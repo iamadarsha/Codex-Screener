@@ -21,18 +21,23 @@ async def lifespan(_app: FastAPI):
     from app.services.nse_poller import nse_poller_loop
 
     configure_logging()
+    logger.info("BreakoutScan API starting up...")
     poller_task = None
-    # Initialize Redis connection pool on startup
+    # Initialize Redis connection pool on startup (with timeout so healthcheck passes)
     try:
         from app.services.redis_cache import get_redis
 
-        redis = await get_redis()
-        logger.info("Redis connected: %s", await redis.ping())
+        redis = await asyncio.wait_for(get_redis(), timeout=5.0)
+        pong = await asyncio.wait_for(redis.ping(), timeout=5.0)
+        logger.info("Redis connected: %s", pong)
         # Start NSE background poller
         poller_task = asyncio.create_task(nse_poller_loop())
         logger.info("NSE poller task started")
-    except Exception:
-        logger.warning("Redis not available at startup – features relying on it will degrade gracefully")
+    except asyncio.TimeoutError:
+        logger.warning("Redis connection timed out – starting without Redis")
+    except Exception as exc:
+        logger.warning("Redis not available at startup (%s) – features relying on it will degrade gracefully", exc)
+    logger.info("BreakoutScan API ready")
     yield
     # Cleanup
     if poller_task is not None:
@@ -54,13 +59,8 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "*",
-        "http://localhost:3000",
-        "http://localhost:5173",
-        settings.next_public_api_url.replace("8000", "3000"),
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
