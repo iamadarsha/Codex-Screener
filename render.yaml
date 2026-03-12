@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: breakoutscan-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: ./apps/api
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: breakoutscan-redis
+          property: connectionString
+      - key: UPSTOX_API_KEY
+        sync: false
+      - key: UPSTOX_API_SECRET
+        sync: false
+      - key: INDIAN_API_KEY
+        sync: false
+      - key: API_HOST
+        value: "0.0.0.0"
+      - key: API_PORT
+        value: "8000"
+    healthCheckPath: /health
+
+  - type: redis
+    name: breakoutscan-redis
+    plan: free
+    maxmemoryPolicy: allkeys-lru

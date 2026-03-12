@@ -78,7 +78,9 @@ export interface PrebuiltScan {
 
 export interface ScanResultItem {
   symbol: string;
-  name: string;
+  company_name: string;
+  /** @deprecated Use company_name instead */
+  name?: string;
   sector: string;
   ltp: number;
   change_pct: number;
@@ -90,9 +92,9 @@ export interface ScanResultItem {
 export interface ScanResult {
   scan_id: string;
   scan_name: string;
-  count: number;
-  results: ScanResultItem[];
-  executed_at: string;
+  total_matches: number;
+  items: ScanResultItem[];
+  run_at: string;
 }
 
 export interface CustomScanCondition {
@@ -109,7 +111,8 @@ export interface CustomScanRequest {
 
 export interface MarketStatus {
   is_open: boolean;
-  session: string;
+  status: string;
+  message?: string;
   next_open?: string;
   next_close?: string;
 }
@@ -125,9 +128,15 @@ export interface MarketBreadth {
 export interface IndexData {
   symbol: string;
   name: string;
-  value: number;
+  last: number;
+  /** @deprecated Use last instead */
+  value?: number;
   change: number;
   change_pct: number;
+  open?: number;
+  high?: number;
+  low?: number;
+  prev_close?: number;
 }
 
 export interface SectorData {

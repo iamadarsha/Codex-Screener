@@ -32,7 +32,12 @@ class ORBDetector:
     """Compute and query Opening Range Breakout levels via Redis."""
 
     def __init__(self) -> None:
-        self._redis = get_redis()
+        self._redis = None
+
+    async def _get_redis(self):
+        if self._redis is None:
+            self._redis = await get_redis()
+        return self._redis
 
     # ------------------------------------------------------------------
     # Set the opening range
@@ -83,9 +88,10 @@ class ORBDetector:
 
         key = orb_range_key(symbol)
         mapping = {"high": str(orb_high), "low": str(orb_low)}
-        await self._redis.hset(key, mapping=mapping)  # type: ignore[arg-type]
+        redis = await self._get_redis()
+        await redis.hset(key, mapping=mapping)  # type: ignore[arg-type]
         # Expire at end of trading day (valid only for the session).
-        await self._redis.expire(key, 8 * 60 * 60)
+        await redis.expire(key, 8 * 60 * 60)
 
         log.info(
             "orb_range_set",
@@ -117,7 +123,8 @@ class ORBDetector:
             return None
 
         key = orb_range_key(symbol)
-        data = await self._redis.hgetall(key)
+        redis = await self._get_redis()
+        data = await redis.hgetall(key)
 
         if not data:
             log.debug("orb_no_range", symbol=symbol)
@@ -140,5 +147,6 @@ class ORBDetector:
 
     async def get_range(self, symbol: str) -> dict[str, str] | None:
         """Return the stored ORB range or ``None``."""
-        data = await self._redis.hgetall(orb_range_key(symbol))
+        redis = await self._get_redis()
+        data = await redis.hgetall(orb_range_key(symbol))
         return data if data else None

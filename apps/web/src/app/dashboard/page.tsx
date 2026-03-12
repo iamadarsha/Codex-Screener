@@ -17,8 +17,8 @@ import type { ScanResultItem } from "@/lib/api-types";
 
 export default function DashboardPage() {
   const { data: breadth, isLoading: breadthLoading } = useMarketBreadth();
-  const { data: sectors } = useMarketSectors();
-  const { data: scans } = usePrebuiltScans();
+  const { data: sectors, isLoading: sectorsLoading } = useMarketSectors();
+  const { data: scans, isLoading: scansLoading } = usePrebuiltScans();
   const runScan = useRunPrebuiltScan();
 
   const [breakoutItems, setBreakoutItems] = useState<ScanResultItem[]>([]);
@@ -29,13 +29,13 @@ export default function DashboardPage() {
       runScan.mutate(scanId, {
         onSuccess: (result) => {
           setBreakoutItems((prev) => {
-            const newItems = result.results.filter(
+            const newItems = result.items.filter(
               (r) => !prev.some((p) => p.symbol === r.symbol)
             );
             return [...newItems, ...prev].slice(0, 50);
           });
           // Volume surges from any scan with high volume
-          const volSurges = result.results.filter((r) => r.volume > 0);
+          const volSurges = result.items.filter((r) => r.volume > 0);
           if (volSurges.length > 0) {
             setVolumeItems((prev) => {
               const combined = [...volSurges, ...prev];
@@ -101,17 +101,27 @@ export default function DashboardPage() {
             {/* Right: Breadth + Scan Toggles */}
             <div className="space-y-6">
               <BreadthDonut breadth={breadth} />
-              {scans && (
+              {scansLoading ? (
+                <SkeletonCard />
+              ) : scans ? (
                 <ActiveScanToggles
                   scans={scans}
                   onRunScan={handleRunScan}
                 />
-              )}
+              ) : null}
             </div>
           </div>
 
           {/* Sector Heatmap */}
-          {sectors && <SectorHeatmap sectors={sectors} />}
+          {sectorsLoading ? (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {[1, 2, 3, 4].map((i) => (
+                <SkeletonCard key={i} />
+              ))}
+            </div>
+          ) : sectors ? (
+            <SectorHeatmap sectors={sectors} />
+          ) : null}
         </div>
       </PageTransition>
     </AppShell>

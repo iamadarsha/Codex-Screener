@@ -7,13 +7,19 @@ import {
   runCustomScan,
 } from "@/lib/api";
 import type { CustomScanRequest, ScanResult } from "@/lib/api-types";
+import { MOCK_PREBUILT_SCANS } from "@/lib/mock-data";
 
 export function usePrebuiltScans() {
-  return useQuery({
+  const query = useQuery({
     queryKey: ["prebuiltScans"],
     queryFn: fetchPrebuiltScans,
     staleTime: 60_000 * 5,
+    retry: 1,
   });
+  return {
+    ...query,
+    data: query.data ?? (query.isError ? MOCK_PREBUILT_SCANS : undefined),
+  };
 }
 
 export function useRunPrebuiltScan() {

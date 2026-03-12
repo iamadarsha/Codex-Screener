@@ -25,7 +25,7 @@ export function SortableResultsTable({ items }: SortableResultsTableProps) {
             <span className="font-mono font-semibold text-white">
               {row.original.symbol}
             </span>
-            <div className="text-xs text-[#5C5D6E]">{row.original.name}</div>
+            <div className="text-xs text-[#5a6478]">{row.original.company_name ?? row.original.name}</div>
           </div>
         ),
       },

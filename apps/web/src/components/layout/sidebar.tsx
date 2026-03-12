@@ -11,15 +11,20 @@ import {
   LayoutDashboard,
   SearchCheck,
   Target,
-  WalletCards,
+  Eye,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useMarketStatus } from "@/hooks/use-market-breadth";
 
-const navigationItems = [
+const mainNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/screener", label: "Screener", icon: SearchCheck },
-  { href: "/chart/RELIANCE", label: "Chart", icon: ChartCandlestick },
-  { href: "/watchlist", label: "Watchlist", icon: WalletCards },
+  { href: "/chart/RELIANCE", label: "Charts", icon: ChartCandlestick },
+  { href: "/watchlist", label: "Watchlist", icon: Eye },
+] as const;
+
+const analysisNav = [
   { href: "/fundamentals", label: "Fundamentals", icon: Target },
   { href: "/alerts", label: "Alerts", icon: BellRing },
 ] as const;
@@ -27,69 +32,142 @@ const navigationItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const { data: status } = useMarketStatus();
+
+  const isOpen = status?.is_open ?? false;
+
+  const renderNavItem = ({
+    href,
+    label,
+    icon: Icon,
+  }: {
+    href: string;
+    label: string;
+    icon: typeof LayoutDashboard;
+  }) => {
+    const isActive = pathname === href || pathname.startsWith(href + "/");
+
+    return (
+      <Link
+        key={href}
+        href={href}
+        title={collapsed ? label : undefined}
+        className={cn(
+          "relative flex items-center rounded-lg py-2.5 text-sm font-medium transition",
+          collapsed ? "justify-center px-2" : "gap-3 px-4",
+          isActive
+            ? "bg-[rgba(124,92,252,0.12)] text-white"
+            : "text-[#8b95a8] hover:bg-[#1c2333] hover:text-white"
+        )}
+      >
+        {isActive && (
+          <span className="absolute inset-y-2 left-0 w-[3px] rounded-full bg-[#7c5cfc]" />
+        )}
+        <Icon className="h-[18px] w-[18px] shrink-0" />
+        {!collapsed && <span>{label}</span>}
+      </Link>
+    );
+  };
 
   return (
     <aside
       className={cn(
-        "hidden flex-col border-r border-[#191a22] bg-sidebar py-5 transition-all duration-300 lg:flex",
-        collapsed ? "w-[68px] px-2" : "w-[220px] px-4"
+        "hidden flex-col border-r border-[#1a2235] bg-[#101624] py-5 transition-all duration-300 lg:flex",
+        collapsed ? "w-[68px] px-2" : "w-[230px] px-4"
       )}
     >
+      {/* Logo */}
       <Link
         href="/"
-        className={cn("mb-8 flex items-center", collapsed ? "justify-center" : "gap-3")}
+        className={cn(
+          "mb-6 flex items-center",
+          collapsed ? "justify-center" : "gap-3"
+        )}
       >
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#7C5CFC] to-[#5B3FD4] font-semibold text-white shadow-accent">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#7c5cfc] to-[#5b3fd4] text-base font-bold text-white shadow-accent">
           B
         </div>
         {!collapsed && (
           <div>
             <div className="text-sm font-semibold text-white">BreakoutScan</div>
-            <div className="text-xs uppercase tracking-[0.2em] text-[#5C5D6E]">
+            <div className="text-[10px] uppercase tracking-[0.2em] text-[#5a6478]">
               Live terminal
             </div>
           </div>
         )}
       </Link>
 
-      <nav className="flex-1 space-y-1">
-        {navigationItems.map(({ href, label, icon: Icon }) => {
-          const isActive =
-            pathname === href || pathname.startsWith(href + "/");
+      {/* Market status */}
+      <div
+        className={cn(
+          "mb-5 flex items-center rounded-lg border border-[#232d40] bg-[#0a0e1a] px-3 py-2",
+          collapsed ? "justify-center" : "gap-2"
+        )}
+      >
+        <span
+          className={cn(
+            "h-2 w-2 shrink-0 rounded-full pulse-dot",
+            isOpen ? "bg-[#00c796]" : "bg-[#ff5a8a]"
+          )}
+        />
+        {!collapsed && (
+          <span
+            className={cn(
+              "text-[10px] font-semibold uppercase tracking-[0.15em]",
+              isOpen ? "text-[#00c796]" : "text-[#ff5a8a]"
+            )}
+          >
+            {isOpen ? "Market Open" : "Market Closed"}
+          </span>
+        )}
+      </div>
 
-          return (
-            <Link
-              key={href}
-              href={href}
-              title={collapsed ? label : undefined}
-              className={cn(
-                "relative flex items-center rounded-lg py-2.5 text-sm transition",
-                collapsed ? "justify-center px-2" : "gap-3 px-4",
-                isActive
-                  ? "bg-[rgba(124,92,252,0.15)] text-white"
-                  : "text-[#9899A8] hover:bg-[#171922] hover:text-white"
-              )}
-            >
-              {isActive && (
-                <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-accent" />
-              )}
-              <Icon className="h-4 w-4 shrink-0" />
-              {!collapsed && <span>{label}</span>}
-            </Link>
-          );
-        })}
+      {/* Main nav */}
+      {!collapsed && (
+        <div className="mb-1 px-4 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#5a6478]">
+          Main
+        </div>
+      )}
+      <nav className="space-y-0.5">
+        {mainNav.map((item) => renderNavItem(item))}
       </nav>
 
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="mt-4 flex items-center justify-center rounded-lg py-2 text-[#5C5D6E] transition hover:bg-[#171922] hover:text-white"
-      >
-        {collapsed ? (
-          <ChevronRight className="h-4 w-4" />
-        ) : (
-          <ChevronLeft className="h-4 w-4" />
-        )}
-      </button>
+      {/* Analysis nav */}
+      {!collapsed && (
+        <div className="mb-1 mt-6 px-4 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#5a6478]">
+          Analysis
+        </div>
+      )}
+      {collapsed && <div className="my-3 border-t border-[#1a2235]" />}
+      <nav className="space-y-0.5">
+        {analysisNav.map((item) => renderNavItem(item))}
+      </nav>
+
+      <div className="flex-1" />
+
+      {/* Bottom actions */}
+      <div className="mt-4 space-y-1">
+        <button
+          className={cn(
+            "flex w-full items-center rounded-lg py-2.5 text-sm text-[#5a6478] transition hover:bg-[#1c2333] hover:text-white",
+            collapsed ? "justify-center px-2" : "gap-3 px-4"
+          )}
+        >
+          <Settings className="h-[18px] w-[18px] shrink-0" />
+          {!collapsed && <span>Settings</span>}
+        </button>
+
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="flex w-full items-center justify-center rounded-lg py-2 text-[#5a6478] transition hover:bg-[#1c2333] hover:text-white"
+        >
+          {collapsed ? (
+            <ChevronRight className="h-4 w-4" />
+          ) : (
+            <ChevronLeft className="h-4 w-4" />
+          )}
+        </button>
+      </div>
     </aside>
   );
 }

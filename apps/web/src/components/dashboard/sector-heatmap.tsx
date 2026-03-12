@@ -8,23 +8,26 @@ interface SectorHeatmapProps {
   sectors: SectorData[];
 }
 
-function getHeatColor(changePct: number): string {
+function getHeatBg(changePct: number): string {
   if (changePct >= 3) return "bg-[#00897B]";
-  if (changePct >= 1) return "bg-[#00C896]";
-  if (changePct >= 0) return "bg-[#00C896]/40";
-  if (changePct >= -1) return "bg-[#FF4757]/40";
-  if (changePct >= -3) return "bg-[#FF4757]";
-  return "bg-[#D32F2F]";
+  if (changePct >= 2) return "bg-[#00a88a]";
+  if (changePct >= 1) return "bg-[#00c796]/80";
+  if (changePct >= 0.25) return "bg-[#00c796]/40";
+  if (changePct >= -0.25) return "bg-[#232d40]";
+  if (changePct >= -1) return "bg-[#ff5a8a]/40";
+  if (changePct >= -2) return "bg-[#ff5a8a]/70";
+  if (changePct >= -3) return "bg-[#e0436e]";
+  return "bg-[#c62c55]";
 }
 
 function getTextColor(changePct: number): string {
-  if (Math.abs(changePct) >= 1) return "text-white";
-  return "text-[#E8E9F0]";
+  if (Math.abs(changePct) >= 0.25) return "text-white";
+  return "text-[#e8ecf4]";
 }
 
 export function SectorHeatmap({ sectors }: SectorHeatmapProps) {
   return (
-    <div className="rounded-panel border border-border bg-card p-5">
+    <div className="rounded-panel border border-[#232d40] bg-[#161d2d] p-5">
       <h3 className="mb-4 text-sm font-semibold text-white">
         Sector Performance
       </h3>
@@ -34,13 +37,13 @@ export function SectorHeatmap({ sectors }: SectorHeatmapProps) {
           <div
             key={sector.sector}
             className={cn(
-              "flex flex-col items-center justify-center rounded-lg px-3 py-4 transition hover:opacity-90",
-              getHeatColor(sector.change_pct)
+              "group relative flex flex-col items-center justify-center rounded-lg px-3 py-4 transition-all hover:scale-[1.02] hover:shadow-lg",
+              getHeatBg(sector.change_pct)
             )}
           >
             <span
               className={cn(
-                "text-xs font-semibold",
+                "text-[11px] font-semibold leading-tight text-center",
                 getTextColor(sector.change_pct)
               )}
             >
@@ -48,22 +51,35 @@ export function SectorHeatmap({ sectors }: SectorHeatmapProps) {
             </span>
             <span
               className={cn(
-                "mt-1 font-mono text-lg font-bold",
+                "mt-1.5 font-mono text-lg font-bold tabular-nums",
                 getTextColor(sector.change_pct)
               )}
             >
               {formatPercent(sector.change_pct, 1)}
             </span>
-            <div className="mt-1.5 flex gap-2 text-[10px]">
-              <span className="text-[#00C896]">{sector.advances}A</span>
-              <span className="text-[#FF4757]">{sector.declines}D</span>
+            <div className="mt-2 flex gap-3 text-[10px]">
+              <span className="text-[#00c796]">
+                <span className="opacity-60">A</span> {sector.advances}
+              </span>
+              <span className="text-[#ff5a8a]">
+                <span className="opacity-60">D</span> {sector.declines}
+              </span>
+            </div>
+
+            {/* Hover tooltip with top gainer/loser */}
+            <div className="pointer-events-none absolute -bottom-1 left-1/2 z-10 -translate-x-1/2 translate-y-full scale-95 rounded-lg border border-[#232d40] bg-[#1c2333] px-3 py-2 opacity-0 shadow-lg transition group-hover:scale-100 group-hover:opacity-100">
+              <div className="whitespace-nowrap text-[10px]">
+                <span className="text-[#00c796]">+{sector.top_gainer}</span>
+                {" / "}
+                <span className="text-[#ff5a8a]">-{sector.top_loser}</span>
+              </div>
             </div>
           </div>
         ))}
       </div>
 
       {sectors.length === 0 && (
-        <div className="py-12 text-center text-sm text-[#5C5D6E]">
+        <div className="py-12 text-center text-sm text-[#5a6478]">
           No sector data available
         </div>
       )}

@@ -20,6 +20,7 @@ class LivePrice(BaseModel):
 
 class IndexData(BaseModel):
     name: str
+    symbol: str | None = None
     last: float
     change: float
     change_pct: float
