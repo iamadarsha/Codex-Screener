@@ -10,6 +10,7 @@ import {
   ChevronRight,
   LayoutDashboard,
   SearchCheck,
+  Sparkles,
   Target,
   Eye,
   Settings,
@@ -20,6 +21,7 @@ import { useMarketStatus } from "@/hooks/use-market-breadth";
 const mainNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/screener", label: "Screener", icon: SearchCheck },
+  { href: "/ai-picks", label: "AI Picks", icon: Sparkles },
   { href: "/chart/RELIANCE", label: "Charts", icon: ChartCandlestick },
   { href: "/watchlist", label: "Watchlist", icon: Eye },
 ] as const;

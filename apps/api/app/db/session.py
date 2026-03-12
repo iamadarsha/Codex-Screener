@@ -1,27 +1,50 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncIterator
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import get_settings
 
-settings = get_settings()
+logger = logging.getLogger(__name__)
 
-# Use SSL for cloud databases (Supabase, etc.), skip for localhost
-_connect_args: dict = {}
-if "localhost" not in settings.database_url and "127.0.0.1" not in settings.database_url:
-    _connect_args["ssl"] = "require"
+_engine = None
+_session_factory = None
 
-engine = create_async_engine(
-    settings.database_url,
-    pool_pre_ping=True,
-    connect_args=_connect_args,
-)
-SessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+
+def _get_engine():
+    """Lazily create the SQLAlchemy async engine on first use."""
+    global _engine
+    if _engine is None:
+        settings = get_settings()
+        connect_args: dict = {}
+        if "localhost" not in settings.database_url and "127.0.0.1" not in settings.database_url:
+            connect_args["ssl"] = "require"
+        _engine = create_async_engine(
+            settings.database_url,
+            pool_pre_ping=True,
+            pool_timeout=5,
+            pool_recycle=300,
+            pool_size=5,
+            max_overflow=10,
+            connect_args=connect_args,
+        )
+        logger.info("Database engine created")
+    return _engine
+
+
+def _get_session_factory():
+    """Lazily create the session factory on first use."""
+    global _session_factory
+    if _session_factory is None:
+        _session_factory = async_sessionmaker(
+            _get_engine(), expire_on_commit=False, class_=AsyncSession
+        )
+    return _session_factory
 
 
 async def get_db_session() -> AsyncIterator[AsyncSession]:
-    async with SessionLocal() as session:
+    factory = _get_session_factory()
+    async with factory() as session:
         yield session
-

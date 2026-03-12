@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.api.routes import (
+    ai_suggestions,
     alerts,
     auth,
     fundamentals,
@@ -30,3 +31,4 @@ api_router.include_router(watchlist.router)
 api_router.include_router(alerts.router)
 api_router.include_router(fundamentals.router)
 api_router.include_router(indices.router)
+api_router.include_router(ai_suggestions.router)

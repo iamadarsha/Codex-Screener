@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "./constants";
 import type {
+  AiSuggestionsResponse,
   Alert,
   AlertCreateRequest,
   CustomScanRequest,
@@ -190,4 +191,18 @@ export function fetchFundamentals(
   return apiFetch<FundamentalData[]>(
     `/api/fundamentals${qs ? `?${qs}` : ""}`
   );
+}
+
+/* ------------------------------------------------------------------ */
+/*  AI Suggestions                                                     */
+/* ------------------------------------------------------------------ */
+
+export function fetchAiSuggestions(): Promise<AiSuggestionsResponse> {
+  return apiFetch<AiSuggestionsResponse>("/api/ai-suggestions");
+}
+
+export function refreshAiSuggestions(): Promise<AiSuggestionsResponse> {
+  return apiFetch<AiSuggestionsResponse>("/api/ai-suggestions/refresh", {
+    method: "POST",
+  });
 }
