@@ -26,7 +26,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
   const queryClient = getQueryClient();
 
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} dark`}>
       <head>
         <title>BreakoutScan</title>
         <meta
@@ -34,7 +34,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
           content="India's real-time NSE/BSE breakout screener."
         />
       </head>
-      <body>
+      <body className="min-h-screen bg-[#0a0e1a] font-sans text-[#e8ecf4] antialiased">
         <QueryClientProvider client={queryClient}>
           {children}
           <Toaster
@@ -42,9 +42,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
             position="bottom-right"
             toastOptions={{
               style: {
-                background: "#1A1B23",
-                border: "1px solid #2A2B35",
-                color: "#E8E9F0",
+                background: "#1c2333",
+                border: "1px solid #232d40",
+                color: "#e8ecf4",
               },
             }}
           />

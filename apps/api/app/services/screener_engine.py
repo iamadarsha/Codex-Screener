@@ -17,6 +17,7 @@ import structlog
 
 from app.services.condition_evaluator import (
     Condition,
+    Operand,
     evaluate_conditions,
 )
 from app.services.orb import ORBDetector
@@ -108,8 +109,13 @@ class ScreenerEngine:
     """Execute scans against the live indicator store in Redis."""
 
     def __init__(self) -> None:
-        self._redis = get_redis()
+        self._redis = None
         self._orb = ORBDetector()
+
+    async def _get_redis(self):
+        if self._redis is None:
+            self._redis = await get_redis()
+        return self._redis
 
     # ------------------------------------------------------------------
     # Core scan runner
@@ -138,16 +144,17 @@ class ScreenerEngine:
             Each entry: ``{"symbol": str, "data": dict, "patterns": list}``.
         """
         t0 = time.perf_counter()
+        redis = await self._get_redis()
 
         # --- check cache ------------------------------------------------------
         cache_key = scan_result_key(_scan_hash(scan_definition, universe))
-        cached = await self._redis.get(cache_key)
+        cached = await redis.get(cache_key)
         if cached:
             log.info("scan_cache_hit", cache_key=cache_key)
             return json.loads(cached)
 
         # --- load universe ----------------------------------------------------
-        symbols: set[str] = await self._redis.smembers(universe_key(universe))
+        symbols: set[str] = await redis.smembers(universe_key(universe))
         if not symbols:
             log.warning("scan_empty_universe", universe=universe)
             return []
@@ -158,7 +165,7 @@ class ScreenerEngine:
         pattern_name: str | None = scan_definition.get("pattern")
 
         # --- batch fetch indicators (pipeline) --------------------------------
-        pipe = self._redis.pipeline(transaction=False)
+        pipe = redis.pipeline(transaction=False)
         for sym in symbol_list:
             pipe.hgetall(indicator_key(sym, timeframe))
         indicator_results: list[dict[str, str]] = await pipe.execute()
@@ -173,7 +180,7 @@ class ScreenerEngine:
             for c in conditions
         )
         if needs_orb:
-            orb_pipe = self._redis.pipeline(transaction=False)
+            orb_pipe = redis.pipeline(transaction=False)
             for sym in symbol_list:
                 orb_pipe.hgetall(orb_range_key(sym))
             orb_results: list[dict[str, str]] = await orb_pipe.execute()
@@ -227,7 +234,7 @@ class ScreenerEngine:
         matches.sort(key=lambda m: m["symbol"])
 
         # --- cache results ----------------------------------------------------
-        await self._redis.set(
+        await redis.set(
             cache_key,
             json.dumps(matches),
             ex=_SCAN_RESULT_TTL,
@@ -266,15 +273,49 @@ class ScreenerEngine:
 
     async def run_custom_scan(
         self,
-        conditions: list[Condition],
+        conditions: list[Condition | dict],
         universe: str = "nifty500",
         timeframe: str = "1d",
         pattern: str | None = None,
     ) -> list[dict[str, Any]]:
         """Build an ad-hoc scan definition and execute it."""
+        from app.services.condition_evaluator import (
+            ConditionOperator,
+            IndicatorRef,
+            INDICATOR_NAMES,
+            NumericLiteral,
+        )
+
+        # Convert dict conditions to Condition objects if needed
+        parsed_conditions: list[Condition] = []
+        for c in conditions:
+            if isinstance(c, Condition):
+                parsed_conditions.append(c)
+            elif isinstance(c, dict):
+                left = IndicatorRef(name=c.get("indicator", "close"))
+                op_str = c.get("operator", "gt")
+                op_map = {
+                    "gt": ConditionOperator.GREATER_THAN,
+                    "lt": ConditionOperator.LESS_THAN,
+                    "eq": ConditionOperator.EQUALS,
+                    "cross_above": ConditionOperator.CROSSES_ABOVE,
+                    "cross_below": ConditionOperator.CROSSES_BELOW,
+                }
+                operator = op_map.get(op_str, ConditionOperator.GREATER_THAN)
+                val = c.get("value", 0)
+                if isinstance(val, str) and val in INDICATOR_NAMES:
+                    right: Operand = IndicatorRef(name=val)
+                else:
+                    from decimal import Decimal as _Decimal
+
+                    right = NumericLiteral(value=_Decimal(str(val)))
+                parsed_conditions.append(
+                    Condition(left=left, operator=operator, right=right)
+                )
+
         scan_def: ScanDefinition = {
             "id": "custom",
-            "conditions": conditions,
+            "conditions": parsed_conditions,
             "timeframe": timeframe,
         }
         if pattern:
