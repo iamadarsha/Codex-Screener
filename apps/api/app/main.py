@@ -16,16 +16,32 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    import asyncio
+
+    from app.services.nse_poller import nse_poller_loop
+
     configure_logging()
+    poller_task = None
     # Initialize Redis connection pool on startup
     try:
         from app.services.redis_cache import get_redis
 
         redis = await get_redis()
         logger.info("Redis connected: %s", await redis.ping())
+        # Start NSE background poller
+        poller_task = asyncio.create_task(nse_poller_loop())
+        logger.info("NSE poller task started")
     except Exception:
         logger.warning("Redis not available at startup – features relying on it will degrade gracefully")
     yield
+    # Cleanup
+    if poller_task is not None:
+        poller_task.cancel()
+        try:
+            await poller_task
+        except asyncio.CancelledError:
+            pass
+        logger.info("NSE poller task stopped")
 
 
 settings = get_settings()
@@ -39,6 +55,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "*",
         "http://localhost:3000",
         "http://localhost:5173",
         settings.next_public_api_url.replace("8000", "3000"),

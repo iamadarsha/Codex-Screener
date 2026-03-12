@@ -108,8 +108,13 @@ class ScreenerEngine:
     """Execute scans against the live indicator store in Redis."""
 
     def __init__(self) -> None:
-        self._redis = get_redis()
+        self._redis = None
         self._orb = ORBDetector()
+
+    async def _get_redis(self):
+        if self._redis is None:
+            self._redis = await get_redis()
+        return self._redis
 
     # ------------------------------------------------------------------
     # Core scan runner
@@ -138,16 +143,17 @@ class ScreenerEngine:
             Each entry: ``{"symbol": str, "data": dict, "patterns": list}``.
         """
         t0 = time.perf_counter()
+        redis = await self._get_redis()
 
         # --- check cache ------------------------------------------------------
         cache_key = scan_result_key(_scan_hash(scan_definition, universe))
-        cached = await self._redis.get(cache_key)
+        cached = await redis.get(cache_key)
         if cached:
             log.info("scan_cache_hit", cache_key=cache_key)
             return json.loads(cached)
 
         # --- load universe ----------------------------------------------------
-        symbols: set[str] = await self._redis.smembers(universe_key(universe))
+        symbols: set[str] = await redis.smembers(universe_key(universe))
         if not symbols:
             log.warning("scan_empty_universe", universe=universe)
             return []
@@ -158,7 +164,7 @@ class ScreenerEngine:
         pattern_name: str | None = scan_definition.get("pattern")
 
         # --- batch fetch indicators (pipeline) --------------------------------
-        pipe = self._redis.pipeline(transaction=False)
+        pipe = redis.pipeline(transaction=False)
         for sym in symbol_list:
             pipe.hgetall(indicator_key(sym, timeframe))
         indicator_results: list[dict[str, str]] = await pipe.execute()
@@ -173,7 +179,7 @@ class ScreenerEngine:
             for c in conditions
         )
         if needs_orb:
-            orb_pipe = self._redis.pipeline(transaction=False)
+            orb_pipe = redis.pipeline(transaction=False)
             for sym in symbol_list:
                 orb_pipe.hgetall(orb_range_key(sym))
             orb_results: list[dict[str, str]] = await orb_pipe.execute()
@@ -227,7 +233,7 @@ class ScreenerEngine:
         matches.sort(key=lambda m: m["symbol"])
 
         # --- cache results ----------------------------------------------------
-        await self._redis.set(
+        await redis.set(
             cache_key,
             json.dumps(matches),
             ex=_SCAN_RESULT_TTL,

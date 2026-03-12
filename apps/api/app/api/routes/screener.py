@@ -48,7 +48,6 @@ async def run_prebuilt_scan(req: ScanRequest):
         results = await engine.run_prebuilt_scan(
             scan_id=req.scan_id,
             universe=req.universe,
-            timeframe=req.timeframe,
         )
 
         return ScanResult(
@@ -56,9 +55,8 @@ async def run_prebuilt_scan(req: ScanRequest):
             scan_name=scan_def.get("name", req.scan_id),
             description=scan_def.get("description"),
             run_at=datetime.now(timezone.utc),
-            duration_ms=results.get("duration_ms"),
-            total_matches=len(results.get("items", [])),
-            items=results.get("items", []),
+            total_matches=len(results),
+            items=results,
         )
     except HTTPException:
         raise
@@ -84,9 +82,8 @@ async def run_custom_scan(req: CustomScanRequest):
             scan_id="custom",
             scan_name=req.name or "Custom Scan",
             run_at=datetime.now(timezone.utc),
-            duration_ms=results.get("duration_ms"),
-            total_matches=len(results.get("items", [])),
-            items=results.get("items", []),
+            total_matches=len(results),
+            items=results,
         )
     except Exception as exc:
         logger.exception("Custom scan failed")
