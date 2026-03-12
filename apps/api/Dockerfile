@@ -15,6 +15,8 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 COPY . .
 
-EXPOSE ${PORT:-8001}
+# Railway injects PORT at runtime; default to 8001 for local Docker
+ENV PORT=8001
+EXPOSE ${PORT}
 
-CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8001} --workers 1
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --workers 1 --log-level info"]
