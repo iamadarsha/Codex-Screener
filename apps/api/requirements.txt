@@ -2,7 +2,9 @@ alembic
 apscheduler
 asyncpg
 celery
+curl_cffi
 fastapi
+greenlet
 httpx
 orjson
 pandas
@@ -25,5 +27,3 @@ upstox-python-sdk
 uvicorn[standard]
 websockets
 yfinance
-requests
-
