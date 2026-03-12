@@ -1,5 +1,9 @@
-import type { Metadata } from "next";
+"use client";
+
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "sonner";
+import { getQueryClient } from "@/lib/query-client";
 import type { ReactNode } from "react";
 
 import "./globals.css";
@@ -14,19 +18,38 @@ const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
 });
 
-export const metadata: Metadata = {
-  title: "BreakoutScan",
-  description: "India's real-time NSE/BSE breakout screener.",
-};
-
-type RootLayoutProps = {
+interface RootLayoutProps {
   children: ReactNode;
-};
+}
 
 export default function RootLayout({ children }: RootLayoutProps) {
+  const queryClient = getQueryClient();
+
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
-      <body>{children}</body>
+      <head>
+        <title>BreakoutScan</title>
+        <meta
+          name="description"
+          content="India's real-time NSE/BSE breakout screener."
+        />
+      </head>
+      <body>
+        <QueryClientProvider client={queryClient}>
+          {children}
+          <Toaster
+            theme="dark"
+            position="bottom-right"
+            toastOptions={{
+              style: {
+                background: "#1A1B23",
+                border: "1px solid #2A2B35",
+                color: "#E8E9F0",
+              },
+            }}
+          />
+        </QueryClientProvider>
+      </body>
     </html>
   );
 }

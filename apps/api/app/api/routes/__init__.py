@@ -1,2 +1,32 @@
 """HTTP route modules for BreakoutScan."""
 
+from __future__ import annotations
+
+from fastapi import APIRouter
+
+from app.api.routes import (
+    alerts,
+    auth,
+    fundamentals,
+    indices,
+    market,
+    prices,
+    screener,
+    stocks,
+    watchlist,
+)
+
+api_router = APIRouter()
+
+# Auth routes (no /api prefix - lives at /auth/*)
+api_router.include_router(auth.router)
+
+# API routes
+api_router.include_router(stocks.router)
+api_router.include_router(screener.router)
+api_router.include_router(prices.router)
+api_router.include_router(market.router)
+api_router.include_router(watchlist.router)
+api_router.include_router(alerts.router)
+api_router.include_router(fundamentals.router)
+api_router.include_router(indices.router)

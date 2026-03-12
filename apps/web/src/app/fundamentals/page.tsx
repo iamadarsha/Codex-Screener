@@ -1,22 +1,86 @@
+"use client";
+
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Search } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
-import { Card } from "@/components/ui/card";
+import { PageTransition } from "@/components/layout/page-transition";
+import { SectionHeading } from "@/components/ui/section-heading";
+import { SkeletonTable } from "@/components/ui/skeleton";
+import { FilterSidebar } from "@/components/fundamentals/filter-sidebar";
+import { FundamentalsResultsTable } from "@/components/fundamentals/results-table";
+import { fetchFundamentals } from "@/lib/api";
+import type { FundamentalFilters } from "@/lib/api-types";
+import { Badge } from "@/components/ui/badge";
+
+const defaultFilters: FundamentalFilters = {};
 
 export default function FundamentalsPage() {
+  const [filters, setFilters] = useState<FundamentalFilters>(defaultFilters);
+  const [appliedFilters, setAppliedFilters] =
+    useState<FundamentalFilters>(defaultFilters);
+  const [search, setSearch] = useState("");
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["fundamentals", appliedFilters],
+    queryFn: () => fetchFundamentals(appliedFilters),
+  });
+
   return (
     <AppShell>
-      <Card>
-        <div className="text-xs uppercase tracking-[0.22em] text-[#5C5D6E]">
-          Fundamentals
+      <PageTransition>
+        <div className="space-y-6">
+          <SectionHeading
+            title="Fundamentals"
+            subtitle="Screen stocks by fundamental metrics"
+            action={
+              data && (
+                <Badge variant="accent">
+                  {data.length} results
+                </Badge>
+              )
+            }
+          />
+
+          <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+            {/* Filter Sidebar */}
+            <FilterSidebar
+              filters={filters}
+              onChange={setFilters}
+              onApply={() => setAppliedFilters({ ...filters })}
+              onReset={() => {
+                setFilters(defaultFilters);
+                setAppliedFilters(defaultFilters);
+              }}
+            />
+
+            {/* Results */}
+            <div className="space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#5C5D6E]" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Filter results by symbol..."
+                  className="h-10 w-full max-w-sm rounded-lg border border-[#2A2B35] bg-[#13141A] pl-10 pr-3 text-sm text-[#E8E9F0] placeholder-[#5C5D6E] outline-none focus:border-[#7C5CFC]"
+                />
+              </div>
+
+              {isLoading ? (
+                <SkeletonTable rows={8} />
+              ) : (
+                <div className="rounded-panel border border-border bg-card">
+                  <FundamentalsResultsTable
+                    data={data ?? []}
+                    searchValue={search}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-        <h1 className="mt-2 text-3xl font-bold text-white">
-          Quality and valuation filters
-        </h1>
-        <p className="mt-3 text-sm text-[#9899A8]">
-          Range filters, quality scoring, and expanded analytics are staged for
-          the frontend build phase.
-        </p>
-      </Card>
+      </PageTransition>
     </AppShell>
   );
 }
-

@@ -1,0 +1,207 @@
+/* ------------------------------------------------------------------ */
+/*  API response types for BreakoutScan backend                       */
+/* ------------------------------------------------------------------ */
+
+export interface Stock {
+  symbol: string;
+  name: string;
+  sector: string;
+  industry: string;
+  market_cap: number;
+  is_nifty50: boolean;
+  is_nifty500: boolean;
+}
+
+export interface StockListResponse {
+  stocks: Stock[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface LivePrice {
+  symbol: string;
+  ltp: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  prev_close: number;
+  change: number;
+  change_pct: number;
+  volume: number;
+  timestamp: string;
+}
+
+export interface LivePriceMap {
+  [symbol: string]: LivePrice;
+}
+
+export interface OHLCV {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface PriceHistory {
+  symbol: string;
+  timeframe: string;
+  candles: OHLCV[];
+}
+
+export interface Indicators {
+  symbol: string;
+  ema20: number | null;
+  ema50: number | null;
+  rsi: number | null;
+  macd: number | null;
+  macd_signal: number | null;
+  macd_histogram: number | null;
+  bb_upper: number | null;
+  bb_middle: number | null;
+  bb_lower: number | null;
+  atr: number | null;
+  adx: number | null;
+  volume_sma20: number | null;
+}
+
+export interface PrebuiltScan {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  icon?: string;
+}
+
+export interface ScanResultItem {
+  symbol: string;
+  name: string;
+  sector: string;
+  ltp: number;
+  change_pct: number;
+  volume: number;
+  signal_strength?: number;
+  triggered_at?: string;
+}
+
+export interface ScanResult {
+  scan_id: string;
+  scan_name: string;
+  count: number;
+  results: ScanResultItem[];
+  executed_at: string;
+}
+
+export interface CustomScanCondition {
+  indicator: string;
+  operator: string;
+  value: number | string;
+}
+
+export interface CustomScanRequest {
+  conditions: CustomScanCondition[];
+  universe: string;
+  timeframe: string;
+}
+
+export interface MarketStatus {
+  is_open: boolean;
+  session: string;
+  next_open?: string;
+  next_close?: string;
+}
+
+export interface MarketBreadth {
+  advances: number;
+  declines: number;
+  unchanged: number;
+  total: number;
+  advance_decline_ratio: number;
+}
+
+export interface IndexData {
+  symbol: string;
+  name: string;
+  value: number;
+  change: number;
+  change_pct: number;
+}
+
+export interface SectorData {
+  sector: string;
+  change_pct: number;
+  advances: number;
+  declines: number;
+  top_gainer: string;
+  top_loser: string;
+}
+
+export interface WatchlistItem {
+  symbol: string;
+  name: string;
+  added_at: string;
+}
+
+export interface Alert {
+  id: string;
+  user_id: string;
+  symbol: string;
+  condition_type: string;
+  condition_value: number;
+  operator: string;
+  is_active: boolean;
+  triggered_at?: string;
+  created_at: string;
+}
+
+export interface AlertCreateRequest {
+  user_id: string;
+  symbol: string;
+  condition_type: string;
+  condition_value: number;
+  operator: string;
+}
+
+export interface FundamentalData {
+  symbol: string;
+  name: string;
+  sector: string;
+  market_cap: number;
+  pe_ratio: number | null;
+  pb_ratio: number | null;
+  dividend_yield: number | null;
+  roe: number | null;
+  debt_to_equity: number | null;
+  eps: number | null;
+  book_value: number | null;
+  face_value: number | null;
+}
+
+export interface FundamentalFilters {
+  pe_min?: number;
+  pe_max?: number;
+  pb_min?: number;
+  pb_max?: number;
+  market_cap_min?: number;
+  market_cap_max?: number;
+  roe_min?: number;
+  dividend_yield_min?: number;
+  debt_to_equity_max?: number;
+}
+
+/* WebSocket message types */
+export interface WsPriceMessage {
+  type: "price";
+  data: LivePrice;
+}
+
+export interface WsSubscribeMessage {
+  subscribe: string[];
+}
+
+export interface WsUnsubscribeMessage {
+  unsubscribe: string[];
+}

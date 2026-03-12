@@ -25,4 +25,5 @@ supabase
 tenacity
 upstox-python-sdk
 uvicorn[standard]
+websockets
 yfinance
