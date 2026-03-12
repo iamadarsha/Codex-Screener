@@ -2,7 +2,9 @@ alembic
 apscheduler
 asyncpg
 celery
+curl_cffi
 fastapi
+greenlet
 httpx
 orjson
 pandas
@@ -24,4 +26,3 @@ tenacity
 upstox-python-sdk
 uvicorn[standard]
 yfinance
-
