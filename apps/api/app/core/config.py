@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     next_public_supabase_url: str = ""
     next_public_supabase_anon_key: str = ""
     indian_api_key: str = ""
+    gemini_api_key: str = ""
     telegram_bot_token: str = ""
     fcm_server_key: str = ""
     environment: str = "development"

@@ -214,3 +214,22 @@ export interface WsSubscribeMessage {
 export interface WsUnsubscribeMessage {
   unsubscribe: string[];
 }
+
+/* AI Suggestions */
+export interface AiSuggestion {
+  symbol: string;
+  name: string;
+  sector: string;
+  rationale: string;
+  confidence: number;
+  catalyst: string;
+  target_horizon: "intraday" | "swing" | "positional";
+}
+
+export interface AiSuggestionsResponse {
+  suggestions: AiSuggestion[];
+  generated_at: string | null;
+  headline_count?: number;
+  next_refresh?: string;
+  message?: string;
+}
