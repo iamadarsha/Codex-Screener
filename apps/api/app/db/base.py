@@ -15,3 +15,6 @@ NAMING_CONVENTION = {
 class Base(DeclarativeBase):
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
 
+
+# Import models so Alembic can discover table metadata.
+from app.db.models import alert, alert_history, ohlcv, scan_run, stock, user_scan, watchlist  # noqa: E402,F401
