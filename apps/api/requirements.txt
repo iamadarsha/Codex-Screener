@@ -25,4 +25,5 @@ upstox-python-sdk
 uvicorn[standard]
 websockets
 yfinance
+requests
 

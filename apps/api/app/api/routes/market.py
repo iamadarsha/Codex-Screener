@@ -168,10 +168,11 @@ async def market_indices():
             if name in MAJOR_INDICES:
                 results.append(
                     IndexData(
-                        name=idx["index"],
-                        last=idx["last"],
-                        change=idx["change"],
-                        change_pct=idx["percentChange"],
+                        name=name,
+                        symbol=name.replace(" ", ""),
+                        last=idx.get("last", 0),
+                        change=idx.get("change", 0),
+                        change_pct=idx.get("percentChange", 0),
                         open=idx.get("open"),
                         high=idx.get("high"),
                         low=idx.get("low"),

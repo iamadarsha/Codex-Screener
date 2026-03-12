@@ -17,6 +17,7 @@ import structlog
 
 from app.services.condition_evaluator import (
     Condition,
+    Operand,
     evaluate_conditions,
 )
 from app.services.orb import ORBDetector
@@ -272,15 +273,49 @@ class ScreenerEngine:
 
     async def run_custom_scan(
         self,
-        conditions: list[Condition],
+        conditions: list[Condition | dict],
         universe: str = "nifty500",
         timeframe: str = "1d",
         pattern: str | None = None,
     ) -> list[dict[str, Any]]:
         """Build an ad-hoc scan definition and execute it."""
+        from app.services.condition_evaluator import (
+            ConditionOperator,
+            IndicatorRef,
+            INDICATOR_NAMES,
+            NumericLiteral,
+        )
+
+        # Convert dict conditions to Condition objects if needed
+        parsed_conditions: list[Condition] = []
+        for c in conditions:
+            if isinstance(c, Condition):
+                parsed_conditions.append(c)
+            elif isinstance(c, dict):
+                left = IndicatorRef(name=c.get("indicator", "close"))
+                op_str = c.get("operator", "gt")
+                op_map = {
+                    "gt": ConditionOperator.GREATER_THAN,
+                    "lt": ConditionOperator.LESS_THAN,
+                    "eq": ConditionOperator.EQUALS,
+                    "cross_above": ConditionOperator.CROSSES_ABOVE,
+                    "cross_below": ConditionOperator.CROSSES_BELOW,
+                }
+                operator = op_map.get(op_str, ConditionOperator.GREATER_THAN)
+                val = c.get("value", 0)
+                if isinstance(val, str) and val in INDICATOR_NAMES:
+                    right: Operand = IndicatorRef(name=val)
+                else:
+                    from decimal import Decimal as _Decimal
+
+                    right = NumericLiteral(value=_Decimal(str(val)))
+                parsed_conditions.append(
+                    Condition(left=left, operator=operator, right=right)
+                )
+
         scan_def: ScanDefinition = {
             "id": "custom",
-            "conditions": conditions,
+            "conditions": parsed_conditions,
             "timeframe": timeframe,
         }
         if pattern:

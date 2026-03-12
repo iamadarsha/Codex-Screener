@@ -50,13 +50,27 @@ async def run_prebuilt_scan(req: ScanRequest):
             universe=req.universe,
         )
 
+        # Transform engine results to ScanResultItem format
+        items = []
+        for r in results:
+            data = r.get("data", {})
+            items.append({
+                "symbol": r.get("symbol", ""),
+                "company_name": r.get("symbol", ""),
+                "ltp": float(data.get("close", 0) or 0),
+                "change_pct": float(data.get("change_pct", 0) or 0),
+                "sector": data.get("sector", ""),
+                "matched_conditions": [],
+                "score": None,
+            })
+
         return ScanResult(
             scan_id=req.scan_id,
             scan_name=scan_def.get("name", req.scan_id),
             description=scan_def.get("description"),
             run_at=datetime.now(timezone.utc),
-            total_matches=len(results),
-            items=results,
+            total_matches=len(items),
+            items=items,
         )
     except HTTPException:
         raise
@@ -78,12 +92,26 @@ async def run_custom_scan(req: CustomScanRequest):
             timeframe=req.timeframe,
         )
 
+        # Transform engine results to ScanResultItem format
+        items = []
+        for r in results:
+            data = r.get("data", {})
+            items.append({
+                "symbol": r.get("symbol", ""),
+                "company_name": r.get("symbol", ""),
+                "ltp": float(data.get("close", 0) or 0),
+                "change_pct": float(data.get("change_pct", 0) or 0),
+                "sector": data.get("sector", ""),
+                "matched_conditions": [],
+                "score": None,
+            })
+
         return ScanResult(
             scan_id="custom",
             scan_name=req.name or "Custom Scan",
             run_at=datetime.now(timezone.utc),
-            total_matches=len(results),
-            items=results,
+            total_matches=len(items),
+            items=items,
         )
     except Exception as exc:
         logger.exception("Custom scan failed")
