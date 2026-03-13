@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { Search } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageTransition } from "@/components/layout/page-transition";
 import { PriceChart } from "@/components/chart/price-chart";
@@ -12,13 +13,50 @@ import { StockSnapshot } from "@/components/chart/stock-snapshot";
 import { VolumePanel } from "@/components/chart/volume-panel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLivePrices } from "@/hooks/use-live-prices";
-import { fetchStock, fetchPriceHistory, fetchIndicators } from "@/lib/api";
+import { fetchStock, fetchPriceHistory, fetchIndicators, fetchStocks } from "@/lib/api";
+import type { Stock } from "@/lib/api-types";
+import { cn } from "@/lib/cn";
 
 export default function ChartPage() {
   const params = useParams();
+  const router = useRouter();
   const symbol = (params.symbol as string)?.toUpperCase() ?? "RELIANCE";
   const [timeframe, setTimeframe] = useState("daily");
   const [activeIndicators, setActiveIndicators] = useState<string[]>([]);
+  const [chartSearch, setChartSearch] = useState("");
+  const [chartSuggestions, setChartSuggestions] = useState<Stock[]>([]);
+  const [showChartDropdown, setShowChartDropdown] = useState(false);
+  const [chartSelectedIdx, setChartSelectedIdx] = useState(-1);
+  const chartDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const searchChartStocks = useCallback((query: string) => {
+    if (chartDebounceRef.current) clearTimeout(chartDebounceRef.current);
+    if (query.length < 1) {
+      setChartSuggestions([]);
+      setShowChartDropdown(false);
+      return;
+    }
+    chartDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetchStocks({ search: query, limit: 10 });
+        setChartSuggestions(res.stocks ?? []);
+        setShowChartDropdown(true);
+        setChartSelectedIdx(-1);
+      } catch {
+        setChartSuggestions([]);
+      }
+    }, 250);
+  }, []);
+
+  const navigateToSymbol = useCallback(
+    (sym: string) => {
+      router.push(`/chart/${sym.toUpperCase()}`);
+      setChartSearch("");
+      setChartSuggestions([]);
+      setShowChartDropdown(false);
+    },
+    [router]
+  );
 
   const symbols = useMemo(() => [symbol], [symbol]);
   const livePrices = useLivePrices(symbols);
@@ -51,6 +89,65 @@ export default function ChartPage() {
     <AppShell>
       <PageTransition>
         <div className="space-y-4">
+          {/* Symbol Search */}
+          <div className="relative max-w-md">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (chartSelectedIdx >= 0 && chartSuggestions[chartSelectedIdx]) {
+                  navigateToSymbol(chartSuggestions[chartSelectedIdx].symbol);
+                } else if (chartSearch.trim()) {
+                  navigateToSymbol(chartSearch.trim());
+                }
+              }}
+            >
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted z-10" />
+              <input
+                type="text"
+                value={chartSearch}
+                onChange={(e) => {
+                  setChartSearch(e.target.value);
+                  searchChartStocks(e.target.value);
+                }}
+                onFocus={() => chartSuggestions.length > 0 && setShowChartDropdown(true)}
+                onBlur={() => setTimeout(() => setShowChartDropdown(false), 200)}
+                onKeyDown={(e) => {
+                  if (!showChartDropdown || chartSuggestions.length === 0) return;
+                  if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    setChartSelectedIdx((prev) => (prev < chartSuggestions.length - 1 ? prev + 1 : 0));
+                  } else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setChartSelectedIdx((prev) => (prev > 0 ? prev - 1 : chartSuggestions.length - 1));
+                  } else if (e.key === "Escape") {
+                    setShowChartDropdown(false);
+                  }
+                }}
+                placeholder="Search stocks... e.g. RELIANCE, TCS, INFY"
+                className="h-10 w-full rounded-lg border border-border bg-card pl-10 pr-4 text-sm text-text-primary placeholder-text-muted outline-none transition focus:border-accent"
+              />
+            </form>
+            {showChartDropdown && chartSuggestions.length > 0 && (
+              <div className="absolute left-0 top-full z-50 mt-1 w-full overflow-hidden rounded-lg border border-border bg-elevated shadow-lg backdrop-blur-xl">
+                {chartSuggestions.map((s, i) => (
+                  <button
+                    key={s.symbol}
+                    type="button"
+                    onMouseDown={() => navigateToSymbol(s.symbol)}
+                    className={cn(
+                      "flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm transition hover:bg-card",
+                      i === chartSelectedIdx && "bg-card"
+                    )}
+                  >
+                    <span className="font-mono font-semibold text-accent">{s.symbol}</span>
+                    <span className="truncate text-text-secondary">{s.name}</span>
+                    <span className="ml-auto text-xs text-text-muted">{s.sector}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Stock Info */}
           <StockSnapshot stock={stock} livePrice={livePrice} />
 

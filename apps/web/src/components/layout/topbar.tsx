@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Bell, Search, Sun, Moon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { LiveDot } from "@/components/ui/live-dot";
@@ -9,6 +9,8 @@ import { useMarketStatus, useMarketIndices } from "@/hooks/use-market-breadth";
 import { formatPrice, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { useTheme } from "@/components/providers/theme-provider";
+import { fetchStocks } from "@/lib/api";
+import type { Stock } from "@/lib/api-types";
 
 function useIsMarketLive(): boolean {
   const [live, setLive] = useState(false);
@@ -83,16 +85,64 @@ function IndexTicker({
 export function Topbar() {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [suggestions, setSuggestions] = useState<Stock[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedIdx, setSelectedIdx] = useState(-1);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const { data: status } = useMarketStatus();
   const { data: indices } = useMarketIndices();
   const isMarketLive = useIsMarketLive();
   const { theme, toggleTheme } = useTheme();
 
+  const searchStocks = useCallback((query: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (query.length < 1) {
+      setSuggestions([]);
+      setShowDropdown(false);
+      return;
+    }
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetchStocks({ search: query, limit: 8 });
+        setSuggestions(res.stocks ?? []);
+        setShowDropdown(true);
+        setSelectedIdx(-1);
+      } catch {
+        setSuggestions([]);
+      }
+    }, 250);
+  }, []);
+
+  const navigateToChart = useCallback(
+    (symbol: string) => {
+      router.push(`/chart/${symbol.toUpperCase()}`);
+      setSearch("");
+      setSuggestions([]);
+      setShowDropdown(false);
+    },
+    [router]
+  );
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (search.trim()) {
-      router.push(`/chart/${search.trim().toUpperCase()}`);
-      setSearch("");
+    if (selectedIdx >= 0 && suggestions[selectedIdx]) {
+      navigateToChart(suggestions[selectedIdx].symbol);
+    } else if (search.trim()) {
+      navigateToChart(search.trim());
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!showDropdown || suggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedIdx((prev) => (prev < suggestions.length - 1 ? prev + 1 : 0));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIdx((prev) => (prev > 0 ? prev - 1 : suggestions.length - 1));
+    } else if (e.key === "Escape") {
+      setShowDropdown(false);
     }
   };
 
@@ -114,20 +164,50 @@ export function Topbar() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Search */}
-          <form onSubmit={handleSearch} className="relative">
-            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-muted" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search symbol..."
-              className="h-9 w-48 rounded-lg border border-border bg-card pl-9 pr-14 text-sm text-text-primary placeholder-text-muted outline-none transition focus:w-64 focus:border-accent"
-            />
-            <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border bg-page px-1.5 py-0.5 text-[10px] text-text-muted">
-              ⌘K
-            </kbd>
-          </form>
+          {/* Search with autocomplete */}
+          <div className="relative" ref={dropdownRef}>
+            <form onSubmit={handleSearch}>
+              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-muted z-10" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  searchStocks(e.target.value);
+                }}
+                onFocus={() => suggestions.length > 0 && setShowDropdown(true)}
+                onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+                onKeyDown={handleKeyDown}
+                placeholder="Search symbol..."
+                className="h-9 w-48 rounded-lg border border-border bg-card pl-9 pr-14 text-sm text-text-primary placeholder-text-muted outline-none transition focus:w-64 focus:border-accent"
+              />
+              <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border bg-page px-1.5 py-0.5 text-[10px] text-text-muted">
+                ⌘K
+              </kbd>
+            </form>
+            {showDropdown && suggestions.length > 0 && (
+              <div className="absolute right-0 top-full z-50 mt-1 w-72 overflow-hidden rounded-lg border border-border bg-elevated shadow-lg backdrop-blur-xl">
+                {suggestions.map((stock, i) => (
+                  <button
+                    key={stock.symbol}
+                    type="button"
+                    onMouseDown={() => navigateToChart(stock.symbol)}
+                    className={cn(
+                      "flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition hover:bg-card",
+                      i === selectedIdx && "bg-card"
+                    )}
+                  >
+                    <span className="font-mono font-semibold text-accent">
+                      {stock.symbol}
+                    </span>
+                    <span className="truncate text-text-secondary">
+                      {stock.name}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Theme toggle */}
           <button
