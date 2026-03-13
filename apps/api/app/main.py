@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import logging
+import sys
 from contextlib import asynccontextmanager
+
+print("BreakoutScan: loading main module...", file=sys.stderr, flush=True)
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,6 +15,7 @@ from app.core.logging import configure_logging
 from app.ws import ws_router
 
 logger = logging.getLogger(__name__)
+print("BreakoutScan: all imports OK", file=sys.stderr, flush=True)
 
 
 @asynccontextmanager
