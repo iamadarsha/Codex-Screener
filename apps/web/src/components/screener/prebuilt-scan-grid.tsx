@@ -88,7 +88,7 @@ export function PrebuiltScanGrid({
       </div>
 
       {/* Card grid */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
         {filtered.map((scan) => {
           const Icon = iconMap[scan.icon ?? ""] ?? Zap;
           const isActive = activeScanId === scan.id;
@@ -99,7 +99,7 @@ export function PrebuiltScanGrid({
               onClick={() => onRunScan(scan.id)}
               disabled={isLoading && isActive}
               className={cn(
-                "group relative flex flex-col items-start rounded-xl border p-4 text-left transition-all",
+                "group relative flex flex-col items-start rounded-xl border p-3 sm:p-4 text-left transition-all",
                 isActive
                   ? "border-accent bg-accent/[0.08] shadow-glow"
                   : "border-border bg-card hover:border-accent/50 hover:-translate-y-0.5 hover:shadow-lg"
@@ -115,10 +115,10 @@ export function PrebuiltScanGrid({
               >
                 <Icon className="h-5 w-5" />
               </div>
-              <h4 className="mb-1 text-sm font-semibold text-text-primary">
+              <h4 className="mb-0.5 text-xs sm:text-sm font-semibold text-text-primary leading-tight">
                 {scan.name}
               </h4>
-              <p className="text-xs leading-relaxed text-text-secondary">
+              <p className="text-[10px] sm:text-xs leading-relaxed text-text-secondary line-clamp-2">
                 {scan.description}
               </p>
 

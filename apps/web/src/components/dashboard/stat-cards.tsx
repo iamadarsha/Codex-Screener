@@ -66,7 +66,7 @@ export function StatCards({
   ];
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
       {cards.map((card) => (
         <Card
           key={card.label}
@@ -86,14 +86,14 @@ export function StatCards({
 
           <div className="flex items-start justify-between">
             <div>
-              <div className="text-[11px] font-medium uppercase tracking-wider text-text-secondary">
+              <div className="text-[10px] sm:text-[11px] font-medium uppercase tracking-wider text-text-secondary">
                 {card.label}
               </div>
-              <div className="mt-3 flex items-baseline gap-1">
+              <div className="mt-2 sm:mt-3 flex items-baseline gap-1">
                 <AnimatedNumber
                   value={card.value}
                   format={(v) => Math.round(v).toString()}
-                  className="text-3xl font-semibold tabular-nums text-text-primary"
+                  className="text-2xl sm:text-3xl font-semibold tabular-nums text-text-primary"
                 />
                 {card.suffix && (
                   <span className="text-lg font-semibold text-text-secondary">

@@ -161,9 +161,10 @@ export function Topbar() {
 
   return (
     <header className="glass-topbar flex flex-col">
-      <div className="flex h-14 items-center justify-between gap-2 px-3 sm:gap-4 sm:px-6">
-        {/* Scrollable index tickers */}
-        <div className="flex flex-1 items-center gap-5 overflow-x-auto scrollbar-none">
+      {/* Mobile: compact row with search + status */}
+      <div className="flex h-12 items-center justify-between gap-2 px-3 sm:h-14 sm:gap-4 sm:px-6">
+        {/* Index tickers — hidden on mobile, shown on sm+ */}
+        <div className="hidden sm:flex flex-1 items-center gap-5 overflow-x-auto scrollbar-none">
           {indices?.slice(0, 5).map((idx) => (
             <IndexTicker
               key={idx.symbol}
@@ -176,11 +177,16 @@ export function Topbar() {
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Mobile: App name */}
+        <span className="sm:hidden text-sm font-bold text-text-primary tracking-tight">
+          Codex Screener
+        </span>
+
+        <div className="flex items-center gap-1.5 sm:gap-3">
           {/* Search with autocomplete */}
           <div className="relative" ref={dropdownRef}>
             <form onSubmit={handleSearch}>
-              <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-muted z-10" />
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-muted z-10" />
               <input
                 type="text"
                 value={search}
@@ -191,22 +197,22 @@ export function Topbar() {
                 onFocus={() => suggestions.length > 0 && setShowDropdown(true)}
                 onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
                 onKeyDown={handleKeyDown}
-                placeholder="Search symbol..."
-                className="h-9 w-32 rounded-lg border border-border bg-card pl-9 pr-8 text-sm text-text-primary placeholder-text-muted outline-none transition focus:w-48 focus:border-accent sm:w-48 sm:pr-14 sm:focus:w-64"
+                placeholder="Search..."
+                className="h-8 w-28 rounded-lg border border-border bg-card pl-8 pr-2 text-[13px] text-text-primary placeholder-text-muted outline-none transition focus:w-40 focus:border-accent sm:h-9 sm:w-48 sm:pl-9 sm:pr-14 sm:focus:w-64"
               />
-              <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border bg-page px-1.5 py-0.5 text-[10px] text-text-muted">
+              <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border bg-page px-1.5 py-0.5 text-[10px] text-text-muted hidden sm:inline">
                 ⌘K
               </kbd>
             </form>
             {showDropdown && suggestions.length > 0 && (
-              <div className="absolute right-0 top-full z-50 mt-1 w-64 overflow-hidden rounded-lg border border-border bg-elevated shadow-lg backdrop-blur-xl sm:w-72">
+              <div className="absolute right-0 top-full z-50 mt-1 w-[calc(100vw-1.5rem)] max-w-72 overflow-hidden rounded-lg border border-border bg-elevated shadow-lg backdrop-blur-xl sm:w-72">
                 {suggestions.map((stock, i) => (
                   <button
                     key={stock.symbol}
                     type="button"
                     onMouseDown={() => navigateToChart(stock.symbol)}
                     className={cn(
-                      "flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition hover:bg-card",
+                      "flex w-full items-center gap-2 px-3 py-2.5 text-left text-[13px] transition hover:bg-card",
                       i === selectedIdx && "bg-card"
                     )}
                   >
@@ -225,7 +231,7 @@ export function Topbar() {
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
-            className="rounded-lg p-2 text-text-secondary transition hover:bg-elevated hover:text-text-primary"
+            className="rounded-lg p-1.5 sm:p-2 text-text-secondary transition hover:bg-elevated hover:text-text-primary"
             title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
           >
             {theme === "dark" ? (
@@ -235,9 +241,9 @@ export function Topbar() {
             )}
           </button>
 
-          {/* Live market indicator */}
+          {/* Live market indicator — hidden on mobile */}
           {isMarketLive && (
-            <div className="flex items-center gap-1.5 rounded-full border border-bullish/20 bg-bullish/5 px-2.5 py-1">
+            <div className="hidden sm:flex items-center gap-1.5 rounded-full border border-bullish/20 bg-bullish/5 px-2.5 py-1">
               <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-bullish opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-bullish" />
@@ -248,18 +254,18 @@ export function Topbar() {
             </div>
           )}
 
-          {/* Notification bell */}
-          <button className="relative rounded-lg p-2 text-text-secondary transition hover:bg-elevated hover:text-text-primary">
+          {/* Notification bell — hidden on mobile */}
+          <button className="hidden sm:block relative rounded-lg p-2 text-text-secondary transition hover:bg-elevated hover:text-text-primary">
             <Bell className="h-4 w-4" />
             <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-bearish" />
           </button>
 
-          {/* Live indicator */}
-          <div className="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5">
+          {/* Live/Closed status pill */}
+          <div className="flex items-center gap-1.5 rounded-full border border-border bg-card px-2 py-1 sm:gap-2 sm:px-3 sm:py-1.5">
             <LiveDot color={status?.is_open ? "green" : "red"} />
             <span
               className={cn(
-                "text-[10px] font-semibold uppercase tracking-[0.15em]",
+                "text-[9px] sm:text-[10px] font-semibold uppercase tracking-[0.15em]",
                 status?.is_open ? "text-bullish" : "text-bearish"
               )}
             >
@@ -269,8 +275,22 @@ export function Topbar() {
         </div>
       </div>
 
+      {/* Scrolling index ticker — mobile only, below header */}
+      <div className="sm:hidden flex items-center gap-4 overflow-x-auto scrollbar-none px-3 pb-1">
+        {indices?.slice(0, 5).map((idx) => (
+          <IndexTicker
+            key={idx.symbol}
+            name={idx.name ?? idx.symbol}
+            last={idx.last ?? idx.value}
+            changePct={idx.change_pct}
+          />
+        )) ?? (
+          <div className="text-xs text-text-muted">Loading...</div>
+        )}
+      </div>
+
       {/* Market countdown bar */}
-      <div className="px-6 pb-2">
+      <div className="px-3 pb-1.5 sm:px-6 sm:pb-2">
         <CountdownBar isOpen={status?.is_open ?? false} />
       </div>
     </header>

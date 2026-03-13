@@ -55,7 +55,7 @@ export function StockCard({ suggestion, index }: StockCardProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.08, duration: 0.3 }}
       className={cn(
-        "card-hover rounded-panel border border-border bg-card p-5 shadow-card cursor-pointer relative"
+        "card-hover rounded-panel border border-border bg-card p-3 sm:p-5 shadow-card cursor-pointer relative"
       )}
       onClick={() => setExpanded(!expanded)}
     >

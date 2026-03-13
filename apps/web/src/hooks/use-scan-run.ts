@@ -26,15 +26,20 @@ function withMockFallback(result: ScanResult, scanName: string, scanId?: string)
 export function usePrebuiltScans() {
   const query = useQuery({
     queryKey: ["prebuiltScans"],
-    queryFn: fetchPrebuiltScans,
+    queryFn: async () => {
+      try {
+        const scans = await fetchPrebuiltScans();
+        return scans && scans.length > 0 ? scans : MOCK_PREBUILT_SCANS;
+      } catch {
+        return MOCK_PREBUILT_SCANS;
+      }
+    },
     staleTime: 60_000 * 5,
-    refetchInterval: 30_000,
-    retry: 1,
+    refetchInterval: 60_000,
+    retry: 0,
+    placeholderData: MOCK_PREBUILT_SCANS,
   });
-  return {
-    ...query,
-    data: query.data ?? (query.isError ? MOCK_PREBUILT_SCANS : undefined),
-  };
+  return query;
 }
 
 export function useRunPrebuiltScan() {

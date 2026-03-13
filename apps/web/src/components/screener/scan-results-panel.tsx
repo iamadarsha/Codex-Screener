@@ -21,9 +21,9 @@ export function ScanResultsPanel({ result, onClose }: ScanResultsPanelProps) {
       transition={{ duration: 0.3, ease: "easeOut" }}
       className="glass-card rounded-panel"
     >
-      <div className="flex items-center justify-between border-b border-border px-5 py-3">
-        <div className="flex items-center gap-3">
-          <h3 className="text-sm font-semibold text-text-primary">
+      <div className="flex items-start justify-between border-b border-border px-3 sm:px-5 py-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <h3 className="text-xs sm:text-sm font-semibold text-text-primary">
             {result.scan_name}
           </h3>
           <Badge variant="accent">{result.total_matches} results</Badge>
@@ -32,7 +32,7 @@ export function ScanResultsPanel({ result, onClose }: ScanResultsPanelProps) {
               Demo Data
             </span>
           )}
-          <span className="text-xs text-text-muted">
+          <span className="text-[10px] sm:text-xs text-text-muted">
             {formatTime(result.run_at)}
           </span>
         </div>
