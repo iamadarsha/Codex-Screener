@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
@@ -10,10 +10,8 @@ import { PriceChart } from "@/components/chart/price-chart";
 import { TimeframeTabs } from "@/components/chart/timeframe-tabs";
 import { IndicatorPills } from "@/components/chart/indicator-pills";
 import { StockSnapshot } from "@/components/chart/stock-snapshot";
-import { VolumePanel } from "@/components/chart/volume-panel";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useLivePrices } from "@/hooks/use-live-prices";
-import { fetchStock, fetchPriceHistory, fetchIndicators, fetchStocks } from "@/lib/api";
+import { fetchStock, fetchIndicators, fetchStocks } from "@/lib/api";
 import type { Stock } from "@/lib/api-types";
 import { cn } from "@/lib/cn";
 
@@ -58,18 +56,12 @@ export default function ChartPage() {
     [router]
   );
 
-  const symbols = useMemo(() => [symbol], [symbol]);
-  const livePrices = useLivePrices(symbols);
+  const livePrices = useLivePrices([symbol]);
   const livePrice = livePrices[symbol];
 
   const { data: stock } = useQuery({
     queryKey: ["stock", symbol],
     queryFn: () => fetchStock(symbol),
-  });
-
-  const { data: history, isLoading: historyLoading } = useQuery({
-    queryKey: ["priceHistory", symbol, timeframe],
-    queryFn: () => fetchPriceHistory(symbol, timeframe),
   });
 
   const { data: indicators } = useQuery({
@@ -82,8 +74,6 @@ export default function ChartPage() {
       prev.includes(ind) ? prev.filter((i) => i !== ind) : [...prev, ind]
     );
   };
-
-  const candles = history?.candles ?? [];
 
   return (
     <AppShell>
@@ -160,15 +150,8 @@ export default function ChartPage() {
             />
           </div>
 
-          {/* Main Chart */}
-          {historyLoading ? (
-            <Skeleton className="h-[500px] w-full" />
-          ) : (
-            <PriceChart candles={candles} />
-          )}
-
-          {/* Volume Panel */}
-          {candles.length > 0 && <VolumePanel candles={candles} />}
+          {/* Main Chart — TradingView Widget */}
+          <PriceChart symbol={symbol} interval={timeframe} height={500} />
 
           {/* Indicator Values */}
           {indicators && (
