@@ -6,8 +6,11 @@ from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-REPO_ENV_FILE = Path(__file__).resolve().parents[4] / ".env"
-API_ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
+_config_path = Path(__file__).resolve()
+API_ENV_FILE = _config_path.parents[2] / ".env"
+# In Docker (/app/app/core/config.py) the path is only 4 levels deep,
+# so parents[4] would raise IndexError. Fall back to API_ENV_FILE.
+REPO_ENV_FILE = _config_path.parents[4] / ".env" if len(_config_path.parents) > 4 else API_ENV_FILE
 
 
 class Settings(BaseSettings):
