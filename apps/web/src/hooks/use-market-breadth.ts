@@ -14,7 +14,7 @@ export function useMarketBreadth() {
   const query = useQuery({
     queryKey: ["marketBreadth"],
     queryFn: fetchMarketBreadth,
-    refetchInterval: REFETCH_INTERVAL,
+    refetchInterval: 15_000,
     retry: 1,
   });
   return {
@@ -40,7 +40,7 @@ export function useMarketIndices() {
   const query = useQuery({
     queryKey: ["marketIndices"],
     queryFn: fetchMarketIndices,
-    refetchInterval: LIVE_REFETCH_INTERVAL,
+    refetchInterval: 15_000,
     retry: 1,
   });
   return {

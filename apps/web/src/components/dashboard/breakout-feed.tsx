@@ -71,10 +71,10 @@ export function BreakoutFeed({ items }: BreakoutFeedProps) {
           {visibleItems.map((item, idx) => (
             <motion.div
               key={`${item.symbol}-${idx}`}
-              initial={{ opacity: 0, x: -16 }}
+              initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 16 }}
-              transition={{ duration: 0.2 }}
+              transition={{ delay: idx * 0.05, duration: 0.25, ease: "easeOut" }}
             >
               <Link
                 href={`/chart/${item.symbol}`}

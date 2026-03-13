@@ -14,6 +14,7 @@ export function usePrebuiltScans() {
     queryKey: ["prebuiltScans"],
     queryFn: fetchPrebuiltScans,
     staleTime: 60_000 * 5,
+    refetchInterval: 30_000,
     retry: 1,
   });
   return {

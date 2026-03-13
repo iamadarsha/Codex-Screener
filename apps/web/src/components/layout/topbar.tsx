@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Bell, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { LiveDot } from "@/components/ui/live-dot";
@@ -8,6 +8,32 @@ import { CountdownBar } from "@/components/ui/countdown-bar";
 import { useMarketStatus, useMarketIndices } from "@/hooks/use-market-breadth";
 import { formatPrice, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/cn";
+
+function useIsMarketLive(): boolean {
+  const [live, setLive] = useState(false);
+
+  useEffect(() => {
+    function check() {
+      const now = new Date();
+      // Convert to IST (UTC+5:30)
+      const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+      const ist = new Date(utc + 5.5 * 3600000);
+      const day = ist.getDay(); // 0=Sun,6=Sat
+      const hours = ist.getHours();
+      const mins = ist.getMinutes();
+      const totalMins = hours * 60 + mins;
+      // Weekday 9:15 - 15:30 IST
+      const isWeekday = day >= 1 && day <= 5;
+      const inHours = totalMins >= 9 * 60 + 15 && totalMins <= 15 * 60 + 30;
+      setLive(isWeekday && inHours);
+    }
+    check();
+    const interval = setInterval(check, 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return live;
+}
 
 function IndexTicker({
   name,
@@ -58,6 +84,7 @@ export function Topbar() {
   const [search, setSearch] = useState("");
   const { data: status } = useMarketStatus();
   const { data: indices } = useMarketIndices();
+  const isMarketLive = useIsMarketLive();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,6 +126,19 @@ export function Topbar() {
               ⌘K
             </kbd>
           </form>
+
+          {/* Live market indicator */}
+          {isMarketLive && (
+            <div className="flex items-center gap-1.5 rounded-full border border-[#00c796]/20 bg-[#00c796]/5 px-2.5 py-1">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#00c796] opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-[#00c796]" />
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#00c796]">
+                LIVE
+              </span>
+            </div>
+          )}
 
           {/* Notification bell */}
           <button className="relative rounded-lg p-2 text-[#5a6478] transition hover:bg-[#1c2333] hover:text-white">

@@ -5,7 +5,7 @@ import { fetchAiSuggestions, refreshAiSuggestions } from "@/lib/api";
 import type { AiSuggestionsResponse } from "@/lib/api-types";
 
 const MOCK_SUGGESTIONS: AiSuggestionsResponse = {
-  suggestions: [
+  intraday: [
     {
       symbol: "RELIANCE",
       name: "Reliance Industries Ltd",
@@ -14,8 +14,28 @@ const MOCK_SUGGESTIONS: AiSuggestionsResponse = {
         "Strong quarterly results and expansion in digital services driving momentum.",
       confidence: 8,
       catalyst: "Q3 earnings beat",
-      target_horizon: "swing",
+      target_horizon: "intraday",
+      action: "BUY",
+      target_pct: 2.5,
+      stop_loss_pct: 1.0,
+      tags: ["Momentum", "Earnings"],
     },
+    {
+      symbol: "TATAMOTORS",
+      name: "Tata Motors Ltd",
+      sector: "Auto",
+      rationale:
+        "JLR margins expanding, EV segment gaining traction in domestic market.",
+      confidence: 7,
+      catalyst: "EV sales surge",
+      target_horizon: "intraday",
+      action: "BUY",
+      target_pct: 1.8,
+      stop_loss_pct: 0.8,
+      tags: ["EV", "Breakout"],
+    },
+  ],
+  weekly: [
     {
       symbol: "TCS",
       name: "Tata Consultancy Services",
@@ -24,17 +44,11 @@ const MOCK_SUGGESTIONS: AiSuggestionsResponse = {
         "Large deal wins and improving demand outlook in BFSI segment.",
       confidence: 7,
       catalyst: "Deal pipeline growth",
-      target_horizon: "positional",
-    },
-    {
-      symbol: "HDFCBANK",
-      name: "HDFC Bank Ltd",
-      sector: "Banking",
-      rationale:
-        "Post-merger integration complete, strong deposit growth and improving NIMs.",
-      confidence: 8,
-      catalyst: "NIM expansion",
-      target_horizon: "positional",
+      target_horizon: "swing",
+      action: "BUY",
+      target_pct: 5.0,
+      stop_loss_pct: 2.5,
+      tags: ["Large Cap", "IT Revival"],
     },
     {
       symbol: "INFY",
@@ -45,6 +59,26 @@ const MOCK_SUGGESTIONS: AiSuggestionsResponse = {
       confidence: 7,
       catalyst: "Guidance upgrade",
       target_horizon: "swing",
+      action: "BUY",
+      target_pct: 4.5,
+      stop_loss_pct: 2.0,
+      tags: ["Guidance Up", "Quality"],
+    },
+  ],
+  monthly: [
+    {
+      symbol: "HDFCBANK",
+      name: "HDFC Bank Ltd",
+      sector: "Banking",
+      rationale:
+        "Post-merger integration complete, strong deposit growth and improving NIMs.",
+      confidence: 8,
+      catalyst: "NIM expansion",
+      target_horizon: "positional",
+      action: "BUY",
+      target_pct: 12.0,
+      stop_loss_pct: 5.0,
+      tags: ["Banking", "Value"],
     },
     {
       symbol: "BHARTIARTL",
@@ -55,6 +89,10 @@ const MOCK_SUGGESTIONS: AiSuggestionsResponse = {
       confidence: 7,
       catalyst: "Tariff hike impact",
       target_horizon: "positional",
+      action: "BUY",
+      target_pct: 15.0,
+      stop_loss_pct: 6.0,
+      tags: ["5G", "ARPU Growth"],
     },
   ],
   generated_at: new Date().toISOString(),

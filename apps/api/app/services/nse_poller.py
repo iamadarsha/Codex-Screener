@@ -1,48 +1,45 @@
 """Background poller that fetches NSE data and populates Redis for live data."""
 import asyncio
+import json
 import logging
+import time
 from datetime import datetime, timezone
 
 log = logging.getLogger(__name__)
 
 POLL_INTERVAL = 30  # seconds
+COMPUTE_INTERVAL = 300  # 5 minutes — indicator refresh cycle
 MAJOR_INDICES = ["NIFTY 50", "NIFTY BANK", "NIFTY IT", "NIFTY PHARMA", "NIFTY AUTO", "NIFTY FMCG", "INDIA VIX", "NIFTY MIDCAP 50"]
 
+# Module-level state persisted across poll cycles
+_cached_symbols: list[str] = []
+_last_compute_time: float = 0.0
+_poll_count: int = 0
 
-async def _populate_universe_and_compute(stock_data: list[dict]) -> None:
-    """Extract symbols from stock data, populate universe sets, and kick off
-    indicator computation in the background.
 
-    Called once on the first successful poll iteration.
+async def _populate_universe(stock_data: list[dict]) -> list[str]:
+    """Extract symbols from stock data and populate universe sets.
+
+    Returns the list of symbols for reuse.
     """
     from app.services.redis_cache import get_redis
 
     redis = await get_redis()
 
-    nifty50_symbols: list[str] = []
+    symbols: list[str] = []
     for stock in stock_data:
         symbol = stock.get("symbol", "")
         if symbol and symbol != "NIFTY 50":
-            nifty50_symbols.append(symbol)
+            symbols.append(symbol)
 
-    if nifty50_symbols:
-        # Populate Nifty 50 universe
+    if symbols:
         await redis.delete("universe:nifty50")
-        await redis.sadd("universe:nifty50", *nifty50_symbols)
-        log.info("Populated universe:nifty50 with %d symbols", len(nifty50_symbols))
-
-        # Also populate nifty500 with the same data for now (will be expanded
-        # when more data sources provide the full Nifty 500 list).
+        await redis.sadd("universe:nifty50", *symbols)
         await redis.delete("universe:nifty500")
-        await redis.sadd("universe:nifty500", *nifty50_symbols)
-        log.info("Populated universe:nifty500 with %d symbols", len(nifty50_symbols))
+        await redis.sadd("universe:nifty500", *symbols)
+        log.info("Populated universe sets with %d symbols", len(symbols))
 
-        # Kick off bulk indicator computation in the background so it does not
-        # block the polling loop.
-        asyncio.create_task(
-            _run_bulk_compute(nifty50_symbols),
-            name="bulk_compute_nifty50",
-        )
+    return symbols
 
 
 async def _run_bulk_compute(symbols: list[str]) -> None:
@@ -81,19 +78,22 @@ async def _fetch_and_store_trending() -> None:
 
 async def nse_poller_loop():
     """Continuously poll NSE for market data and store in Redis."""
+    global _cached_symbols, _last_compute_time, _poll_count
+
     from app.services.nse_fallback import NSEClient
     from app.services.redis_cache import get_redis, set_json
 
     client = NSEClient()
     log.info("NSE poller started")
 
-    first_iteration = True
-
     while True:
+        _poll_count += 1
         try:
             redis = await get_redis()
 
-            # Fetch all indices
+            # ----------------------------------------------------------
+            # 1. Fetch all indices
+            # ----------------------------------------------------------
             try:
                 raw = await client.get_indices()
                 data = raw.get("data", []) if isinstance(raw, dict) else []
@@ -117,7 +117,6 @@ async def nse_poller_loop():
                         }
                         indices_list.append(index_data)
 
-                    # Use NIFTY 50 data for breadth
                     if name == "NIFTY 50":
                         breadth["advances"] = idx.get("advances", 0) or 0
                         breadth["declines"] = idx.get("declines", 0) or 0
@@ -134,7 +133,9 @@ async def nse_poller_loop():
             except Exception as e:
                 log.warning("Failed to fetch indices: %s", e)
 
-            # Fetch Nifty 50 stock quotes for live prices
+            # ----------------------------------------------------------
+            # 2. Fetch Nifty 50 stock quotes for live prices
+            # ----------------------------------------------------------
             try:
                 http = await client._ensure_client()
                 resp = await http.get("/api/equity-stockIndices", params={"index": "NIFTY 50"})
@@ -161,21 +162,36 @@ async def nse_poller_loop():
                             "timestamp": datetime.now(timezone.utc).isoformat(),
                         }
                         await set_json(f"price:{symbol}", price_data, ttl=60)
-                    log.debug("Stored prices for %d stocks", len(stock_data))
 
-                    # On startup: populate universe sets and start bulk compute
-                    if first_iteration and stock_data:
-                        first_iteration = False
-                        await _populate_universe_and_compute(stock_data)
+                        # Publish to Redis pub/sub for WebSocket clients
+                        await redis.publish("price_updates", json.dumps(price_data))
+
+                    log.debug("Stored + published prices for %d stocks", len(stock_data))
+
+                    # Populate universe on first successful fetch
+                    if not _cached_symbols and stock_data:
+                        _cached_symbols = await _populate_universe(stock_data)
+
+                    # Periodic indicator refresh (every COMPUTE_INTERVAL seconds)
+                    now = time.monotonic()
+                    if _cached_symbols and (now - _last_compute_time) >= COMPUTE_INTERVAL:
+                        _last_compute_time = now
+                        asyncio.create_task(
+                            _run_bulk_compute(_cached_symbols),
+                            name="bulk_compute_periodic",
+                        )
 
             except Exception as e:
                 log.warning("Failed to fetch stock prices: %s", e)
 
-            # Fetch trending stocks from Indian API (non-blocking, every cycle)
-            asyncio.create_task(
-                _fetch_and_store_trending(),
-                name="fetch_trending",
-            )
+            # ----------------------------------------------------------
+            # 3. Fetch trending stocks from Indian API (every other cycle = ~60s)
+            # ----------------------------------------------------------
+            if _poll_count % 2 == 0:
+                asyncio.create_task(
+                    _fetch_and_store_trending(),
+                    name="fetch_trending",
+                )
 
         except Exception as e:
             log.error("NSE poller error: %s", e)

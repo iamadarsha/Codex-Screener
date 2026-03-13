@@ -15,9 +15,10 @@ interface ScanResultsPanelProps {
 export function ScanResultsPanel({ result, onClose }: ScanResultsPanelProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
       className="rounded-panel border border-[#232d40] bg-[#161d2d]"
     >
       <div className="flex items-center justify-between border-b border-[#232d40] px-5 py-3">

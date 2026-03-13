@@ -251,7 +251,28 @@ class YFinanceProvider:
                 "high_52w": _safe_str(high_52w),
             }
 
-            await hset_dict(indicator_key(symbol, "1d"), mapping, ttl=3600)
+            await hset_dict(indicator_key(symbol, "1d"), mapping, ttl=7200)
+
+            # Store OHLCV bars in Redis for chart rendering (avoids DB dependency)
+            try:
+                from app.services.redis_cache import set_json as _set_json
+
+                ohlcv_records = []
+                for ts_idx, row in df.iterrows():
+                    epoch = int(ts_idx.timestamp()) if hasattr(ts_idx, "timestamp") else 0
+                    ohlcv_records.append({
+                        "time": epoch,
+                        "open": round(float(row.get("Open", 0)), 2),
+                        "high": round(float(row.get("High", 0)), 2),
+                        "low": round(float(row.get("Low", 0)), 2),
+                        "close": round(float(row.get("Close", 0)), 2),
+                        "volume": int(row.get("Volume", 0)),
+                    })
+                if ohlcv_records:
+                    await _set_json(f"ohlcv:{symbol}:daily", ohlcv_records, ttl=7200)
+            except Exception as ohlcv_exc:
+                log.warning("ohlcv_store_error", symbol=symbol, error=str(ohlcv_exc))
+
             log.info("indicators_stored", symbol=symbol)
             return True
 
