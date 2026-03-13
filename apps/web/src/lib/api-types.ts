@@ -98,6 +98,7 @@ export interface ScanResult {
   total_matches: number;
   items: ScanResultItem[];
   run_at: string;
+  is_demo?: boolean;
 }
 
 export interface CustomScanCondition {
@@ -219,6 +220,13 @@ export interface WsUnsubscribeMessage {
 }
 
 /* AI Suggestions */
+export interface NewsSource {
+  title: string;
+  url: string;
+  source: string;
+  published_at: string;
+}
+
 export interface AiSuggestion {
   symbol: string;
   name: string;
@@ -231,6 +239,7 @@ export interface AiSuggestion {
   target_pct?: number;
   stop_loss_pct?: number;
   tags?: string[];
+  news_sources?: NewsSource[];
 }
 
 export interface AiSuggestionsResponse {
