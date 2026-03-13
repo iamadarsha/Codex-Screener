@@ -52,7 +52,7 @@ export function PriceChart({
     script.async = true;
     script.textContent = JSON.stringify({
       autosize: true,
-      symbol: `NSE:${symbol}`,
+      symbol: `BSE:${symbol}`,
       interval: tvInterval,
       timezone: "Asia/Kolkata",
       theme: theme === "dark" ? "dark" : "light",
