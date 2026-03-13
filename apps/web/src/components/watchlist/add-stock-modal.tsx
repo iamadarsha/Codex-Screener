@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Plus } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { fetchStocks } from "@/lib/api";
+import { searchLocalStocks } from "@/lib/nse-stocks";
 import { cn } from "@/lib/cn";
 
 interface AddStockModalProps {
@@ -22,13 +23,29 @@ export function AddStockModal({
 }: AddStockModalProps) {
   const [search, setSearch] = useState("");
 
+  // Instant local results
+  const localResults = useMemo(
+    () => (search.length >= 1 ? searchLocalStocks(search, 20) : []),
+    [search]
+  );
+
+  // API results (may take longer / may fail)
   const { data } = useQuery({
     queryKey: ["stocks-search", search],
     queryFn: () => fetchStocks({ search, limit: 20 }),
     enabled: open && search.length >= 1,
   });
 
-  const stocks = data?.stocks ?? [];
+  // Merge: prefer API results if available, otherwise use local
+  const stocks = useMemo(() => {
+    const apiStocks = data?.stocks ?? [];
+    if (apiStocks.length > 0) return apiStocks;
+    return localResults.map((s) => ({
+      symbol: s.symbol,
+      name: s.name,
+      sector: s.sector,
+    }));
+  }, [data, localResults]);
 
   return (
     <Modal open={open} onClose={onClose} title="Add Stock to Watchlist">

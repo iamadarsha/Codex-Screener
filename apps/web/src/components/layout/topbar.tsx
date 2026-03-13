@@ -10,6 +10,7 @@ import { formatPrice, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { useTheme } from "@/components/providers/theme-provider";
 import { fetchStocks } from "@/lib/api";
+import { searchLocalStocks } from "@/lib/nse-stocks";
 import type { Stock } from "@/lib/api-types";
 
 function useIsMarketLive(): boolean {
@@ -102,16 +103,28 @@ export function Topbar() {
       setShowDropdown(false);
       return;
     }
+
+    // Instant local results first
+    const local = searchLocalStocks(query, 8);
+    if (local.length > 0) {
+      setSuggestions(local.map((s) => ({ symbol: s.symbol, name: s.name, sector: s.sector }) as Stock));
+      setShowDropdown(true);
+      setSelectedIdx(-1);
+    }
+
+    // Then try API for potentially better results
     debounceRef.current = setTimeout(async () => {
       try {
         const res = await fetchStocks({ search: query, limit: 8 });
-        setSuggestions(res.stocks ?? []);
-        setShowDropdown(true);
-        setSelectedIdx(-1);
+        if (res.stocks && res.stocks.length > 0) {
+          setSuggestions(res.stocks);
+          setShowDropdown(true);
+          setSelectedIdx(-1);
+        }
       } catch {
-        setSuggestions([]);
+        // Local results already shown — no-op
       }
-    }, 250);
+    }, 300);
   }, []);
 
   const navigateToChart = useCallback(
