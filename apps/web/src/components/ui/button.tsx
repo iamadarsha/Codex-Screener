@@ -20,7 +20,7 @@ export function Button({
 
   return (
     <button
-      className={`inline-flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold transition duration-200 hover:opacity-90 ${variantClassName} ${className}`}
+      className={`inline-flex h-8 sm:h-10 items-center justify-center rounded-lg px-3 sm:px-4 text-xs sm:text-sm font-semibold transition duration-200 hover:opacity-90 ${variantClassName} ${className}`}
       {...props}
     >
       {children}

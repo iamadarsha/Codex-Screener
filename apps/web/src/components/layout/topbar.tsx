@@ -178,7 +178,7 @@ export function Topbar() {
         </div>
 
         {/* Mobile: App name */}
-        <span className="sm:hidden text-sm font-bold text-text-primary tracking-tight">
+        <span className="sm:hidden text-sm font-bold text-text-primary tracking-tight whitespace-nowrap">
           Codex Screener
         </span>
 
@@ -198,22 +198,22 @@ export function Topbar() {
                 onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
                 onKeyDown={handleKeyDown}
                 placeholder="Search..."
-                className="h-8 w-28 rounded-lg border border-border bg-card pl-8 pr-2 text-[13px] text-text-primary placeholder-text-muted outline-none transition focus:w-40 focus:border-accent sm:h-9 sm:w-48 sm:pl-9 sm:pr-14 sm:focus:w-64"
+                className="h-8 w-28 rounded-lg border border-border bg-card pl-8 pr-2 text-[13px] text-text-primary placeholder-text-muted outline-none transition focus:border-accent sm:h-9 sm:w-48 sm:pl-9 sm:pr-14 sm:focus:w-64"
               />
               <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border bg-page px-1.5 py-0.5 text-[10px] text-text-muted hidden sm:inline">
                 ⌘K
               </kbd>
             </form>
             {showDropdown && suggestions.length > 0 && (
-              <div className="absolute right-0 top-full z-50 mt-1 w-[calc(100vw-1.5rem)] max-w-72 overflow-hidden rounded-lg border border-border bg-elevated shadow-lg backdrop-blur-xl sm:w-72">
+              <div className="fixed left-3 right-3 top-12 z-[100] overflow-hidden rounded-lg border border-border shadow-2xl sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-1 sm:w-72" style={{ backgroundColor: '#161D2D' }}>
                 {suggestions.map((stock, i) => (
                   <button
                     key={stock.symbol}
                     type="button"
                     onMouseDown={() => navigateToChart(stock.symbol)}
                     className={cn(
-                      "flex w-full items-center gap-2 px-3 py-2.5 text-left text-[13px] transition hover:bg-card",
-                      i === selectedIdx && "bg-card"
+                      "flex w-full items-center gap-2 px-3 py-2.5 text-left text-[13px] transition",
+                      i === selectedIdx ? "bg-white/10" : "hover:bg-white/10"
                     )}
                   >
                     <span className="font-mono font-semibold text-accent">
@@ -273,20 +273,6 @@ export function Topbar() {
             </span>
           </div>
         </div>
-      </div>
-
-      {/* Scrolling index ticker — mobile only, below header */}
-      <div className="sm:hidden flex items-center gap-4 overflow-x-auto scrollbar-none px-3 pb-1">
-        {indices?.slice(0, 5).map((idx) => (
-          <IndexTicker
-            key={idx.symbol}
-            name={idx.name ?? idx.symbol}
-            last={idx.last ?? idx.value}
-            changePct={idx.change_pct}
-          />
-        )) ?? (
-          <div className="text-xs text-text-muted">Loading...</div>
-        )}
       </div>
 
       {/* Market countdown bar */}

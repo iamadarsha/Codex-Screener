@@ -26,22 +26,22 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/70"
             onClick={onClose}
           />
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 40 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
             className={cn(
-              "relative z-10 w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-2xl",
+              "relative z-10 w-full max-w-lg rounded-t-2xl sm:rounded-xl border border-border bg-card p-4 sm:p-6 shadow-2xl max-h-[85vh] overflow-y-auto",
               className
             )}
           >

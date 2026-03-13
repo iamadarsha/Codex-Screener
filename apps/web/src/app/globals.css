@@ -57,6 +57,13 @@
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* iOS touch fix — ensure buttons are clickable */
+button, a, [role="button"] {
+  touch-action: manipulation;
+  cursor: pointer;
 }
 
 body {
