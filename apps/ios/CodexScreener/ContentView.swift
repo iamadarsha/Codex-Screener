@@ -7,14 +7,15 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            Color(red: 0.04, green: 0.04, blue: 0.07)
+                .ignoresSafeArea()
 
             WebView(
                 url: URL(string: "https://screenercodex.netlify.app")!,
                 isLoading: $isLoading,
                 loadProgress: $loadProgress
             )
-            .ignoresSafeArea(.container, edges: .bottom)
+            .ignoresSafeArea()
 
             if isLoading {
                 LaunchOverlay(progress: loadProgress)
@@ -98,13 +99,33 @@ struct WebView: UIViewRepresentable {
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
 
-        // Allow viewport-fit=cover
+        // Inject viewport meta tag override to ensure proper scaling
+        let script = WKUserScript(
+            source: """
+            var meta = document.querySelector('meta[name=viewport]');
+            if (!meta) {
+                meta = document.createElement('meta');
+                meta.name = 'viewport';
+                document.head.appendChild(meta);
+            }
+            meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
+            """,
+            injectionTime: .atDocumentEnd,
+            forMainFrameOnly: true
+        )
+        config.userContentController.addUserScript(script)
+
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.isOpaque = false
         webView.backgroundColor = UIColor(red: 0.04, green: 0.04, blue: 0.07, alpha: 1)
         webView.scrollView.backgroundColor = UIColor(red: 0.04, green: 0.04, blue: 0.07, alpha: 1)
+
+        // Prevent zoom
+        webView.scrollView.minimumZoomScale = 1.0
+        webView.scrollView.maximumZoomScale = 1.0
+        webView.scrollView.bouncesZoom = false
 
         // Observe loading progress
         webView.addObserver(context.coordinator, forKeyPath: "estimatedProgress", options: .new, context: nil)
@@ -131,22 +152,36 @@ struct WebView: UIViewRepresentable {
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            // Inject CSS for safe areas, scrollbar hiding, and proper fit
+            let safeAreaCSS = """
+            (function() {
+                var style = document.createElement('style');
+                style.textContent = `
+                    html, body {
+                        -webkit-touch-callout: none;
+                        overscroll-behavior: none;
+                        overflow-x: hidden;
+                    }
+                    ::-webkit-scrollbar { display: none; }
+                    body {
+                        padding-top: env(safe-area-inset-top);
+                        padding-bottom: env(safe-area-inset-bottom);
+                        padding-left: env(safe-area-inset-left);
+                        padding-right: env(safe-area-inset-right);
+                        min-height: 100vh;
+                        min-height: -webkit-fill-available;
+                    }
+                `;
+                document.head.appendChild(style);
+            })();
+            """
+            webView.evaluateJavaScript(safeAreaCSS)
+
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 withAnimation(.easeOut(duration: 0.3)) {
                     self.parent.isLoading = false
                 }
             }
-
-            // Inject CSS to handle safe areas and hide scrollbar
-            let css = """
-            body {
-                -webkit-touch-callout: none;
-                overscroll-behavior: none;
-            }
-            ::-webkit-scrollbar { display: none; }
-            """
-            let js = "var style = document.createElement('style'); style.textContent = `\(css)`; document.head.appendChild(style);"
-            webView.evaluateJavaScript(js)
         }
 
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
