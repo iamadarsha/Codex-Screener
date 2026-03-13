@@ -76,7 +76,7 @@ export default function ChartPage() {
           {/* Indicator Values */}
           {indicators && (
             <div className="rounded-panel border border-border bg-card p-5">
-              <h3 className="mb-3 text-sm font-semibold text-white">
+              <h3 className="mb-3 text-sm font-semibold text-text-primary">
                 Technical Indicators
               </h3>
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
@@ -89,10 +89,10 @@ export default function ChartPage() {
                   { label: "ATR", value: indicators.atr },
                 ].map((ind) => (
                   <div key={ind.label}>
-                    <div className="text-[10px] uppercase tracking-wider text-[#5C5D6E]">
+                    <div className="text-[10px] uppercase tracking-wider text-text-muted">
                       {ind.label}
                     </div>
-                    <div className="mt-0.5 font-mono text-sm text-white">
+                    <div className="mt-0.5 font-mono text-sm text-text-primary">
                       {ind.value?.toFixed(2) ?? "-"}
                     </div>
                   </div>

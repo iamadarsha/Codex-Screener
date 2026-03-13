@@ -6,9 +6,9 @@ interface LiveDotProps {
 }
 
 const colorMap = {
-  green: "bg-[#00C896]",
-  red: "bg-[#FF4757]",
-  yellow: "bg-[#FFA502]",
+  green: "bg-bullish",
+  red: "bg-bearish",
+  yellow: "bg-warning",
 };
 
 export function LiveDot({ className, color = "green" }: LiveDotProps) {

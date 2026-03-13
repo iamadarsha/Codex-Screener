@@ -26,7 +26,7 @@ export function VolumePanel({ candles, height = 120 }: VolumePanelProps) {
 
   return (
     <div className="rounded-panel border border-border bg-card p-4">
-      <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-[#8B8D9A]">
+      <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-text-secondary">
         Volume
       </h4>
       <ResponsiveContainer width="100%" height={height}>
@@ -38,11 +38,11 @@ export function VolumePanel({ candles, height = 120 }: VolumePanelProps) {
           />
           <Tooltip
             contentStyle={{
-              background: "#1A1B23",
-              border: "1px solid #2A2B35",
+              background: "var(--bg-elevated)",
+              border: "1px solid var(--border)",
               borderRadius: 8,
               fontSize: 12,
-              color: "#E8E9F0",
+              color: "var(--text-primary)",
             }}
             formatter={(value: number) => [formatVolume(value), "Volume"]}
             labelFormatter={() => ""}

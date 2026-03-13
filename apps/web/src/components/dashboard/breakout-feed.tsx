@@ -36,7 +36,7 @@ function FlashPrice({ price }: { price: number }) {
   return (
     <span
       className={cn(
-        "inline-block rounded px-1 font-mono text-sm tabular-nums text-white",
+        "inline-block rounded px-1 font-mono text-sm tabular-nums text-text-primary",
         flash
       )}
     >
@@ -57,10 +57,10 @@ export function BreakoutFeed({ items }: BreakoutFeedProps) {
   }, [items]);
 
   return (
-    <div className="rounded-panel border border-[#232d40] bg-[#161d2d]">
-      <div className="flex items-center gap-2 border-b border-[#232d40] px-5 py-3">
-        <Zap className="h-4 w-4 text-[#ff8800]" />
-        <h3 className="text-sm font-semibold text-white">Live Breakout Feed</h3>
+    <div className="glass-card rounded-panel">
+      <div className="flex items-center gap-2 border-b border-border px-5 py-3">
+        <Zap className="h-4 w-4 text-warning" />
+        <h3 className="text-sm font-semibold text-text-primary">Live Breakout Feed</h3>
         <Badge variant="accent" className="ml-auto">
           {items.length} signals
         </Badge>
@@ -79,22 +79,22 @@ export function BreakoutFeed({ items }: BreakoutFeedProps) {
               <Link
                 href={`/chart/${item.symbol}`}
                 className={cn(
-                  "flex items-center gap-4 px-5 py-3 transition hover:bg-[#1c2333]",
-                  idx % 2 === 0 ? "bg-transparent" : "bg-[#101624]/30"
+                  "flex items-center gap-4 px-5 py-3 transition hover:bg-elevated",
+                  idx % 2 === 0 ? "bg-transparent" : "bg-sidebar/30"
                 )}
               >
                 {/* Symbol & name */}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-sm font-semibold text-white">
+                    <span className="font-mono text-sm font-semibold text-text-primary">
                       {item.symbol}
                     </span>
-                    <span className="truncate text-xs text-[#8b95a8]">
+                    <span className="truncate text-xs text-text-secondary">
                       {item.company_name ?? item.name}
                     </span>
                   </div>
                   <div className="mt-0.5 flex items-center gap-2">
-                    <span className="text-[10px] text-[#5a6478]">{item.sector}</span>
+                    <span className="text-[10px] text-text-muted">{item.sector}</span>
                     {item.signal_strength != null && (
                       <SignalBadge
                         signal={
@@ -115,7 +115,7 @@ export function BreakoutFeed({ items }: BreakoutFeedProps) {
                   <div
                     className={cn(
                       "font-mono text-xs tabular-nums",
-                      item.change_pct >= 0 ? "text-[#00c796]" : "text-[#ff5a8a]"
+                      item.change_pct >= 0 ? "text-bullish" : "text-bearish"
                     )}
                   >
                     {formatPercent(item.change_pct)}
@@ -124,7 +124,7 @@ export function BreakoutFeed({ items }: BreakoutFeedProps) {
 
                 {/* Time ago */}
                 {item.triggered_at && (
-                  <span className="shrink-0 text-[10px] text-[#5a6478]">
+                  <span className="shrink-0 text-[10px] text-text-muted">
                     {timeAgo(item.triggered_at)}
                   </span>
                 )}
@@ -133,7 +133,7 @@ export function BreakoutFeed({ items }: BreakoutFeedProps) {
           ))}
         </AnimatePresence>
         {visibleItems.length === 0 && (
-          <div className="px-5 py-12 text-center text-sm text-[#5a6478]">
+          <div className="px-5 py-12 text-center text-sm text-text-muted">
             No breakout signals yet
           </div>
         )}

@@ -58,12 +58,12 @@ export function Sidebar() {
           "relative flex items-center rounded-lg py-2.5 text-sm font-medium transition",
           collapsed ? "justify-center px-2" : "gap-3 px-4",
           isActive
-            ? "bg-[rgba(124,92,252,0.12)] text-white"
-            : "text-[#8b95a8] hover:bg-[#1c2333] hover:text-white"
+            ? "bg-accent/10 text-text-primary shadow-[inset_0_0_12px_rgba(124,92,252,0.08)]"
+            : "text-text-secondary hover:bg-elevated hover:text-text-primary"
         )}
       >
         {isActive && (
-          <span className="absolute inset-y-2 left-0 w-[3px] rounded-full bg-[#7c5cfc]" />
+          <span className="absolute inset-y-2 left-0 w-[3px] rounded-full bg-accent" />
         )}
         <Icon className="h-[18px] w-[18px] shrink-0" />
         {!collapsed && <span>{label}</span>}
@@ -74,7 +74,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "hidden flex-col border-r border-[#1a2235] bg-[#101624] py-5 transition-all duration-300 lg:flex",
+        "glass-sidebar hidden flex-col py-5 transition-all duration-300 lg:flex",
         collapsed ? "w-[68px] px-2" : "w-[230px] px-4"
       )}
     >
@@ -86,13 +86,13 @@ export function Sidebar() {
           collapsed ? "justify-center" : "gap-3"
         )}
       >
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#7c5cfc] to-[#5b3fd4] text-base font-bold text-white shadow-accent">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-accent to-accent/70 text-base font-bold text-white shadow-accent">
           B
         </div>
         {!collapsed && (
           <div>
-            <div className="text-sm font-semibold text-white">BreakoutScan</div>
-            <div className="text-[10px] uppercase tracking-[0.2em] text-[#5a6478]">
+            <div className="text-sm font-semibold text-text-primary">BreakoutScan</div>
+            <div className="text-[10px] uppercase tracking-[0.2em] text-text-muted">
               Live terminal
             </div>
           </div>
@@ -102,21 +102,21 @@ export function Sidebar() {
       {/* Market status */}
       <div
         className={cn(
-          "mb-5 flex items-center rounded-lg border border-[#232d40] bg-[#0a0e1a] px-3 py-2",
+          "mb-5 flex items-center rounded-lg border border-border bg-page px-3 py-2",
           collapsed ? "justify-center" : "gap-2"
         )}
       >
         <span
           className={cn(
             "h-2 w-2 shrink-0 rounded-full pulse-dot",
-            isOpen ? "bg-[#00c796]" : "bg-[#ff5a8a]"
+            isOpen ? "bg-bullish" : "bg-bearish"
           )}
         />
         {!collapsed && (
           <span
             className={cn(
               "text-[10px] font-semibold uppercase tracking-[0.15em]",
-              isOpen ? "text-[#00c796]" : "text-[#ff5a8a]"
+              isOpen ? "text-bullish" : "text-bearish"
             )}
           >
             {isOpen ? "Market Open" : "Market Closed"}
@@ -126,7 +126,7 @@ export function Sidebar() {
 
       {/* Main nav */}
       {!collapsed && (
-        <div className="mb-1 px-4 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#5a6478]">
+        <div className="mb-1 px-4 text-[10px] font-semibold uppercase tracking-[0.15em] text-text-muted">
           Main
         </div>
       )}
@@ -136,11 +136,11 @@ export function Sidebar() {
 
       {/* Analysis nav */}
       {!collapsed && (
-        <div className="mb-1 mt-6 px-4 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#5a6478]">
+        <div className="mb-1 mt-6 px-4 text-[10px] font-semibold uppercase tracking-[0.15em] text-text-muted">
           Analysis
         </div>
       )}
-      {collapsed && <div className="my-3 border-t border-[#1a2235]" />}
+      {collapsed && <div className="my-3 border-t border-border" />}
       <nav className="space-y-0.5">
         {analysisNav.map((item) => renderNavItem(item))}
       </nav>
@@ -151,7 +151,7 @@ export function Sidebar() {
       <div className="mt-4 space-y-1">
         <button
           className={cn(
-            "flex w-full items-center rounded-lg py-2.5 text-sm text-[#5a6478] transition hover:bg-[#1c2333] hover:text-white",
+            "flex w-full items-center rounded-lg py-2.5 text-sm text-text-muted transition hover:bg-elevated hover:text-text-primary",
             collapsed ? "justify-center px-2" : "gap-3 px-4"
           )}
         >
@@ -161,7 +161,7 @@ export function Sidebar() {
 
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="flex w-full items-center justify-center rounded-lg py-2 text-[#5a6478] transition hover:bg-[#1c2333] hover:text-white"
+          className="flex w-full items-center justify-center rounded-lg py-2 text-text-muted transition hover:bg-elevated hover:text-text-primary"
         >
           {collapsed ? (
             <ChevronRight className="h-4 w-4" />

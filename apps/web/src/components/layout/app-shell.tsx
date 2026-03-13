@@ -11,7 +11,7 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   return (
-    <div className="min-h-screen bg-page text-white lg:flex">
+    <div className="min-h-screen bg-page text-text-primary lg:flex">
       <Sidebar />
       <div className="flex min-h-screen flex-1 flex-col">
         <Topbar />

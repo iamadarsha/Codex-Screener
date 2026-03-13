@@ -42,8 +42,8 @@ export function FilterSidebar({
   return (
     <div className="rounded-panel border border-border bg-card p-5">
       <div className="mb-4 flex items-center gap-2">
-        <Filter className="h-4 w-4 text-[#7C5CFC]" />
-        <h3 className="text-sm font-semibold text-white">Filters</h3>
+        <Filter className="h-4 w-4 text-accent" />
+        <h3 className="text-sm font-semibold text-text-primary">Filters</h3>
       </div>
 
       <div className="space-y-3">
@@ -65,7 +65,7 @@ export function FilterSidebar({
         </Button>
         <button
           onClick={onReset}
-          className="rounded-lg border border-[#2A2B35] p-2.5 text-[#8B8D9A] transition hover:bg-[#22232D] hover:text-white"
+          className="rounded-lg border border-border p-2.5 text-text-secondary transition hover:bg-elevated hover:text-text-primary"
         >
           <RotateCcw className="h-4 w-4" />
         </button>

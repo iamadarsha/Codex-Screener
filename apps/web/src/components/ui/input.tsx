@@ -13,7 +13,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={id}
-            className="text-xs font-medium uppercase tracking-wider text-[#8B8D9A]"
+            className="text-xs font-medium uppercase tracking-wider text-text-secondary"
           >
             {label}
           </label>
@@ -22,16 +22,16 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           ref={ref}
           id={id}
           className={cn(
-            "h-10 rounded-lg border border-[#2A2B35] bg-[#13141A] px-3 text-sm text-[#E8E9F0] placeholder-[#5C5D6E] outline-none transition",
-            "focus:border-[#7C5CFC] focus:ring-1 focus:ring-[rgba(124,92,252,0.3)]",
-            "hover:border-[#3A3B45]",
-            error && "border-[#FF4757] focus:border-[#FF4757] focus:ring-[rgba(255,71,87,0.3)]",
+            "h-10 rounded-lg border border-border bg-page px-3 text-sm text-text-primary placeholder-text-muted outline-none transition",
+            "focus:border-accent focus:ring-1 focus:ring-accent-glow",
+            "hover:border-border",
+            error && "border-bearish focus:border-bearish focus:ring-bearish/30",
             className
           )}
           {...props}
         />
         {error && (
-          <span className="text-xs text-[#FF4757]">{error}</span>
+          <span className="text-xs text-bearish">{error}</span>
         )}
       </div>
     );

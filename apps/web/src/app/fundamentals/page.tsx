@@ -57,13 +57,13 @@ export default function FundamentalsPage() {
             {/* Results */}
             <div className="space-y-4">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#5C5D6E]" />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
                 <input
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Filter results by symbol..."
-                  className="h-10 w-full max-w-sm rounded-lg border border-[#2A2B35] bg-[#13141A] pl-10 pr-3 text-sm text-[#E8E9F0] placeholder-[#5C5D6E] outline-none focus:border-[#7C5CFC]"
+                  className="h-10 w-full max-w-sm rounded-lg border border-border bg-page pl-10 pr-3 text-sm text-text-primary placeholder-text-muted outline-none focus:border-accent"
                 />
               </div>
 

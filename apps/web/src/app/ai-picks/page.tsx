@@ -72,7 +72,7 @@ export default function AiPicksPage() {
               onClick={() => refresh.mutate()}
               disabled={refresh.isPending}
               className={cn(
-                "flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-[#8b95a8] transition hover:border-[#7c5cfc]/30 hover:text-white",
+                "flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-text-secondary transition hover:border-accent/30 hover:text-text-primary",
                 refresh.isPending && "cursor-not-allowed opacity-50"
               )}
             >
@@ -88,7 +88,7 @@ export default function AiPicksPage() {
 
           {/* Meta info */}
           {generatedAt && (
-            <div className="flex flex-wrap items-center gap-4 text-xs text-[#5a6478]">
+            <div className="flex flex-wrap items-center gap-4 text-xs text-text-muted">
               <span className="flex items-center gap-1">
                 <Sparkles className="h-3 w-3" /> Powered by Gemini 2.5 Flash
               </span>
@@ -102,7 +102,7 @@ export default function AiPicksPage() {
           )}
 
           {/* Tab switcher */}
-          <div className="flex items-center gap-1 border-b border-[#232d40]">
+          <div className="flex items-center gap-1 border-b border-border">
             {TABS.map((tab) => {
               const count = groupedPicks[tab.key].length;
               return (
@@ -112,8 +112,8 @@ export default function AiPicksPage() {
                   className={cn(
                     "relative flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors",
                     activeTab === tab.key
-                      ? "text-white"
-                      : "text-[#5a6478] hover:text-[#8b95a8]"
+                      ? "text-text-primary"
+                      : "text-text-muted hover:text-text-secondary"
                   )}
                 >
                   {tab.label}
@@ -122,15 +122,15 @@ export default function AiPicksPage() {
                       className={cn(
                         "rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums",
                         activeTab === tab.key
-                          ? "bg-[#7c5cfc]/20 text-[#7c5cfc]"
-                          : "bg-[#1c2333] text-[#5a6478]"
+                          ? "bg-accent/20 text-accent"
+                          : "bg-elevated text-text-muted"
                       )}
                     >
                       {count}
                     </span>
                   )}
                   {activeTab === tab.key && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-[#7c5cfc]" />
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-accent" />
                   )}
                 </button>
               );
@@ -146,8 +146,8 @@ export default function AiPicksPage() {
             </div>
           ) : activePicks.length === 0 ? (
             <div className="rounded-panel border border-border bg-card p-10 text-center">
-              <Sparkles className="mx-auto h-8 w-8 text-[#5a6478]" />
-              <p className="mt-3 text-sm text-[#8b95a8]">
+              <Sparkles className="mx-auto h-8 w-8 text-text-muted" />
+              <p className="mt-3 text-sm text-text-secondary">
                 No AI suggestions available for this timeframe. Click Refresh to
                 generate picks based on the latest market news.
               </p>
@@ -162,7 +162,7 @@ export default function AiPicksPage() {
 
           {/* Disclaimer */}
           <div className="rounded-panel border border-border bg-card/60 px-5 py-4">
-            <p className="text-[11px] leading-relaxed text-[#5a6478]">
+            <p className="text-[11px] leading-relaxed text-text-muted">
               Disclaimer: AI-generated suggestions are for informational
               purposes only and do not constitute financial advice. Always do
               your own research before making investment decisions. Past

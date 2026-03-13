@@ -21,12 +21,12 @@ export function HistoryTimeline({ alerts }: HistoryTimelineProps) {
   return (
     <div className="rounded-panel border border-border bg-card p-5">
       <div className="mb-4 flex items-center gap-2">
-        <Clock className="h-4 w-4 text-[#8B8D9A]" />
-        <h3 className="text-sm font-semibold text-white">Alert History</h3>
+        <Clock className="h-4 w-4 text-text-secondary" />
+        <h3 className="text-sm font-semibold text-text-primary">Alert History</h3>
       </div>
 
       {triggered.length === 0 && (
-        <div className="py-8 text-center text-sm text-[#5C5D6E]">
+        <div className="py-8 text-center text-sm text-text-muted">
           No triggered alerts yet
         </div>
       )}
@@ -36,29 +36,29 @@ export function HistoryTimeline({ alerts }: HistoryTimelineProps) {
           <div key={alert.id} className="relative flex gap-4 pb-6">
             {/* Timeline line */}
             {idx < triggered.length - 1 && (
-              <div className="absolute left-[15px] top-8 h-full w-px bg-[#2A2B35]" />
+              <div className="absolute left-[15px] top-8 h-full w-px bg-border" />
             )}
 
             {/* Dot */}
-            <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[rgba(0,200,150,0.1)]">
-              <Bell className="h-3.5 w-3.5 text-[#00C896]" />
+            <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-bullish/10">
+              <Bell className="h-3.5 w-3.5 text-bullish" />
             </div>
 
             {/* Content */}
             <div className="flex-1 pt-1">
               <div className="flex items-center gap-2">
-                <span className="font-mono text-sm font-semibold text-white">
+                <span className="font-mono text-sm font-semibold text-text-primary">
                   {alert.symbol}
                 </span>
-                <span className="text-xs text-[#8B8D9A]">
+                <span className="text-xs text-text-secondary">
                   {alert.condition_type.replace(/_/g, " ")}
                 </span>
               </div>
-              <div className="mt-0.5 text-xs text-[#5C5D6E]">
+              <div className="mt-0.5 text-xs text-text-muted">
                 {alert.operator} {alert.condition_value}
               </div>
               {alert.triggered_at && (
-                <div className="mt-1 text-xs text-[#5C5D6E]">
+                <div className="mt-1 text-xs text-text-muted">
                   {formatDate(alert.triggered_at)} at{" "}
                   {formatTime(alert.triggered_at)}
                 </div>

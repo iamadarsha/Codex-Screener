@@ -53,7 +53,7 @@ export function DataTable<T>({
       <table className="w-full text-sm">
         <thead>
           {table.getHeaderGroups().map((hg) => (
-            <tr key={hg.id} className="border-b border-[#2A2B35]">
+            <tr key={hg.id} className="border-b border-border">
               {hg.headers.map((header) => {
                 const canSort = header.column.getCanSort();
                 const sorted = header.column.getIsSorted();
@@ -61,8 +61,8 @@ export function DataTable<T>({
                   <th
                     key={header.id}
                     className={cn(
-                      "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#8B8D9A]",
-                      canSort && "cursor-pointer select-none hover:text-white"
+                      "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-secondary",
+                      canSort && "cursor-pointer select-none hover:text-text-primary"
                     )}
                     onClick={header.column.getToggleSortingHandler()}
                   >
@@ -71,7 +71,7 @@ export function DataTable<T>({
                         ? null
                         : flexRender(header.column.columnDef.header, header.getContext())}
                       {canSort && (
-                        <span className="text-[#5C5D6E]">
+                        <span className="text-text-muted">
                           {sorted === "asc" ? (
                             <ArrowUp className="h-3 w-3" />
                           ) : sorted === "desc" ? (
@@ -94,13 +94,13 @@ export function DataTable<T>({
               key={row.id}
               onClick={() => onRowClick?.(row.original)}
               className={cn(
-                "border-b border-[#1E1F28] transition",
-                idx % 2 === 0 ? "bg-transparent" : "bg-[#13141A]/40",
-                onRowClick && "cursor-pointer hover:bg-[#22232D]"
+                "border-b border-border transition",
+                idx % 2 === 0 ? "bg-transparent" : "bg-page/40",
+                onRowClick && "cursor-pointer hover:bg-elevated"
               )}
             >
               {row.getVisibleCells().map((cell) => (
-                <td key={cell.id} className="px-4 py-3 text-[#E8E9F0]">
+                <td key={cell.id} className="px-4 py-3 text-text-primary">
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>
               ))}
@@ -110,7 +110,7 @@ export function DataTable<T>({
             <tr>
               <td
                 colSpan={columns.length}
-                className="px-4 py-12 text-center text-[#5C5D6E]"
+                className="px-4 py-12 text-center text-text-muted"
               >
                 No results found
               </td>

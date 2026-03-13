@@ -9,16 +9,16 @@ function TickerItem({ index }: { index: IndexData }) {
   const last = index.last ?? index.value ?? 0;
   return (
     <div className="flex shrink-0 items-center gap-2 px-4">
-      <span className="text-[11px] font-medium text-[#5a6478] whitespace-nowrap">
+      <span className="text-[11px] font-medium text-text-muted whitespace-nowrap">
         {index.name ?? index.symbol}
       </span>
-      <span className="font-mono text-xs tabular-nums text-white">
+      <span className="font-mono text-xs tabular-nums text-text-primary">
         {formatPrice(last)}
       </span>
       <span
         className={cn(
           "font-mono text-[11px] tabular-nums",
-          index.change_pct >= 0 ? "text-[#00c796]" : "text-[#ff5a8a]"
+          index.change_pct >= 0 ? "text-bullish" : "text-bearish"
         )}
       >
         {formatPercent(index.change_pct)}
@@ -33,7 +33,7 @@ export function IndexTickerBar() {
   if (!indices || indices.length === 0) return null;
 
   return (
-    <div className="overflow-hidden border-b border-[#1a2235] bg-[rgba(10,14,26,0.6)]">
+    <div className="overflow-hidden border-b border-border-subtle bg-page/60">
       <div
         className="flex whitespace-nowrap py-1.5"
         style={{

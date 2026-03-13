@@ -47,8 +47,8 @@ export function AlertForm({ onSubmit, isLoading }: AlertFormProps) {
   });
 
   const selectClass = cn(
-    "h-10 rounded-lg border border-[#2A2B35] bg-[#13141A] px-3 text-sm text-[#E8E9F0] outline-none transition",
-    "focus:border-[#7C5CFC] hover:border-[#3A3B45]"
+    "h-10 rounded-lg border border-border bg-page px-3 text-sm text-text-primary outline-none transition",
+    "focus:border-accent hover:border-border"
   );
 
   const handleSubmit = () => {
@@ -68,18 +68,18 @@ export function AlertForm({ onSubmit, isLoading }: AlertFormProps) {
   return (
     <div className="rounded-panel border border-border bg-card p-5">
       <div className="mb-4 flex items-center gap-2">
-        <BellPlus className="h-4 w-4 text-[#7C5CFC]" />
-        <h3 className="text-sm font-semibold text-white">Create Alert</h3>
+        <BellPlus className="h-4 w-4 text-accent" />
+        <h3 className="text-sm font-semibold text-text-primary">Create Alert</h3>
       </div>
 
       <div className="space-y-4">
         {/* Symbol selector */}
         <div className="relative">
-          <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-[#8B8D9A]">
+          <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-text-secondary">
             Symbol
           </label>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#5C5D6E]" />
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-muted" />
             <input
               type="text"
               value={selectedSymbol || symbolSearch}
@@ -90,11 +90,11 @@ export function AlertForm({ onSubmit, isLoading }: AlertFormProps) {
               }}
               onFocus={() => setShowDropdown(true)}
               placeholder="Search symbol..."
-              className="h-10 w-full rounded-lg border border-[#2A2B35] bg-[#13141A] pl-9 pr-3 text-sm text-[#E8E9F0] placeholder-[#5C5D6E] outline-none focus:border-[#7C5CFC]"
+              className="h-10 w-full rounded-lg border border-border bg-page pl-9 pr-3 text-sm text-text-primary placeholder-text-muted outline-none focus:border-accent"
             />
           </div>
           {showDropdown && searchData?.stocks && searchData.stocks.length > 0 && !selectedSymbol && (
-            <div className="absolute z-10 mt-1 w-full rounded-lg border border-[#2A2B35] bg-[#1A1B23] py-1 shadow-lg">
+            <div className="absolute z-10 mt-1 w-full rounded-lg border border-border bg-card py-1 shadow-lg">
               {searchData.stocks.map((s) => (
                 <button
                   key={s.symbol}
@@ -103,12 +103,12 @@ export function AlertForm({ onSubmit, isLoading }: AlertFormProps) {
                     setSymbolSearch("");
                     setShowDropdown(false);
                   }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[#22232D]"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-elevated"
                 >
-                  <span className="font-mono font-semibold text-white">
+                  <span className="font-mono font-semibold text-text-primary">
                     {s.symbol}
                   </span>
-                  <span className="text-xs text-[#8B8D9A]">{s.name}</span>
+                  <span className="text-xs text-text-secondary">{s.name}</span>
                 </button>
               ))}
             </div>
@@ -117,7 +117,7 @@ export function AlertForm({ onSubmit, isLoading }: AlertFormProps) {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-[#8B8D9A]">
+            <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-text-secondary">
               Condition
             </label>
             <select
@@ -133,7 +133,7 @@ export function AlertForm({ onSubmit, isLoading }: AlertFormProps) {
             </select>
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-[#8B8D9A]">
+            <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-text-secondary">
               Operator
             </label>
             <select

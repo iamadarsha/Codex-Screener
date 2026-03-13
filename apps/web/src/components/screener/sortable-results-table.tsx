@@ -22,10 +22,10 @@ export function SortableResultsTable({ items }: SortableResultsTableProps) {
         header: "Symbol",
         cell: ({ row }) => (
           <div>
-            <span className="font-mono font-semibold text-white">
+            <span className="font-mono font-semibold text-text-primary">
               {row.original.symbol}
             </span>
-            <div className="text-xs text-[#5a6478]">{row.original.company_name ?? row.original.name}</div>
+            <div className="text-xs text-text-muted">{row.original.company_name ?? row.original.name}</div>
           </div>
         ),
       },
@@ -33,14 +33,14 @@ export function SortableResultsTable({ items }: SortableResultsTableProps) {
         accessorKey: "sector",
         header: "Sector",
         cell: ({ row }) => (
-          <span className="text-xs text-[#8B8D9A]">{row.original.sector}</span>
+          <span className="text-xs text-text-secondary">{row.original.sector}</span>
         ),
       },
       {
         accessorKey: "ltp",
         header: "LTP",
         cell: ({ row }) => (
-          <span className="font-mono text-white">
+          <span className="font-mono text-text-primary">
             {formatPrice(row.original.ltp)}
           </span>
         ),
@@ -62,7 +62,7 @@ export function SortableResultsTable({ items }: SortableResultsTableProps) {
         accessorKey: "volume",
         header: "Volume",
         cell: ({ row }) => (
-          <span className="font-mono text-[#8B8D9A]">
+          <span className="font-mono text-text-secondary">
             {formatVolume(row.original.volume)}
           </span>
         ),
@@ -72,16 +72,16 @@ export function SortableResultsTable({ items }: SortableResultsTableProps) {
         header: "Signal",
         cell: ({ row }) => {
           const strength = row.original.signal_strength;
-          if (!strength) return <span className="text-[#5C5D6E]">-</span>;
+          if (!strength) return <span className="text-text-muted">-</span>;
           return (
             <div className="flex items-center gap-2">
-              <div className="h-1.5 w-16 overflow-hidden rounded-full bg-[#1E1F28]">
+              <div className="h-1.5 w-16 overflow-hidden rounded-full bg-border">
                 <div
-                  className="h-full rounded-full bg-[#7C5CFC]"
+                  className="h-full rounded-full bg-accent"
                   style={{ width: `${Math.min(strength * 100, 100)}%` }}
                 />
               </div>
-              <span className="font-mono text-xs text-[#8B8D9A]">
+              <span className="font-mono text-xs text-text-secondary">
                 {(strength * 100).toFixed(0)}%
               </span>
             </div>

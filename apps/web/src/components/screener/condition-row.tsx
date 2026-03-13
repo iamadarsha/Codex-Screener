@@ -46,9 +46,9 @@ export function ConditionRow({
   canRemove = true,
 }: ConditionRowProps) {
   const selectClass = cn(
-    "h-9 rounded-lg border border-[#2A2B35] bg-[#13141A] px-3 text-sm text-[#E8E9F0] outline-none transition",
-    "focus:border-[#7C5CFC] focus:ring-1 focus:ring-[rgba(124,92,252,0.3)]",
-    "hover:border-[#3A3B45]"
+    "h-9 rounded-lg border border-border bg-page px-3 text-sm text-text-primary outline-none transition",
+    "focus:border-accent focus:ring-1 focus:ring-accent-glow",
+    "hover:border-border"
   );
 
   return (
@@ -83,8 +83,8 @@ export function ConditionRow({
         onChange={(e) => onChange("value", e.target.value)}
         placeholder="Value"
         className={cn(
-          "h-9 flex-1 rounded-lg border border-[#2A2B35] bg-[#13141A] px-3 text-sm text-[#E8E9F0] placeholder-[#5C5D6E] outline-none transition",
-          "focus:border-[#7C5CFC] focus:ring-1 focus:ring-[rgba(124,92,252,0.3)]"
+          "h-9 flex-1 rounded-lg border border-border bg-page px-3 text-sm text-text-primary placeholder-text-muted outline-none transition",
+          "focus:border-accent focus:ring-1 focus:ring-accent-glow"
         )}
       />
 
@@ -94,8 +94,8 @@ export function ConditionRow({
         className={cn(
           "rounded-lg p-2 transition",
           canRemove
-            ? "text-[#8B8D9A] hover:bg-[#22232D] hover:text-[#FF4757]"
-            : "cursor-not-allowed text-[#2A2B35]"
+            ? "text-text-secondary hover:bg-elevated hover:text-bearish"
+            : "cursor-not-allowed text-border"
         )}
       >
         <Trash2 className="h-4 w-4" />

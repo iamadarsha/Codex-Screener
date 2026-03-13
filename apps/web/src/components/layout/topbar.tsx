@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bell, Search } from "lucide-react";
+import { Bell, Search, Sun, Moon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { LiveDot } from "@/components/ui/live-dot";
 import { CountdownBar } from "@/components/ui/countdown-bar";
 import { useMarketStatus, useMarketIndices } from "@/hooks/use-market-breadth";
 import { formatPrice, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/cn";
+import { useTheme } from "@/components/providers/theme-provider";
 
 function useIsMarketLive(): boolean {
   const [live, setLive] = useState(false);
@@ -57,10 +58,10 @@ function IndexTicker({
 
   return (
     <div className="flex shrink-0 items-center gap-2 px-1">
-      <span className="text-[11px] font-medium text-[#5a6478]">{name}</span>
+      <span className="text-[11px] font-medium text-text-muted">{name}</span>
       <span
         className={cn(
-          "font-mono text-sm tabular-nums text-white transition-colors",
+          "font-mono text-sm tabular-nums text-text-primary transition-colors",
           flash === "up" && "flash-bullish",
           flash === "down" && "flash-bearish"
         )}
@@ -70,7 +71,7 @@ function IndexTicker({
       <span
         className={cn(
           "font-mono text-xs tabular-nums",
-          changePct >= 0 ? "text-[#00c796]" : "text-[#ff5a8a]"
+          changePct >= 0 ? "text-bullish" : "text-bearish"
         )}
       >
         {formatPercent(changePct)}
@@ -85,6 +86,7 @@ export function Topbar() {
   const { data: status } = useMarketStatus();
   const { data: indices } = useMarketIndices();
   const isMarketLive = useIsMarketLive();
+  const { theme, toggleTheme } = useTheme();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,7 +97,7 @@ export function Topbar() {
   };
 
   return (
-    <header className="flex flex-col border-b border-[#1a2235] bg-[rgba(10,14,26,0.8)] backdrop-blur-md">
+    <header className="glass-topbar flex flex-col">
       <div className="flex h-14 items-center justify-between gap-4 px-6">
         {/* Scrollable index tickers */}
         <div className="flex flex-1 items-center gap-5 overflow-x-auto scrollbar-none">
@@ -107,52 +109,65 @@ export function Topbar() {
               changePct={idx.change_pct}
             />
           )) ?? (
-            <div className="text-sm text-[#5a6478]">Loading indices...</div>
+            <div className="text-sm text-text-muted">Loading indices...</div>
           )}
         </div>
 
         <div className="flex items-center gap-3">
           {/* Search */}
           <form onSubmit={handleSearch} className="relative">
-            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#5a6478]" />
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-muted" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search symbol..."
-              className="h-9 w-48 rounded-lg border border-[#232d40] bg-[#101624] pl-9 pr-14 text-sm text-[#e8ecf4] placeholder-[#5a6478] outline-none transition focus:w-64 focus:border-[#7c5cfc]"
+              className="h-9 w-48 rounded-lg border border-border bg-card pl-9 pr-14 text-sm text-text-primary placeholder-text-muted outline-none transition focus:w-64 focus:border-accent"
             />
-            <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-[#232d40] bg-[#0a0e1a] px-1.5 py-0.5 text-[10px] text-[#5a6478]">
+            <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border bg-page px-1.5 py-0.5 text-[10px] text-text-muted">
               ⌘K
             </kbd>
           </form>
 
+          {/* Theme toggle */}
+          <button
+            onClick={toggleTheme}
+            className="rounded-lg p-2 text-text-secondary transition hover:bg-elevated hover:text-text-primary"
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {theme === "dark" ? (
+              <Sun className="h-4 w-4" />
+            ) : (
+              <Moon className="h-4 w-4" />
+            )}
+          </button>
+
           {/* Live market indicator */}
           {isMarketLive && (
-            <div className="flex items-center gap-1.5 rounded-full border border-[#00c796]/20 bg-[#00c796]/5 px-2.5 py-1">
+            <div className="flex items-center gap-1.5 rounded-full border border-bullish/20 bg-bullish/5 px-2.5 py-1">
               <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#00c796] opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-[#00c796]" />
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-bullish opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-bullish" />
               </span>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#00c796]">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-bullish">
                 LIVE
               </span>
             </div>
           )}
 
           {/* Notification bell */}
-          <button className="relative rounded-lg p-2 text-[#5a6478] transition hover:bg-[#1c2333] hover:text-white">
+          <button className="relative rounded-lg p-2 text-text-secondary transition hover:bg-elevated hover:text-text-primary">
             <Bell className="h-4 w-4" />
-            <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-[#ff5a8a]" />
+            <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-bearish" />
           </button>
 
           {/* Live indicator */}
-          <div className="flex items-center gap-2 rounded-full border border-[#232d40] bg-[#101624] px-3 py-1.5">
+          <div className="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5">
             <LiveDot color={status?.is_open ? "green" : "red"} />
             <span
               className={cn(
                 "text-[10px] font-semibold uppercase tracking-[0.15em]",
-                status?.is_open ? "text-[#00c796]" : "text-[#ff5a8a]"
+                status?.is_open ? "text-bullish" : "text-bearish"
               )}
             >
               {status?.is_open ? "Live" : "Closed"}

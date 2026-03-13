@@ -41,16 +41,16 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
             className={cn(
-              "relative z-10 w-full max-w-lg rounded-xl border border-[#2A2B35] bg-[#1A1B23] p-6 shadow-2xl",
+              "relative z-10 w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-2xl",
               className
             )}
           >
             {title && (
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-white">{title}</h3>
+                <h3 className="text-lg font-semibold text-text-primary">{title}</h3>
                 <button
                   onClick={onClose}
-                  className="rounded-lg p-1.5 text-[#8B8D9A] transition hover:bg-[#22232D] hover:text-white"
+                  className="rounded-lg p-1.5 text-text-secondary transition hover:bg-elevated hover:text-text-primary"
                 >
                   <X className="h-4 w-4" />
                 </button>

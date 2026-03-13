@@ -106,7 +106,7 @@ export function PriceChart({ candles, height = 500 }: PriceChartProps) {
   return (
     <div
       ref={containerRef}
-      className="w-full overflow-hidden rounded-lg border border-[#1E1F28]"
+      className="w-full overflow-hidden rounded-lg border border-border"
     />
   );
 }

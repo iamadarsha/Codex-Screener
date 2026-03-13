@@ -51,16 +51,16 @@ export function CountdownBar({
 
   return (
     <div className={cn("flex flex-col gap-1", className)}>
-      <div className="flex items-center justify-between text-[10px] text-[#8B8D9A]">
+      <div className="flex items-center justify-between text-[10px] text-text-secondary">
         <span>{openTime} IST</span>
-        <span className={isOpen ? "text-[#00C896]" : "text-[#FF4757]"}>
+        <span className={isOpen ? "text-bullish" : "text-bearish"}>
           {isOpen ? "Market Open" : "Market Closed"}
         </span>
         <span>{closeTime} IST</span>
       </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#1E1F28]">
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-border">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-[#7C5CFC] to-[#00C896] transition-all duration-500"
+          className="h-full rounded-full bg-gradient-to-r from-accent to-bullish transition-all duration-500"
           style={{ width: `${isOpen ? progress * 100 : 0}%` }}
         />
       </div>

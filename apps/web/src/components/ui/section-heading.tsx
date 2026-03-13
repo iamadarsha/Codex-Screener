@@ -17,9 +17,9 @@ export function SectionHeading({
   return (
     <div className={cn("flex items-center justify-between", className)}>
       <div>
-        <h2 className="text-lg font-semibold text-white">{title}</h2>
+        <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
         {subtitle && (
-          <p className="mt-0.5 text-sm text-[#8B8D9A]">{subtitle}</p>
+          <p className="mt-0.5 text-sm text-text-secondary">{subtitle}</p>
         )}
       </div>
       {action && <div>{action}</div>}

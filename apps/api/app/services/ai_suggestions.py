@@ -34,10 +34,11 @@ def get_next_trading_day_9am() -> datetime:
 
 
 def _compute_ttl_seconds() -> int:
+    """Cache for 6 hours or until next trading day 9 AM, whichever is longer."""
     now = now_ist()
     next_9am = get_next_trading_day_9am()
     delta = (next_9am - now).total_seconds()
-    return max(int(delta), 300)
+    return max(int(delta), 21600)  # minimum 6 hours
 
 
 async def _fetch_news_headlines() -> list[str]:
@@ -256,6 +257,26 @@ async def get_suggestions() -> dict[str, Any] | None:
     try:
         from app.services.redis_cache import get_json
 
-        return await get_json(REDIS_KEY)
+        cached = await get_json(REDIS_KEY)
+        if cached:
+            return cached
     except Exception:
-        return None
+        pass
+    return None
+
+
+async def get_or_generate_suggestions() -> dict[str, Any]:
+    """Get cached suggestions or generate fresh ones. Never returns None."""
+    cached = await get_suggestions()
+    if cached:
+        return cached
+    try:
+        return await generate_suggestions()
+    except Exception as e:
+        log.error("Failed to generate AI suggestions: %s", e)
+        return {
+            "intraday": [], "weekly": [], "monthly": [],
+            "generated_at": now_ist().isoformat(),
+            "headline_count": 0,
+            "error": "Generation failed — will retry on next request",
+        }

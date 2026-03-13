@@ -153,8 +153,9 @@ async def get_price_history(
 
             from app.services.yahoo_finance import YFinanceProvider
 
-            records = await _asyncio.to_thread(
-                YFinanceProvider.get_historical, symbol, "6mo", "1d"
+            records = await _asyncio.wait_for(
+                _asyncio.to_thread(YFinanceProvider.get_historical, symbol, "6mo", "1d"),
+                timeout=15.0,
             )
             if records:
                 from datetime import datetime as _dt
