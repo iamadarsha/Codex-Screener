@@ -107,9 +107,20 @@ export function useAiSuggestions() {
     retry: 1,
   });
 
+  const hasEmptyData =
+    query.data &&
+    !query.data.intraday?.length &&
+    !query.data.weekly?.length &&
+    !query.data.monthly?.length;
+
   return {
     ...query,
-    data: query.data ?? (query.isError ? MOCK_SUGGESTIONS : undefined),
+    data:
+      query.data && !hasEmptyData
+        ? query.data
+        : query.isError || hasEmptyData
+          ? MOCK_SUGGESTIONS
+          : undefined,
   };
 }
 

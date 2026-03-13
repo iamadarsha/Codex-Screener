@@ -6,7 +6,7 @@ export const WS_BASE_URL =
 
 export const WS_PRICES_URL = `${WS_BASE_URL}/ws/prices`;
 
-export const DEFAULT_USER_ID = "default";
+export const DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000001";
 
 export const TIMEFRAME_OPTIONS = [
   { label: "1m", value: "1min" },
