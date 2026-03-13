@@ -15,7 +15,7 @@ struct ContentView: View {
                 isLoading: $isLoading,
                 loadProgress: $loadProgress
             )
-            .ignoresSafeArea()
+            .ignoresSafeArea(.container, edges: [.bottom, .leading, .trailing])
 
             if isLoading {
                 LaunchOverlay(progress: loadProgress)
@@ -108,7 +108,7 @@ struct WebView: UIViewRepresentable {
                 meta.name = 'viewport';
                 document.head.appendChild(meta);
             }
-            meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
+            meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
             """,
             injectionTime: .atDocumentEnd,
             forMainFrameOnly: true
@@ -117,7 +117,7 @@ struct WebView: UIViewRepresentable {
 
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
-        webView.scrollView.contentInsetAdjustmentBehavior = .never
+        webView.scrollView.contentInsetAdjustmentBehavior = .automatic
         webView.isOpaque = false
         webView.backgroundColor = UIColor(red: 0.04, green: 0.04, blue: 0.07, alpha: 1)
         webView.scrollView.backgroundColor = UIColor(red: 0.04, green: 0.04, blue: 0.07, alpha: 1)
@@ -161,16 +161,16 @@ struct WebView: UIViewRepresentable {
                         -webkit-touch-callout: none;
                         overscroll-behavior: none;
                         overflow-x: hidden;
+                        max-width: 100vw;
                     }
                     ::-webkit-scrollbar { display: none; }
                     body {
-                        padding-top: env(safe-area-inset-top);
-                        padding-bottom: env(safe-area-inset-bottom);
-                        padding-left: env(safe-area-inset-left);
-                        padding-right: env(safe-area-inset-right);
                         min-height: 100vh;
                         min-height: -webkit-fill-available;
+                        box-sizing: border-box;
                     }
+                    img, video, canvas, svg { max-width: 100%; }
+                    table { max-width: 100%; overflow-x: auto; display: block; }
                 `;
                 document.head.appendChild(style);
             })();
