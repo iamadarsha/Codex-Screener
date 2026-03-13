@@ -11,17 +11,48 @@ POLL_INTERVAL = 30  # seconds
 COMPUTE_INTERVAL = 300  # 5 minutes — indicator refresh cycle
 MAJOR_INDICES = ["NIFTY 50", "NIFTY BANK", "NIFTY IT", "NIFTY PHARMA", "NIFTY AUTO", "NIFTY FMCG", "INDIA VIX", "NIFTY MIDCAP 50"]
 
+# Hardcoded Nifty 50 symbols as fallback when NSE fetch fails
+NIFTY_50_SYMBOLS = [
+    "ADANIENT", "ADANIPORTS", "APOLLOHOSP", "ASIANPAINT", "AXISBANK",
+    "BAJAJ-AUTO", "BAJFINANCE", "BAJAJFINSV", "BEL", "BPCL",
+    "BHARTIARTL", "BRITANNIA", "CIPLA", "COALINDIA", "DRREDDY",
+    "EICHERMOT", "ETERNAL", "GRASIM", "HCLTECH", "HDFCBANK",
+    "HDFCLIFE", "HEROMOTOCO", "HINDALCO", "HINDUNILVR", "ICICIBANK",
+    "ITC", "INDUSINDBK", "INFY", "JSWSTEEL", "KOTAKBANK",
+    "LT", "M&M", "MARUTI", "NESTLEIND", "NTPC",
+    "ONGC", "POWERGRID", "RELIANCE", "SBILIFE", "SBIN",
+    "SUNPHARMA", "TCS", "TATACONSUM", "TATAMOTORS", "TATASTEEL",
+    "TECHM", "TITAN", "TRENT", "ULTRACEMCO", "WIPRO",
+]
+
+# TTL values (seconds)
+PRICE_TTL = 300       # 5 min — survives between poll cycles
+INDICES_TTL = 180     # 3 min
+BREADTH_TTL = 180     # 3 min
+
 # Module-level state persisted across poll cycles
 _cached_symbols: list[str] = []
 _last_compute_time: float = 0.0
 _poll_count: int = 0
+_startup_done: bool = False
+_consecutive_failures: int = 0
+
+
+async def populate_universe_fallback() -> list[str]:
+    """Populate universe with hardcoded Nifty 50 symbols (called at startup)."""
+    from app.services.redis_cache import get_redis
+
+    redis = await get_redis()
+    await redis.delete("universe:nifty50")
+    await redis.sadd("universe:nifty50", *NIFTY_50_SYMBOLS)
+    await redis.delete("universe:nifty500")
+    await redis.sadd("universe:nifty500", *NIFTY_50_SYMBOLS)
+    log.info("Populated universe with %d hardcoded Nifty 50 symbols", len(NIFTY_50_SYMBOLS))
+    return list(NIFTY_50_SYMBOLS)
 
 
 async def _populate_universe(stock_data: list[dict]) -> list[str]:
-    """Extract symbols from stock data and populate universe sets.
-
-    Returns the list of symbols for reuse.
-    """
+    """Extract symbols from stock data and populate universe sets."""
     from app.services.redis_cache import get_redis
 
     redis = await get_redis()
@@ -37,7 +68,7 @@ async def _populate_universe(stock_data: list[dict]) -> list[str]:
         await redis.sadd("universe:nifty50", *symbols)
         await redis.delete("universe:nifty500")
         await redis.sadd("universe:nifty500", *symbols)
-        log.info("Populated universe sets with %d symbols", len(symbols))
+        log.info("Populated universe sets with %d symbols from live data", len(symbols))
 
     return symbols
 
@@ -78,13 +109,20 @@ async def _fetch_and_store_trending() -> None:
 
 async def nse_poller_loop():
     """Continuously poll NSE for market data and store in Redis."""
-    global _cached_symbols, _last_compute_time, _poll_count
+    global _cached_symbols, _last_compute_time, _poll_count, _startup_done, _consecutive_failures
 
     from app.services.nse_fallback import NSEClient
     from app.services.redis_cache import get_redis, set_json
 
     client = NSEClient()
     log.info("NSE poller started")
+
+    # Immediately populate universe with fallback symbols so screener works from the start
+    if not _cached_symbols:
+        try:
+            _cached_symbols = await populate_universe_fallback()
+        except Exception as e:
+            log.error("Failed to populate fallback universe: %s", e)
 
     while True:
         _poll_count += 1
@@ -123,12 +161,12 @@ async def nse_poller_loop():
                         breadth["unchanged"] = idx.get("unchanged", 0) or 0
 
                 if indices_list:
-                    await set_json("market:indices", indices_list, ttl=60)
+                    await set_json("market:indices", indices_list, ttl=INDICES_TTL)
                     log.debug("Stored %d indices", len(indices_list))
 
                 breadth["total"] = breadth["advances"] + breadth["declines"] + breadth["unchanged"]
                 breadth["advance_decline_ratio"] = round(breadth["advances"] / max(breadth["declines"], 1), 2)
-                await set_json("market:breadth", breadth, ttl=60)
+                await set_json("market:breadth", breadth, ttl=BREADTH_TTL)
 
             except Exception as e:
                 log.warning("Failed to fetch indices: %s", e)
@@ -136,6 +174,7 @@ async def nse_poller_loop():
             # ----------------------------------------------------------
             # 2. Fetch Nifty 50 stock quotes for live prices
             # ----------------------------------------------------------
+            fetch_ok = False
             try:
                 http = await client._ensure_client()
                 resp = await http.get("/api/equity-stockIndices", params={"index": "NIFTY 50"})
@@ -161,31 +200,50 @@ async def nse_poller_loop():
                             "volume": stock.get("totalTradedVolume", 0),
                             "timestamp": datetime.now(timezone.utc).isoformat(),
                         }
-                        await set_json(f"price:{symbol}", price_data, ttl=60)
+                        await set_json(f"price:{symbol}", price_data, ttl=PRICE_TTL)
 
                         # Publish to Redis pub/sub for WebSocket clients
                         await redis.publish("price_updates", json.dumps(price_data))
 
                     log.debug("Stored + published prices for %d stocks", len(stock_data))
+                    fetch_ok = True
+                    _consecutive_failures = 0
 
-                    # Populate universe on first successful fetch
-                    if not _cached_symbols and stock_data:
+                    # Update universe with live data (more accurate than hardcoded)
+                    if stock_data:
                         _cached_symbols = await _populate_universe(stock_data)
-
-                    # Periodic indicator refresh (every COMPUTE_INTERVAL seconds)
-                    now = time.monotonic()
-                    if _cached_symbols and (now - _last_compute_time) >= COMPUTE_INTERVAL:
-                        _last_compute_time = now
-                        asyncio.create_task(
-                            _run_bulk_compute(_cached_symbols),
-                            name="bulk_compute_periodic",
-                        )
+                else:
+                    log.warning("NSE stock quotes returned status %d", resp.status_code)
 
             except Exception as e:
                 log.warning("Failed to fetch stock prices: %s", e)
 
+            if not fetch_ok:
+                _consecutive_failures += 1
+                if _consecutive_failures >= 3:
+                    log.error(
+                        "NSE fetch failed %d consecutive times — data may be stale",
+                        _consecutive_failures,
+                    )
+
             # ----------------------------------------------------------
-            # 3. Fetch trending stocks from Indian API (every other cycle = ~60s)
+            # 3. Trigger indicator compute
+            # ----------------------------------------------------------
+            # On first successful cycle OR every COMPUTE_INTERVAL
+            now = time.monotonic()
+            if _cached_symbols and (
+                not _startup_done
+                or (now - _last_compute_time) >= COMPUTE_INTERVAL
+            ):
+                _startup_done = True
+                _last_compute_time = now
+                asyncio.create_task(
+                    _run_bulk_compute(_cached_symbols),
+                    name="bulk_compute_periodic",
+                )
+
+            # ----------------------------------------------------------
+            # 4. Fetch trending stocks from Indian API (every other cycle = ~60s)
             # ----------------------------------------------------------
             if _poll_count % 2 == 0:
                 asyncio.create_task(

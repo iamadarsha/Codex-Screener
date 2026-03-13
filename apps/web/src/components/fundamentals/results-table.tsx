@@ -25,10 +25,10 @@ export function FundamentalsResultsTable({
         header: "Symbol",
         cell: ({ row }) => (
           <div>
-            <span className="font-mono font-semibold text-white">
+            <span className="font-mono font-semibold text-text-primary">
               {row.original.symbol}
             </span>
-            <div className="text-xs text-[#5C5D6E]">{row.original.name}</div>
+            <div className="text-xs text-text-muted">{row.original.name}</div>
           </div>
         ),
       },
@@ -36,14 +36,14 @@ export function FundamentalsResultsTable({
         accessorKey: "sector",
         header: "Sector",
         cell: ({ row }) => (
-          <span className="text-xs text-[#8B8D9A]">{row.original.sector}</span>
+          <span className="text-xs text-text-secondary">{row.original.sector}</span>
         ),
       },
       {
         accessorKey: "market_cap",
         header: "Market Cap",
         cell: ({ row }) => (
-          <span className="font-mono text-white">
+          <span className="font-mono text-text-primary">
             {formatMarketCap(row.original.market_cap)}
           </span>
         ),
@@ -52,7 +52,7 @@ export function FundamentalsResultsTable({
         accessorKey: "pe_ratio",
         header: "P/E",
         cell: ({ row }) => (
-          <span className="font-mono text-[#8B8D9A]">
+          <span className="font-mono text-text-secondary">
             {row.original.pe_ratio?.toFixed(1) ?? "-"}
           </span>
         ),
@@ -61,7 +61,7 @@ export function FundamentalsResultsTable({
         accessorKey: "pb_ratio",
         header: "P/B",
         cell: ({ row }) => (
-          <span className="font-mono text-[#8B8D9A]">
+          <span className="font-mono text-text-secondary">
             {row.original.pb_ratio?.toFixed(2) ?? "-"}
           </span>
         ),
@@ -70,7 +70,7 @@ export function FundamentalsResultsTable({
         accessorKey: "roe",
         header: "ROE %",
         cell: ({ row }) => (
-          <span className="font-mono text-[#8B8D9A]">
+          <span className="font-mono text-text-secondary">
             {row.original.roe?.toFixed(1) ?? "-"}
           </span>
         ),
@@ -79,7 +79,7 @@ export function FundamentalsResultsTable({
         accessorKey: "dividend_yield",
         header: "Div Yield",
         cell: ({ row }) => (
-          <span className="font-mono text-[#8B8D9A]">
+          <span className="font-mono text-text-secondary">
             {row.original.dividend_yield?.toFixed(2) ?? "-"}%
           </span>
         ),
@@ -88,7 +88,7 @@ export function FundamentalsResultsTable({
         accessorKey: "debt_to_equity",
         header: "D/E",
         cell: ({ row }) => (
-          <span className="font-mono text-[#8B8D9A]">
+          <span className="font-mono text-text-secondary">
             {row.original.debt_to_equity?.toFixed(2) ?? "-"}
           </span>
         ),
@@ -97,7 +97,7 @@ export function FundamentalsResultsTable({
         accessorKey: "eps",
         header: "EPS",
         cell: ({ row }) => (
-          <span className="font-mono text-[#8B8D9A]">
+          <span className="font-mono text-text-secondary">
             {row.original.eps?.toFixed(2) ?? "-"}
           </span>
         ),

@@ -18,24 +18,48 @@ logger = logging.getLogger(__name__)
 print("BreakoutScan: all imports OK", file=sys.stderr, flush=True)
 
 
+_poller_running = False
+_universe_size = 0
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    global _poller_running, _universe_size
     import asyncio
 
-    from app.services.nse_poller import nse_poller_loop
+    from app.services.nse_poller import nse_poller_loop, populate_universe_fallback
 
     configure_logging()
     logger.info("BreakoutScan API starting up...")
+
+    # Log configured API keys (masked) for debugging
+    settings = get_settings()
+    logger.info(
+        "Config: GEMINI_API_KEY=%s, INDIAN_API_KEY=%s, REDIS_URL=%s",
+        "***set***" if settings.gemini_api_key else "MISSING",
+        "***set***" if settings.indian_api_key else "MISSING",
+        settings.redis_url[:30] + "..." if settings.redis_url else "MISSING",
+    )
+
     poller_task = None
-    # Initialize Redis connection pool on startup (with timeout so healthcheck passes)
     try:
         from app.services.redis_cache import get_redis
 
-        redis = await asyncio.wait_for(get_redis(), timeout=5.0)
+        redis = await asyncio.wait_for(get_redis(), timeout=10.0)
         pong = await asyncio.wait_for(redis.ping(), timeout=5.0)
         logger.info("Redis connected: %s", pong)
+
+        # Immediately populate universe so screener works from first request
+        try:
+            symbols = await populate_universe_fallback()
+            _universe_size = len(symbols)
+            logger.info("Universe pre-populated with %d symbols", _universe_size)
+        except Exception as e:
+            logger.warning("Failed to pre-populate universe: %s", e)
+
         # Start NSE background poller
         poller_task = asyncio.create_task(nse_poller_loop())
+        _poller_running = True
         logger.info("NSE poller task started")
     except asyncio.TimeoutError:
         logger.warning("Redis connection timed out – starting without Redis")
@@ -44,6 +68,7 @@ async def lifespan(_app: FastAPI):
     logger.info("BreakoutScan API ready")
     yield
     # Cleanup
+    _poller_running = False
     if poller_task is not None:
         poller_task.cancel()
         try:
@@ -82,5 +107,9 @@ async def root() -> dict[str, str]:
 
 
 @app.get("/health", tags=["system"])
-async def health() -> dict[str, str]:
-    return {"status": "ok"}
+async def health() -> dict:
+    return {
+        "status": "ok",
+        "poller": "running" if _poller_running else "stopped",
+        "universe_size": _universe_size,
+    }

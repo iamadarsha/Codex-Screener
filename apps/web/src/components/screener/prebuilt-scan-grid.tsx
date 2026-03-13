@@ -78,8 +78,8 @@ export function PrebuiltScanGrid({
             className={cn(
               "rounded-full px-3.5 py-1.5 text-xs font-medium transition",
               activeCategory === cat
-                ? "bg-[#7c5cfc] text-white shadow-accent"
-                : "border border-[#232d40] bg-[#161d2d] text-[#8b95a8] hover:border-[#7c5cfc]/40 hover:text-white"
+                ? "bg-accent text-white shadow-accent"
+                : "border border-border bg-card text-text-secondary hover:border-accent/40 hover:text-text-primary"
             )}
           >
             {cat}
@@ -101,37 +101,37 @@ export function PrebuiltScanGrid({
               className={cn(
                 "group relative flex flex-col items-start rounded-xl border p-4 text-left transition-all",
                 isActive
-                  ? "border-[#7c5cfc] bg-[rgba(124,92,252,0.08)] shadow-glow"
-                  : "border-[#232d40] bg-[#161d2d] hover:border-[#7c5cfc]/50 hover:-translate-y-0.5 hover:shadow-lg"
+                  ? "border-accent bg-accent/[0.08] shadow-glow"
+                  : "border-border bg-card hover:border-accent/50 hover:-translate-y-0.5 hover:shadow-lg"
               )}
             >
               <div
                 className={cn(
                   "mb-3 rounded-lg p-2.5",
                   isActive
-                    ? "bg-[rgba(124,92,252,0.15)] text-[#7c5cfc]"
-                    : "bg-[#1c2333] text-[#8b95a8] group-hover:text-white"
+                    ? "bg-accent/15 text-accent"
+                    : "bg-elevated text-text-secondary group-hover:text-text-primary"
                 )}
               >
                 <Icon className="h-5 w-5" />
               </div>
-              <h4 className="mb-1 text-sm font-semibold text-white">
+              <h4 className="mb-1 text-sm font-semibold text-text-primary">
                 {scan.name}
               </h4>
-              <p className="text-xs leading-relaxed text-[#8b95a8]">
+              <p className="text-xs leading-relaxed text-text-secondary">
                 {scan.description}
               </p>
 
               <div className="mt-3 flex w-full items-center justify-between">
-                <span className="text-[10px] uppercase tracking-wider text-[#5a6478]">
+                <span className="text-[10px] uppercase tracking-wider text-text-muted">
                   {scan.category}
                 </span>
                 <span
                   className={cn(
                     "rounded-md px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider transition",
                     isActive && !isLoading
-                      ? "bg-[#7c5cfc]/20 text-[#7c5cfc]"
-                      : "bg-[#1c2333] text-[#5a6478] group-hover:bg-[#7c5cfc] group-hover:text-white"
+                      ? "bg-accent/20 text-accent"
+                      : "bg-elevated text-text-muted group-hover:bg-accent group-hover:text-white"
                   )}
                 >
                   {isActive && isLoading ? (
@@ -144,8 +144,8 @@ export function PrebuiltScanGrid({
 
               {/* Loading bar */}
               {isActive && isLoading && (
-                <div className="mt-2 h-0.5 w-full overflow-hidden rounded-full bg-[#232d40]">
-                  <div className="h-full w-1/3 animate-pulse rounded-full bg-[#7c5cfc]" />
+                <div className="mt-2 h-0.5 w-full overflow-hidden rounded-full bg-border">
+                  <div className="h-full w-1/3 animate-pulse rounded-full bg-accent" />
                 </div>
               )}
             </button>
@@ -154,7 +154,7 @@ export function PrebuiltScanGrid({
       </div>
 
       {filtered.length === 0 && (
-        <div className="py-12 text-center text-sm text-[#5a6478]">
+        <div className="py-12 text-center text-sm text-text-muted">
           No scans in this category
         </div>
       )}

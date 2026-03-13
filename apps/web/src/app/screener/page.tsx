@@ -55,7 +55,7 @@ export default function ScreenerPage() {
 
           {/* Prebuilt Scans Grid */}
           <div>
-            <h3 className="mb-3 text-sm font-semibold text-[#8B8D9A]">
+            <h3 className="mb-3 text-sm font-semibold text-text-secondary">
               Prebuilt Scans
             </h3>
             {scansLoading ? (

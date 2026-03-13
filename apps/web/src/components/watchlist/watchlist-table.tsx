@@ -29,10 +29,10 @@ export function WatchlistTable({ items, onRemove }: WatchlistTableProps) {
         header: "Symbol",
         cell: ({ row }) => (
           <div>
-            <span className="font-mono font-semibold text-white">
+            <span className="font-mono font-semibold text-text-primary">
               {row.original.symbol}
             </span>
-            <div className="text-xs text-[#5C5D6E]">{row.original.name}</div>
+            <div className="text-xs text-text-muted">{row.original.name}</div>
           </div>
         ),
       },
@@ -42,7 +42,7 @@ export function WatchlistTable({ items, onRemove }: WatchlistTableProps) {
         accessorFn: (row) => row.livePrice?.ltp ?? 0,
         cell: ({ row }) => {
           const lp = row.original.livePrice;
-          if (!lp) return <span className="text-[#5C5D6E]">--</span>;
+          if (!lp) return <span className="text-text-muted">--</span>;
           return <PriceCell price={lp.ltp} />;
         },
       },
@@ -64,7 +64,7 @@ export function WatchlistTable({ items, onRemove }: WatchlistTableProps) {
         header: "Volume",
         accessorFn: (row) => row.livePrice?.volume ?? 0,
         cell: ({ row }) => (
-          <span className="font-mono text-[#8B8D9A]">
+          <span className="font-mono text-text-secondary">
             {row.original.livePrice
               ? formatVolume(row.original.livePrice.volume)
               : "--"}
@@ -76,7 +76,7 @@ export function WatchlistTable({ items, onRemove }: WatchlistTableProps) {
         header: "High",
         accessorFn: (row) => row.livePrice?.high ?? 0,
         cell: ({ row }) => (
-          <span className="font-mono text-[#8B8D9A]">
+          <span className="font-mono text-text-secondary">
             {row.original.livePrice?.high.toFixed(2) ?? "--"}
           </span>
         ),
@@ -86,7 +86,7 @@ export function WatchlistTable({ items, onRemove }: WatchlistTableProps) {
         header: "Low",
         accessorFn: (row) => row.livePrice?.low ?? 0,
         cell: ({ row }) => (
-          <span className="font-mono text-[#8B8D9A]">
+          <span className="font-mono text-text-secondary">
             {row.original.livePrice?.low.toFixed(2) ?? "--"}
           </span>
         ),
@@ -100,7 +100,7 @@ export function WatchlistTable({ items, onRemove }: WatchlistTableProps) {
               e.stopPropagation();
               onRemove(row.original.symbol);
             }}
-            className="rounded-lg p-1.5 text-[#5C5D6E] transition hover:bg-[#22232D] hover:text-[#FF4757]"
+            className="rounded-lg p-1.5 text-text-muted transition hover:bg-elevated hover:text-bearish"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>

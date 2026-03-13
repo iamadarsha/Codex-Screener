@@ -11,24 +11,24 @@ interface SectorHeatmapProps {
 function getHeatBg(changePct: number): string {
   if (changePct >= 3) return "bg-[#00897B]";
   if (changePct >= 2) return "bg-[#00a88a]";
-  if (changePct >= 1) return "bg-[#00c796]/80";
-  if (changePct >= 0.25) return "bg-[#00c796]/40";
-  if (changePct >= -0.25) return "bg-[#232d40]";
-  if (changePct >= -1) return "bg-[#ff5a8a]/40";
-  if (changePct >= -2) return "bg-[#ff5a8a]/70";
+  if (changePct >= 1) return "bg-bullish/80";
+  if (changePct >= 0.25) return "bg-bullish/40";
+  if (changePct >= -0.25) return "bg-border";
+  if (changePct >= -1) return "bg-bearish/40";
+  if (changePct >= -2) return "bg-bearish/70";
   if (changePct >= -3) return "bg-[#e0436e]";
   return "bg-[#c62c55]";
 }
 
 function getTextColor(changePct: number): string {
   if (Math.abs(changePct) >= 0.25) return "text-white";
-  return "text-[#e8ecf4]";
+  return "text-text-primary";
 }
 
 export function SectorHeatmap({ sectors }: SectorHeatmapProps) {
   return (
-    <div className="rounded-panel border border-[#232d40] bg-[#161d2d] p-5">
-      <h3 className="mb-4 text-sm font-semibold text-white">
+    <div className="glass-card rounded-panel p-5">
+      <h3 className="mb-4 text-sm font-semibold text-text-primary">
         Sector Performance
       </h3>
 
@@ -58,20 +58,20 @@ export function SectorHeatmap({ sectors }: SectorHeatmapProps) {
               {formatPercent(sector.change_pct, 1)}
             </span>
             <div className="mt-2 flex gap-3 text-[10px]">
-              <span className="text-[#00c796]">
+              <span className="text-bullish">
                 <span className="opacity-60">A</span> {sector.advances}
               </span>
-              <span className="text-[#ff5a8a]">
+              <span className="text-bearish">
                 <span className="opacity-60">D</span> {sector.declines}
               </span>
             </div>
 
             {/* Hover tooltip with top gainer/loser */}
-            <div className="pointer-events-none absolute -bottom-1 left-1/2 z-10 -translate-x-1/2 translate-y-full scale-95 rounded-lg border border-[#232d40] bg-[#1c2333] px-3 py-2 opacity-0 shadow-lg transition group-hover:scale-100 group-hover:opacity-100">
+            <div className="pointer-events-none absolute -bottom-1 left-1/2 z-10 -translate-x-1/2 translate-y-full scale-95 rounded-lg border border-border bg-elevated px-3 py-2 opacity-0 shadow-lg transition group-hover:scale-100 group-hover:opacity-100">
               <div className="whitespace-nowrap text-[10px]">
-                <span className="text-[#00c796]">+{sector.top_gainer}</span>
+                <span className="text-bullish">+{sector.top_gainer}</span>
                 {" / "}
-                <span className="text-[#ff5a8a]">-{sector.top_loser}</span>
+                <span className="text-bearish">-{sector.top_loser}</span>
               </div>
             </div>
           </div>
@@ -79,7 +79,7 @@ export function SectorHeatmap({ sectors }: SectorHeatmapProps) {
       </div>
 
       {sectors.length === 0 && (
-        <div className="py-12 text-center text-sm text-[#5a6478]">
+        <div className="py-12 text-center text-sm text-text-muted">
           No sector data available
         </div>
       )}

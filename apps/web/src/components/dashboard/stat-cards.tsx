@@ -28,39 +28,39 @@ export function StatCards({
       label: "Active Breakouts",
       value: breakoutCount,
       icon: TrendingUp,
-      color: "text-[#00c796]",
-      borderGrad: "from-[#00c796] to-[#00c796]/0",
-      bgGlow: "from-[rgba(0,199,150,0.06)]",
+      color: "text-bullish",
+      borderGrad: "from-bullish to-bullish/0",
+      bgGlow: "from-bullish/[0.06]",
     },
     {
       label: "Triggered Alerts",
       value: alertCount,
       icon: Bell,
-      color: "text-[#7c5cfc]",
-      borderGrad: "from-[#7c5cfc] to-[#7c5cfc]/0",
-      bgGlow: "from-[rgba(124,92,252,0.06)]",
+      color: "text-accent",
+      borderGrad: "from-accent to-accent/0",
+      bgGlow: "from-accent/[0.06]",
     },
     {
       label: "Volume Surges",
       value: volumeSurgeCount,
       icon: BarChart3,
-      color: "text-[#ff8800]",
-      borderGrad: "from-[#ff8800] to-[#ff8800]/0",
-      bgGlow: "from-[rgba(255,136,0,0.06)]",
+      color: "text-warning",
+      borderGrad: "from-warning to-warning/0",
+      bgGlow: "from-warning/[0.06]",
     },
     {
       label: "Market Breadth",
       value: breadthPct,
       icon: Eye,
-      color: breadthPct >= 50 ? "text-[#00c796]" : "text-[#ff5a8a]",
+      color: breadthPct >= 50 ? "text-bullish" : "text-bearish",
       borderGrad:
         breadthPct >= 50
-          ? "from-[#00c796] to-[#00c796]/0"
-          : "from-[#ff5a8a] to-[#ff5a8a]/0",
+          ? "from-bullish to-bullish/0"
+          : "from-bearish to-bearish/0",
       bgGlow:
         breadthPct >= 50
-          ? "from-[rgba(0,199,150,0.06)]"
-          : "from-[rgba(255,90,138,0.06)]",
+          ? "from-bullish/[0.06]"
+          : "from-bearish/[0.06]",
       suffix: "%",
     },
   ];
@@ -86,17 +86,17 @@ export function StatCards({
 
           <div className="flex items-start justify-between">
             <div>
-              <div className="text-[11px] font-medium uppercase tracking-wider text-[#8b95a8]">
+              <div className="text-[11px] font-medium uppercase tracking-wider text-text-secondary">
                 {card.label}
               </div>
               <div className="mt-3 flex items-baseline gap-1">
                 <AnimatedNumber
                   value={card.value}
                   format={(v) => Math.round(v).toString()}
-                  className="text-3xl font-semibold tabular-nums text-white"
+                  className="text-3xl font-semibold tabular-nums text-text-primary"
                 />
                 {card.suffix && (
-                  <span className="text-lg font-semibold text-[#8b95a8]">
+                  <span className="text-lg font-semibold text-text-secondary">
                     {card.suffix}
                   </span>
                 )}
@@ -104,7 +104,7 @@ export function StatCards({
             </div>
             <div
               className={cn(
-                "rounded-xl bg-[#1c2333] p-2.5 transition group-hover:scale-110",
+                "rounded-xl bg-elevated p-2.5 transition group-hover:scale-110",
                 card.color
               )}
             >

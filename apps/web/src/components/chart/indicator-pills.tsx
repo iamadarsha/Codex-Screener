@@ -20,8 +20,8 @@ export function IndicatorPills({ active, onToggle }: IndicatorPillsProps) {
             className={cn(
               "rounded-full border px-3 py-1 text-xs font-medium transition",
               isActive
-                ? "border-[#7C5CFC] bg-[rgba(124,92,252,0.12)] text-[#9B7FFF]"
-                : "border-[#2A2B35] text-[#8B8D9A] hover:border-[#3A3B45] hover:text-white"
+                ? "border-accent bg-accent/[0.12] text-accent-hover"
+                : "border-border text-text-secondary hover:border-border hover:text-text-primary"
             )}
           >
             {opt.label}

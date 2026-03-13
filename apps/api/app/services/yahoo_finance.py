@@ -251,7 +251,7 @@ class YFinanceProvider:
                 "high_52w": _safe_str(high_52w),
             }
 
-            await hset_dict(indicator_key(symbol, "1d"), mapping, ttl=7200)
+            await hset_dict(indicator_key(symbol, "1d"), mapping, ttl=14400)
 
             # Store OHLCV bars in Redis for chart rendering (avoids DB dependency)
             try:
@@ -269,7 +269,7 @@ class YFinanceProvider:
                         "volume": int(row.get("Volume", 0)),
                     })
                 if ohlcv_records:
-                    await _set_json(f"ohlcv:{symbol}:daily", ohlcv_records, ttl=7200)
+                    await _set_json(f"ohlcv:{symbol}:daily", ohlcv_records, ttl=14400)
             except Exception as ohlcv_exc:
                 log.warning("ohlcv_store_error", symbol=symbol, error=str(ohlcv_exc))
 

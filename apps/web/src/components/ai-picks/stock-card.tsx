@@ -13,17 +13,17 @@ import { cn } from "@/lib/cn";
 import type { AiSuggestion } from "@/lib/api-types";
 
 const horizonColors: Record<string, string> = {
-  intraday: "text-[#f59e0b] bg-[#f59e0b]/10",
-  swing: "text-[#7c5cfc] bg-[#7c5cfc]/10",
-  positional: "text-[#00c796] bg-[#00c796]/10",
+  intraday: "text-warning bg-warning/10",
+  swing: "text-accent bg-accent/10",
+  positional: "text-bullish bg-bullish/10",
 };
 
 const confidenceColor = (c: number) =>
-  c >= 8 ? "text-[#00c796]" : c >= 6 ? "text-[#f59e0b]" : "text-[#ff5a8a]";
+  c >= 8 ? "text-bullish" : c >= 6 ? "text-warning" : "text-bearish";
 
 const confidenceBarGradient = (c: number) => {
   const pct = (c / 10) * 100;
-  return `linear-gradient(90deg, #ff5a8a 0%, #f59e0b 50%, #00c796 100%)`;
+  return `linear-gradient(90deg, var(--bearish) 0%, var(--warning) 50%, var(--bullish) 100%)`;
 };
 
 interface StockCardProps {
@@ -49,14 +49,14 @@ export function StockCard({ suggestion, index }: StockCardProps) {
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-base font-semibold text-white">
+            <span className="text-base font-semibold text-text-primary">
               {suggestion.symbol}
             </span>
             <span
               className={cn(
                 "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase",
                 horizonColors[suggestion.target_horizon] ??
-                  "text-[#8b95a8] bg-[#1c2333]"
+                  "text-text-secondary bg-elevated"
               )}
             >
               {suggestion.target_horizon}
@@ -66,19 +66,19 @@ export function StockCard({ suggestion, index }: StockCardProps) {
                 className={cn(
                   "rounded px-1.5 py-0.5 text-[10px] font-bold uppercase",
                   suggestion.action === "BUY"
-                    ? "bg-[#00c796]/15 text-[#00c796]"
-                    : "bg-[#ff5a8a]/15 text-[#ff5a8a]"
+                    ? "bg-bullish/15 text-bullish"
+                    : "bg-bearish/15 text-bearish"
                 )}
               >
                 {suggestion.action}
               </span>
             )}
           </div>
-          <p className="mt-0.5 text-xs text-[#8b95a8]">{suggestion.name}</p>
+          <p className="mt-0.5 text-xs text-text-secondary">{suggestion.name}</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1">
-            <Target className="h-3.5 w-3.5 text-[#5a6478]" />
+            <Target className="h-3.5 w-3.5 text-text-muted" />
             <span
               className={cn(
                 "text-sm font-bold",
@@ -89,16 +89,16 @@ export function StockCard({ suggestion, index }: StockCardProps) {
             </span>
           </div>
           {expanded ? (
-            <ChevronUp className="h-4 w-4 text-[#5a6478]" />
+            <ChevronUp className="h-4 w-4 text-text-muted" />
           ) : (
-            <ChevronDown className="h-4 w-4 text-[#5a6478]" />
+            <ChevronDown className="h-4 w-4 text-text-muted" />
           )}
         </div>
       </div>
 
       {/* Confidence bar */}
       <div className="mt-3">
-        <div className="h-1.5 w-full rounded-full bg-[#1c2333] overflow-hidden">
+        <div className="h-1.5 w-full rounded-full bg-elevated overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-500"
             style={{
@@ -113,12 +113,12 @@ export function StockCard({ suggestion, index }: StockCardProps) {
       {(suggestion.target_pct != null || suggestion.stop_loss_pct != null) && (
         <div className="mt-2 flex items-center gap-3 text-[11px]">
           {suggestion.target_pct != null && (
-            <span className="text-[#00c796]">
+            <span className="text-bullish">
               Target: +{suggestion.target_pct}%
             </span>
           )}
           {suggestion.stop_loss_pct != null && (
-            <span className="text-[#ff5a8a]">
+            <span className="text-bearish">
               SL: -{suggestion.stop_loss_pct}%
             </span>
           )}
@@ -127,13 +127,13 @@ export function StockCard({ suggestion, index }: StockCardProps) {
 
       {/* Sector badge + tags */}
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        <span className="rounded bg-[#1c2333] px-2 py-0.5 text-[10px] text-[#8b95a8]">
+        <span className="rounded bg-elevated px-2 py-0.5 text-[10px] text-text-secondary">
           {suggestion.sector}
         </span>
         {suggestion.tags?.map((tag) => (
           <span
             key={tag}
-            className="rounded bg-[#7c5cfc]/10 px-2 py-0.5 text-[10px] font-medium text-[#7c5cfc]"
+            className="rounded bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent"
           >
             {tag}
           </span>
@@ -152,15 +152,15 @@ export function StockCard({ suggestion, index }: StockCardProps) {
           >
             <div className="mt-4 space-y-3 border-t border-border pt-4">
               <div className="flex items-start gap-2">
-                <TrendingUp className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#7c5cfc]" />
-                <p className="text-xs leading-relaxed text-[#c8cdd8]">
+                <TrendingUp className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
+                <p className="text-xs leading-relaxed text-text-secondary">
                   {suggestion.rationale}
                 </p>
               </div>
               <div className="flex items-start gap-2">
-                <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#f59e0b]" />
-                <p className="text-xs text-[#c8cdd8]">
-                  <span className="font-medium text-white">Catalyst:</span>{" "}
+                <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
+                <p className="text-xs text-text-secondary">
+                  <span className="font-medium text-text-primary">Catalyst:</span>{" "}
                   {suggestion.catalyst}
                 </p>
               </div>

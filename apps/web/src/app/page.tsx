@@ -19,49 +19,49 @@ const features = [
     icon: Zap,
     title: "Real-Time Scanning",
     description: "Live price feeds with sub-second latency. Breakout signals fire the moment conditions are met.",
-    color: "text-[#00c796]",
-    bg: "bg-[rgba(0,199,150,0.1)]",
-    border: "border-[rgba(0,199,150,0.2)]",
+    color: "text-bullish",
+    bg: "bg-bullish/10",
+    border: "border-bullish/20",
   },
   {
     icon: ScanSearch,
     title: "12 Prebuilt Scans",
     description: "Volume breakouts, EMA crossovers, RSI divergence, MACD signals, and more ready to run.",
-    color: "text-[#7c5cfc]",
-    bg: "bg-[rgba(124,92,252,0.1)]",
-    border: "border-[rgba(124,92,252,0.2)]",
+    color: "text-accent",
+    bg: "bg-accent/10",
+    border: "border-accent/20",
   },
   {
     icon: SlidersHorizontal,
     title: "Custom Scanner",
     description: "Build your own scan conditions combining any indicator, timeframe, and universe filter.",
-    color: "text-[#00d4ff]",
-    bg: "bg-[rgba(0,212,255,0.1)]",
-    border: "border-[rgba(0,212,255,0.2)]",
+    color: "text-info",
+    bg: "bg-info/10",
+    border: "border-info/20",
   },
   {
     icon: LineChart,
     title: "Technical Charts",
     description: "Interactive candlestick charts with overlays for EMA, Bollinger Bands, RSI, MACD, and volume.",
-    color: "text-[#ff8800]",
-    bg: "bg-[rgba(255,136,0,0.1)]",
-    border: "border-[rgba(255,136,0,0.2)]",
+    color: "text-warning",
+    bg: "bg-warning/10",
+    border: "border-warning/20",
   },
   {
     icon: Bell,
     title: "Smart Alerts",
     description: "Set price, volume, or indicator alerts. Get notified the instant your conditions trigger.",
-    color: "text-[#ff5a8a]",
-    bg: "bg-[rgba(255,90,138,0.1)]",
-    border: "border-[rgba(255,90,138,0.2)]",
+    color: "text-bearish",
+    bg: "bg-bearish/10",
+    border: "border-bearish/20",
   },
   {
     icon: BarChart3,
     title: "Fundamentals",
     description: "Screen stocks by PE, PB, ROE, market cap, dividend yield, and debt-to-equity ratios.",
-    color: "text-[#00c796]",
-    bg: "bg-[rgba(0,199,150,0.1)]",
-    border: "border-[rgba(0,199,150,0.2)]",
+    color: "text-bullish",
+    bg: "bg-bullish/10",
+    border: "border-bullish/20",
   },
 ];
 
@@ -83,7 +83,7 @@ const fadeUp = {
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-[var(--bg-page)]">
+    <div className="min-h-screen bg-page">
       {/* Hero */}
       <section className="relative flex flex-col items-center justify-center overflow-hidden px-6 pb-20 pt-32">
         {/* Glow orbs */}
@@ -103,10 +103,10 @@ export default function HomePage() {
           <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#7c5cfc] to-[#5b3fd4] text-xl font-bold text-white shadow-accent">
             B
           </div>
-          <h1 className="mb-4 text-5xl font-bold tracking-tight text-white sm:text-6xl lg:text-7xl">
+          <h1 className="mb-4 text-5xl font-bold tracking-tight text-text-primary sm:text-6xl lg:text-7xl">
             <span className="gradient-text">BreakoutScan</span>
           </h1>
-          <p className="mb-8 max-w-xl text-lg text-[#8b95a8] sm:text-xl">
+          <p className="mb-8 max-w-xl text-lg text-text-secondary sm:text-xl">
             India&#39;s Real-Time Stock Breakout Scanner.
             <br className="hidden sm:block" />
             Spot momentum before the crowd.
@@ -132,11 +132,11 @@ export default function HomePage() {
               whileInView="visible"
               viewport={{ once: true }}
               variants={fadeUp}
-              className="flex flex-col items-center rounded-xl border border-[#232d40] bg-[#161d2d]/60 px-4 py-5 backdrop-blur"
+              className="glass-card flex flex-col items-center px-4 py-5"
             >
-              <stat.icon className="mb-2 h-5 w-5 text-[#7c5cfc]" />
-              <span className="text-2xl font-bold text-white">{stat.value}</span>
-              <span className="mt-1 text-xs text-[#8b95a8]">{stat.label}</span>
+              <stat.icon className="mb-2 h-5 w-5 text-accent" />
+              <span className="text-2xl font-bold text-text-primary">{stat.value}</span>
+              <span className="mt-1 text-xs text-text-secondary">{stat.label}</span>
             </motion.div>
           ))}
         </div>
@@ -148,7 +148,7 @@ export default function HomePage() {
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          className="mb-12 text-center text-2xl font-semibold text-white sm:text-3xl"
+          className="mb-12 text-center text-2xl font-semibold text-text-primary sm:text-3xl"
         >
           Everything you need to find breakouts
         </motion.h2>
@@ -162,20 +162,20 @@ export default function HomePage() {
               whileInView="visible"
               viewport={{ once: true }}
               variants={fadeUp}
-              className={`group rounded-xl border ${feat.border} ${feat.bg} p-6 transition hover:border-opacity-60 hover:shadow-lg`}
+              className={`glass-card group p-6 ${feat.border} ${feat.bg} transition hover:border-opacity-60 hover:shadow-lg`}
             >
-              <div className={`mb-4 inline-flex rounded-lg bg-[#1c2333] p-2.5 ${feat.color}`}>
+              <div className={`mb-4 inline-flex rounded-lg bg-elevated p-2.5 ${feat.color}`}>
                 <feat.icon className="h-5 w-5" />
               </div>
-              <h3 className="mb-2 text-base font-semibold text-white">{feat.title}</h3>
-              <p className="text-sm leading-relaxed text-[#8b95a8]">{feat.description}</p>
+              <h3 className="mb-2 text-base font-semibold text-text-primary">{feat.title}</h3>
+              <p className="text-sm leading-relaxed text-text-secondary">{feat.description}</p>
             </motion.div>
           ))}
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-[#232d40] px-6 py-8 text-center text-xs text-[#5a6478]">
+      <footer className="border-t border-border px-6 py-8 text-center text-xs text-text-muted">
         BreakoutScan &mdash; Built for Indian markets. Not financial advice.
       </footer>
     </div>

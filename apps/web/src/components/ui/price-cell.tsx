@@ -31,9 +31,9 @@ export function PriceCell({ price, previousPrice, className }: PriceCellProps) {
     <span
       className={cn(
         "inline-block rounded px-1 font-mono tabular-nums transition-colors duration-300",
-        flash === "up" && "flash-bullish text-[#00c796]",
-        flash === "down" && "flash-bearish text-[#ff5a8a]",
-        !flash && "text-[#e8ecf4]",
+        flash === "up" && "flash-bullish text-bullish",
+        flash === "down" && "flash-bearish text-bearish",
+        !flash && "text-text-primary",
         className
       )}
     >
