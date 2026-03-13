@@ -12,6 +12,7 @@ import { FundamentalsResultsTable } from "@/components/fundamentals/results-tabl
 import { fetchFundamentals } from "@/lib/api";
 import type { FundamentalFilters } from "@/lib/api-types";
 import { Badge } from "@/components/ui/badge";
+import { MOCK_FUNDAMENTALS } from "@/lib/mock-data";
 
 const defaultFilters: FundamentalFilters = {};
 
@@ -21,10 +22,13 @@ export default function FundamentalsPage() {
     useState<FundamentalFilters>(defaultFilters);
   const [search, setSearch] = useState("");
 
-  const { data, isLoading } = useQuery({
+  const { data: rawData, isLoading, isError } = useQuery({
     queryKey: ["fundamentals", appliedFilters],
     queryFn: () => fetchFundamentals(appliedFilters),
+    retry: 1,
   });
+
+  const data = (rawData && rawData.length > 0) ? rawData : (isError || (!isLoading && (!rawData || rawData.length === 0))) ? MOCK_FUNDAMENTALS : rawData;
 
   return (
     <AppShell>

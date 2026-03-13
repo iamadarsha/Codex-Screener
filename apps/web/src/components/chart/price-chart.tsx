@@ -1,112 +1,88 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { createChart, type IChartApi, type ISeriesApi, type UTCTimestamp, CandlestickSeries, HistogramSeries } from "lightweight-charts";
-import { CHART_COLORS } from "@/lib/chart-colors";
-import type { OHLCV } from "@/lib/api-types";
+import { useTheme } from "@/components/providers/theme-provider";
 
 interface PriceChartProps {
-  candles: OHLCV[];
+  symbol?: string;
+  interval?: string;
   height?: number;
 }
 
-export function PriceChart({ candles, height = 500 }: PriceChartProps) {
+const INTERVAL_MAP: Record<string, string> = {
+  "1min": "1",
+  "5min": "5",
+  "15min": "15",
+  daily: "D",
+  "1d": "D",
+  "1w": "W",
+  "1M": "M",
+};
+
+export function PriceChart({
+  symbol = "RELIANCE",
+  interval = "D",
+  height = 500,
+}: PriceChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<IChartApi | null>(null);
-  const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
-  const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
+  const { theme } = useTheme();
+  const tvInterval = INTERVAL_MAP[interval] ?? interval;
 
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const chart = createChart(containerRef.current, {
-      width: containerRef.current.clientWidth,
-      height,
-      layout: {
-        background: { color: CHART_COLORS.background },
-        textColor: CHART_COLORS.text,
-        fontFamily: "var(--font-jetbrains-mono), monospace",
-        fontSize: 11,
-      },
-      grid: {
-        vertLines: { color: CHART_COLORS.grid },
-        horzLines: { color: CHART_COLORS.grid },
-      },
-      crosshair: {
-        vertLine: { color: CHART_COLORS.crosshair, width: 1, labelBackgroundColor: CHART_COLORS.crosshair },
-        horzLine: { color: CHART_COLORS.crosshair, width: 1, labelBackgroundColor: CHART_COLORS.crosshair },
-      },
-      rightPriceScale: {
-        borderColor: CHART_COLORS.grid,
-      },
-      timeScale: {
-        borderColor: CHART_COLORS.grid,
-        timeVisible: true,
-        secondsVisible: false,
-      },
+    const container = containerRef.current;
+    container.innerHTML = "";
+
+    const widgetDiv = document.createElement("div");
+    widgetDiv.className = "tradingview-widget-container";
+    widgetDiv.style.height = `${height}px`;
+    widgetDiv.style.width = "100%";
+
+    const innerDiv = document.createElement("div");
+    innerDiv.className = "tradingview-widget-container__widget";
+    innerDiv.style.height = "100%";
+    innerDiv.style.width = "100%";
+    widgetDiv.appendChild(innerDiv);
+
+    const script = document.createElement("script");
+    script.src =
+      "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
+    script.type = "text/javascript";
+    script.async = true;
+    script.textContent = JSON.stringify({
+      autosize: true,
+      symbol: `NSE:${symbol}`,
+      interval: tvInterval,
+      timezone: "Asia/Kolkata",
+      theme: theme === "dark" ? "dark" : "light",
+      style: "1",
+      locale: "en",
+      backgroundColor:
+        theme === "dark" ? "rgba(10, 14, 26, 1)" : "rgba(255, 255, 255, 1)",
+      gridColor:
+        theme === "dark" ? "rgba(26, 34, 53, 0.5)" : "rgba(230, 232, 240, 0.5)",
+      hide_top_toolbar: false,
+      hide_legend: false,
+      allow_symbol_change: true,
+      save_image: false,
+      calendar: false,
+      studies: ["RSI@tv-basicstudies", "MAExp@tv-basicstudies"],
+      support_host: "https://www.tradingview.com",
     });
-
-    const candleSeries = chart.addSeries(CandlestickSeries, {
-      upColor: CHART_COLORS.bullishCandle,
-      downColor: CHART_COLORS.bearishCandle,
-      wickUpColor: CHART_COLORS.bullishWick,
-      wickDownColor: CHART_COLORS.bearishWick,
-      borderVisible: false,
-    });
-
-    const volumeSeries = chart.addSeries(HistogramSeries, {
-      priceFormat: { type: "volume" },
-      priceScaleId: "volume",
-    });
-
-    chart.priceScale("volume").applyOptions({
-      scaleMargins: { top: 0.85, bottom: 0 },
-    });
-
-    chartRef.current = chart;
-    candleSeriesRef.current = candleSeries;
-    volumeSeriesRef.current = volumeSeries;
-
-    const handleResize = () => {
-      if (containerRef.current) {
-        chart.applyOptions({ width: containerRef.current.clientWidth });
-      }
-    };
-    window.addEventListener("resize", handleResize);
+    widgetDiv.appendChild(script);
+    container.appendChild(widgetDiv);
 
     return () => {
-      window.removeEventListener("resize", handleResize);
-      chart.remove();
-      chartRef.current = null;
+      container.innerHTML = "";
     };
-  }, [height]);
-
-  useEffect(() => {
-    if (!candleSeriesRef.current || !volumeSeriesRef.current || candles.length === 0) return;
-
-    const candleData = candles.map((c) => ({
-      time: (c.time as number) as UTCTimestamp,
-      open: c.open,
-      high: c.high,
-      low: c.low,
-      close: c.close,
-    }));
-
-    const volumeData = candles.map((c) => ({
-      time: (c.time as number) as UTCTimestamp,
-      value: c.volume,
-      color: c.close >= c.open ? CHART_COLORS.volumeUp : CHART_COLORS.volumeDown,
-    }));
-
-    candleSeriesRef.current.setData(candleData);
-    volumeSeriesRef.current.setData(volumeData);
-    chartRef.current?.timeScale().fitContent();
-  }, [candles]);
+  }, [symbol, tvInterval, theme, height]);
 
   return (
     <div
       ref={containerRef}
       className="w-full overflow-hidden rounded-lg border border-border"
+      style={{ height: `${height}px` }}
     />
   );
 }

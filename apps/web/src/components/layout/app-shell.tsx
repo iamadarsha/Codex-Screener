@@ -13,10 +13,10 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <div className="min-h-screen bg-page text-text-primary lg:flex">
       <Sidebar />
-      <div className="flex min-h-screen flex-1 flex-col">
+      <div className="flex min-h-screen flex-1 flex-col overflow-x-hidden min-w-0">
         <Topbar />
         <IndexTickerBar />
-        <main className="flex-1 overflow-auto p-6">{children}</main>
+        <main className="flex-1 overflow-x-hidden p-6">{children}</main>
       </div>
     </div>
   );
