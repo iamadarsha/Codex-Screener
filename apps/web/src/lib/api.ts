@@ -206,3 +206,15 @@ export function refreshAiSuggestions(): Promise<AiSuggestionsResponse> {
     method: "POST",
   });
 }
+
+/* ------------------------------------------------------------------ */
+/*  Company Info                                                       */
+/* ------------------------------------------------------------------ */
+
+export function fetchCompanyInfo(
+  symbol: string
+): Promise<import("./api-types").CompanyInfo> {
+  return apiFetch<import("./api-types").CompanyInfo>(
+    `/api/company/${symbol}`
+  );
+}

@@ -10,6 +10,7 @@ import { PriceChart } from "@/components/chart/price-chart";
 import { TimeframeTabs } from "@/components/chart/timeframe-tabs";
 import { IndicatorPills } from "@/components/chart/indicator-pills";
 import { StockSnapshot } from "@/components/chart/stock-snapshot";
+import { CompanyInfoPanel } from "@/components/chart/company-info-panel";
 import { useLivePrices } from "@/hooks/use-live-prices";
 import { fetchStock, fetchIndicators, fetchStocks } from "@/lib/api";
 import type { Stock } from "@/lib/api-types";
@@ -152,6 +153,9 @@ export default function ChartPage() {
 
           {/* Main Chart — TradingView Widget */}
           <PriceChart symbol={symbol} interval={timeframe} height={500} />
+
+          {/* Company Info */}
+          <CompanyInfoPanel symbol={symbol} />
 
           {/* Indicator Values */}
           {indicators && (

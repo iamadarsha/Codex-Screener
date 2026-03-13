@@ -126,7 +126,7 @@ export function StockCard({ suggestion, index }: StockCardProps) {
       {showSources && (
         <div
           ref={sourcesRef}
-          className="absolute right-4 top-12 z-50 w-80 rounded-lg border border-border bg-elevated p-4 shadow-lg backdrop-blur-xl"
+          className="absolute left-0 right-0 top-12 z-50 mx-2 rounded-lg border border-border bg-elevated p-4 shadow-lg backdrop-blur-xl sm:left-auto sm:right-4 sm:mx-0 sm:w-80"
           onClick={(e) => e.stopPropagation()}
         >
           <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">
