@@ -13,6 +13,7 @@ import { StockSnapshot } from "@/components/chart/stock-snapshot";
 import { CompanyInfoPanel } from "@/components/chart/company-info-panel";
 import { useLivePrices } from "@/hooks/use-live-prices";
 import { fetchStock, fetchIndicators, fetchStocks } from "@/lib/api";
+import { searchLocalStocks } from "@/lib/nse-stocks";
 import type { Stock } from "@/lib/api-types";
 import { cn } from "@/lib/cn";
 
@@ -35,16 +36,28 @@ export default function ChartPage() {
       setShowChartDropdown(false);
       return;
     }
+
+    // Instant local results first
+    const local = searchLocalStocks(query, 10);
+    if (local.length > 0) {
+      setChartSuggestions(local.map((s) => ({ symbol: s.symbol, name: s.name, sector: s.sector }) as Stock));
+      setShowChartDropdown(true);
+      setChartSelectedIdx(-1);
+    }
+
+    // Then try API for potentially better results
     chartDebounceRef.current = setTimeout(async () => {
       try {
         const res = await fetchStocks({ search: query, limit: 10 });
-        setChartSuggestions(res.stocks ?? []);
-        setShowChartDropdown(true);
-        setChartSelectedIdx(-1);
+        if (res.stocks && res.stocks.length > 0) {
+          setChartSuggestions(res.stocks);
+          setShowChartDropdown(true);
+          setChartSelectedIdx(-1);
+        }
       } catch {
-        setChartSuggestions([]);
+        // Local results already shown — no-op
       }
-    }, 250);
+    }, 300);
   }, []);
 
   const navigateToSymbol = useCallback(
