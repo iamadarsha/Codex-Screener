@@ -54,7 +54,7 @@ export function StockSnapshot({ stock, livePrice }: StockSnapshotProps) {
       </div>
 
       {livePrice && (
-        <div className="mt-4 grid grid-cols-4 gap-4 border-t border-border pt-4">
+        <div className="mt-4 grid grid-cols-2 gap-3 border-t border-border pt-4 sm:grid-cols-4 sm:gap-4">
           {[
             { label: "Open", value: formatPrice(livePrice.open) },
             { label: "High", value: formatPrice(livePrice.high) },

@@ -8,6 +8,7 @@ from app.api.routes import (
     ai_suggestions,
     alerts,
     auth,
+    company_info,
     fundamentals,
     indices,
     market,
@@ -32,3 +33,4 @@ api_router.include_router(alerts.router)
 api_router.include_router(fundamentals.router)
 api_router.include_router(indices.router)
 api_router.include_router(ai_suggestions.router)
+api_router.include_router(company_info.router)

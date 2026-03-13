@@ -148,7 +148,7 @@ export function Topbar() {
 
   return (
     <header className="glass-topbar flex flex-col">
-      <div className="flex h-14 items-center justify-between gap-4 px-6">
+      <div className="flex h-14 items-center justify-between gap-2 px-3 sm:gap-4 sm:px-6">
         {/* Scrollable index tickers */}
         <div className="flex flex-1 items-center gap-5 overflow-x-auto scrollbar-none">
           {indices?.slice(0, 5).map((idx) => (
@@ -179,14 +179,14 @@ export function Topbar() {
                 onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
                 onKeyDown={handleKeyDown}
                 placeholder="Search symbol..."
-                className="h-9 w-48 rounded-lg border border-border bg-card pl-9 pr-14 text-sm text-text-primary placeholder-text-muted outline-none transition focus:w-64 focus:border-accent"
+                className="h-9 w-32 rounded-lg border border-border bg-card pl-9 pr-8 text-sm text-text-primary placeholder-text-muted outline-none transition focus:w-48 focus:border-accent sm:w-48 sm:pr-14 sm:focus:w-64"
               />
               <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border bg-page px-1.5 py-0.5 text-[10px] text-text-muted">
                 ⌘K
               </kbd>
             </form>
             {showDropdown && suggestions.length > 0 && (
-              <div className="absolute right-0 top-full z-50 mt-1 w-72 overflow-hidden rounded-lg border border-border bg-elevated shadow-lg backdrop-blur-xl">
+              <div className="absolute right-0 top-full z-50 mt-1 w-64 overflow-hidden rounded-lg border border-border bg-elevated shadow-lg backdrop-blur-xl sm:w-72">
                 {suggestions.map((stock, i) => (
                   <button
                     key={stock.symbol}

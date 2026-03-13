@@ -219,6 +219,17 @@ export interface WsUnsubscribeMessage {
   unsubscribe: string[];
 }
 
+/* Company Info */
+export interface CompanyInfo {
+  symbol: string;
+  title: string;
+  description: string;
+  extract: string;
+  thumbnail?: string | null;
+  url: string;
+  source: string;
+}
+
 /* AI Suggestions */
 export interface NewsSource {
   title: string;
