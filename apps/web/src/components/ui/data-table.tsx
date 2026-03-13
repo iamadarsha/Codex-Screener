@@ -61,7 +61,7 @@ export function DataTable<T>({
                   <th
                     key={header.id}
                     className={cn(
-                      "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-secondary",
+                      "px-2 sm:px-4 py-2.5 sm:py-3 text-left text-[10px] sm:text-xs font-medium uppercase tracking-wider text-text-secondary whitespace-nowrap",
                       canSort && "cursor-pointer select-none hover:text-text-primary"
                     )}
                     onClick={header.column.getToggleSortingHandler()}
@@ -100,7 +100,7 @@ export function DataTable<T>({
               )}
             >
               {row.getVisibleCells().map((cell) => (
-                <td key={cell.id} className="px-4 py-3 text-text-primary">
+                <td key={cell.id} className="px-2 sm:px-4 py-2.5 sm:py-3 text-text-primary whitespace-nowrap">
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>
               ))}

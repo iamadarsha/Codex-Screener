@@ -92,7 +92,7 @@ export default function ChartPage() {
   return (
     <AppShell>
       <PageTransition>
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {/* Symbol Search */}
           <div className="relative max-w-md">
             <form
@@ -156,7 +156,7 @@ export default function ChartPage() {
           <StockSnapshot stock={stock} livePrice={livePrice} />
 
           {/* Chart Controls */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:justify-between sm:gap-3">
             <TimeframeTabs active={timeframe} onChange={setTimeframe} />
             <IndicatorPills
               active={activeIndicators}
@@ -165,18 +165,18 @@ export default function ChartPage() {
           </div>
 
           {/* Main Chart — TradingView Widget */}
-          <PriceChart symbol={symbol} interval={timeframe} height={500} />
+          <PriceChart symbol={symbol} interval={timeframe} height={typeof window !== "undefined" && window.innerWidth < 640 ? 350 : 500} />
 
           {/* Company Info */}
           <CompanyInfoPanel symbol={symbol} />
 
           {/* Indicator Values */}
           {indicators && (
-            <div className="rounded-panel border border-border bg-card p-5">
-              <h3 className="mb-3 text-sm font-semibold text-text-primary">
+            <div className="rounded-panel border border-border bg-card p-3 sm:p-5">
+              <h3 className="mb-2 sm:mb-3 text-xs sm:text-sm font-semibold text-text-primary">
                 Technical Indicators
               </h3>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+              <div className="grid grid-cols-3 gap-3 sm:gap-4 lg:grid-cols-6">
                 {[
                   { label: "EMA 20", value: indicators.ema20 },
                   { label: "EMA 50", value: indicators.ema50 },
