@@ -79,6 +79,93 @@ export const MOCK_FUNDAMENTALS: FundamentalData[] = [
   { symbol: "ADANIENT", name: "Adani Enterprises", sector: "Conglomerate", market_cap: 310000, pe_ratio: 85.2, pb_ratio: 12.4, dividend_yield: 0.05, roe: 14.6, debt_to_equity: 1.45, eps: 28.80, book_value: 197.50, face_value: 1 },
 ];
 
+export const MOCK_SCAN_RESULTS_BY_ID: Record<string, ScanResultItem[]> = {
+  rsi_oversold: [
+    { symbol: "WIPRO", company_name: "Wipro", sector: "IT", ltp: 462.75, change_pct: -1.82, volume: 5648210, rsi_14: 22.4, ema_status: "Bearish", matched_conditions: ["RSI(14) < 30"] },
+    { symbol: "TATASTEEL", company_name: "Tata Steel", sector: "Metals", ltp: 128.40, change_pct: -2.15, volume: 18542300, rsi_14: 25.1, ema_status: "Bearish", matched_conditions: ["RSI(14) < 30"] },
+    { symbol: "HINDALCO", company_name: "Hindalco Industries", sector: "Metals", ltp: 485.60, change_pct: -1.45, volume: 7824500, rsi_14: 26.8, ema_status: "Bearish", matched_conditions: ["RSI(14) < 30"] },
+    { symbol: "INDUSINDBK", company_name: "IndusInd Bank", sector: "Banking", ltp: 1425.30, change_pct: -2.85, volume: 4215600, rsi_14: 23.5, ema_status: "Bearish", matched_conditions: ["RSI(14) < 30"] },
+    { symbol: "COALINDIA", company_name: "Coal India", sector: "Mining", ltp: 385.20, change_pct: -1.12, volume: 6542100, rsi_14: 28.9, ema_status: "Bearish", matched_conditions: ["RSI(14) < 30"] },
+  ],
+  rsi_overbought: [
+    { symbol: "BHARTIARTL", company_name: "Bharti Airtel", sector: "Telecom", ltp: 1542.30, change_pct: 2.15, volume: 3284500, rsi_14: 78.2, ema_status: "Bullish", matched_conditions: ["RSI(14) > 70"] },
+    { symbol: "ICICIBANK", company_name: "ICICI Bank", sector: "Banking", ltp: 1285.60, change_pct: 1.82, volume: 4521680, rsi_14: 74.5, ema_status: "Bullish", matched_conditions: ["RSI(14) > 70"] },
+    { symbol: "BAJFINANCE", company_name: "Bajaj Finance", sector: "NBFC", ltp: 6890.50, change_pct: 1.95, volume: 2145800, rsi_14: 76.1, ema_status: "Bullish", matched_conditions: ["RSI(14) > 70"] },
+    { symbol: "TITAN", company_name: "Titan Company", sector: "Consumer", ltp: 3250.80, change_pct: 1.45, volume: 1854200, rsi_14: 72.8, ema_status: "Bullish", matched_conditions: ["RSI(14) > 70"] },
+    { symbol: "TRENT", company_name: "Trent Ltd", sector: "Retail", ltp: 5420.60, change_pct: 3.25, volume: 1245600, rsi_14: 81.5, ema_status: "Bullish", matched_conditions: ["RSI(14) > 70"] },
+  ],
+  volume_spike: [
+    { symbol: "TATAMOTORS", company_name: "Tata Motors", sector: "Automobile", ltp: 745.90, change_pct: 3.45, volume: 25482100, rsi_14: 58.3, ema_status: "Bullish", matched_conditions: ["Volume > 2x Avg"] },
+    { symbol: "SBIN", company_name: "State Bank of India", sector: "Banking", ltp: 812.45, change_pct: 1.85, volume: 19875420, rsi_14: 55.1, ema_status: "Bullish", matched_conditions: ["Volume > 2x Avg"] },
+    { symbol: "RELIANCE", company_name: "Reliance Industries", sector: "Energy", ltp: 2945.50, change_pct: 2.12, volume: 17524610, rsi_14: 52.8, ema_status: "Bullish", matched_conditions: ["Volume > 2x Avg"] },
+    { symbol: "ADANIENT", company_name: "Adani Enterprises", sector: "Conglomerate", ltp: 2450.80, change_pct: 4.52, volume: 15842300, rsi_14: 62.4, ema_status: "Bullish", matched_conditions: ["Volume > 2x Avg"] },
+    { symbol: "JSWSTEEL", company_name: "JSW Steel", sector: "Metals", ltp: 845.20, change_pct: -1.85, volume: 14256800, rsi_14: 38.5, ema_status: "Bearish", matched_conditions: ["Volume > 2x Avg"] },
+  ],
+  bullish_ema_crossover: [
+    { symbol: "TCS", company_name: "Tata Consultancy", sector: "IT", ltp: 3852.25, change_pct: 1.42, volume: 3215840, rsi_14: 56.8, ema_status: "Bullish", matched_conditions: ["EMA(9) > EMA(21)", "Bullish Cross"] },
+    { symbol: "INFY", company_name: "Infosys", sector: "IT", ltp: 1628.30, change_pct: 0.96, volume: 6842150, rsi_14: 52.4, ema_status: "Bullish", matched_conditions: ["EMA(9) > EMA(21)", "Bullish Cross"] },
+    { symbol: "HDFCBANK", company_name: "HDFC Bank", sector: "Banking", ltp: 1725.80, change_pct: 0.85, volume: 5124300, rsi_14: 54.2, ema_status: "Bullish", matched_conditions: ["EMA(9) > EMA(21)", "Bullish Cross"] },
+    { symbol: "SUNPHARMA", company_name: "Sun Pharma", sector: "Pharma", ltp: 1585.40, change_pct: 1.15, volume: 2854600, rsi_14: 58.9, ema_status: "Bullish", matched_conditions: ["EMA(9) > EMA(21)", "Bullish Cross"] },
+    { symbol: "MARUTI", company_name: "Maruti Suzuki", sector: "Automobile", ltp: 12080.50, change_pct: 0.72, volume: 845200, rsi_14: 51.6, ema_status: "Bullish", matched_conditions: ["EMA(9) > EMA(21)", "Bullish Cross"] },
+  ],
+  bearish_ema_crossover: [
+    { symbol: "TATASTEEL", company_name: "Tata Steel", sector: "Metals", ltp: 128.40, change_pct: -2.15, volume: 18542300, rsi_14: 35.2, ema_status: "Bearish", matched_conditions: ["EMA(9) < EMA(21)", "Bearish Cross"] },
+    { symbol: "HINDALCO", company_name: "Hindalco Industries", sector: "Metals", ltp: 485.60, change_pct: -1.45, volume: 7824500, rsi_14: 38.4, ema_status: "Bearish", matched_conditions: ["EMA(9) < EMA(21)", "Bearish Cross"] },
+    { symbol: "WIPRO", company_name: "Wipro", sector: "IT", ltp: 462.75, change_pct: -1.82, volume: 5648210, rsi_14: 32.1, ema_status: "Bearish", matched_conditions: ["EMA(9) < EMA(21)", "Bearish Cross"] },
+    { symbol: "INDUSINDBK", company_name: "IndusInd Bank", sector: "Banking", ltp: 1425.30, change_pct: -2.85, volume: 4215600, rsi_14: 30.5, ema_status: "Bearish", matched_conditions: ["EMA(9) < EMA(21)", "Bearish Cross"] },
+    { symbol: "COALINDIA", company_name: "Coal India", sector: "Mining", ltp: 385.20, change_pct: -1.12, volume: 6542100, rsi_14: 36.8, ema_status: "Bearish", matched_conditions: ["EMA(9) < EMA(21)", "Bearish Cross"] },
+  ],
+  near_52_week_high: [
+    { symbol: "BHARTIARTL", company_name: "Bharti Airtel", sector: "Telecom", ltp: 1542.30, change_pct: 1.85, volume: 3284500, rsi_14: 68.5, ema_status: "Bullish", matched_conditions: ["Within 5% of 52W High"] },
+    { symbol: "BAJFINANCE", company_name: "Bajaj Finance", sector: "NBFC", ltp: 6890.50, change_pct: 2.12, volume: 2145800, rsi_14: 72.1, ema_status: "Bullish", matched_conditions: ["Within 5% of 52W High"] },
+    { symbol: "TRENT", company_name: "Trent Ltd", sector: "Retail", ltp: 5420.60, change_pct: 3.25, volume: 1245600, rsi_14: 75.4, ema_status: "Bullish", matched_conditions: ["Within 5% of 52W High"] },
+    { symbol: "ICICIBANK", company_name: "ICICI Bank", sector: "Banking", ltp: 1285.60, change_pct: 1.19, volume: 4521680, rsi_14: 65.8, ema_status: "Bullish", matched_conditions: ["Within 5% of 52W High"] },
+    { symbol: "RELIANCE", company_name: "Reliance Industries", sector: "Energy", ltp: 2945.50, change_pct: 0.92, volume: 8524610, rsi_14: 62.3, ema_status: "Bullish", matched_conditions: ["Within 5% of 52W High"] },
+  ],
+  macd_bullish_cross: [
+    { symbol: "SBIN", company_name: "State Bank of India", sector: "Banking", ltp: 812.45, change_pct: 1.25, volume: 9875420, rsi_14: 55.1, ema_status: "Bullish", matched_conditions: ["MACD > Signal", "Bullish Cross"] },
+    { symbol: "TATAMOTORS", company_name: "Tata Motors", sector: "Automobile", ltp: 745.90, change_pct: 1.04, volume: 12548900, rsi_14: 52.3, ema_status: "Bullish", matched_conditions: ["MACD > Signal", "Bullish Cross"] },
+    { symbol: "LT", company_name: "Larsen & Toubro", sector: "Infrastructure", ltp: 3425.80, change_pct: 0.65, volume: 2154800, rsi_14: 54.8, ema_status: "Bullish", matched_conditions: ["MACD > Signal", "Bullish Cross"] },
+    { symbol: "NTPC", company_name: "NTPC Ltd", sector: "Power", ltp: 345.60, change_pct: 1.45, volume: 8524100, rsi_14: 58.2, ema_status: "Bullish", matched_conditions: ["MACD > Signal", "Bullish Cross"] },
+    { symbol: "APOLLOHOSP", company_name: "Apollo Hospitals", sector: "Healthcare", ltp: 6280.40, change_pct: 0.85, volume: 542800, rsi_14: 56.4, ema_status: "Bullish", matched_conditions: ["MACD > Signal", "Bullish Cross"] },
+  ],
+  price_above_sma200: [
+    { symbol: "RELIANCE", company_name: "Reliance Industries", sector: "Energy", ltp: 2945.50, change_pct: 0.92, volume: 8524610, rsi_14: 55.8, ema_status: "Bullish", matched_conditions: ["Price > SMA(200)"] },
+    { symbol: "TCS", company_name: "Tata Consultancy", sector: "IT", ltp: 3852.25, change_pct: 0.62, volume: 3215840, rsi_14: 56.8, ema_status: "Bullish", matched_conditions: ["Price > SMA(200)"] },
+    { symbol: "ICICIBANK", company_name: "ICICI Bank", sector: "Banking", ltp: 1285.60, change_pct: 1.19, volume: 4521680, rsi_14: 62.7, ema_status: "Bullish", matched_conditions: ["Price > SMA(200)"] },
+    { symbol: "BHARTIARTL", company_name: "Bharti Airtel", sector: "Telecom", ltp: 1542.30, change_pct: 0.65, volume: 3284500, rsi_14: 58.9, ema_status: "Bullish", matched_conditions: ["Price > SMA(200)"] },
+    { symbol: "BAJFINANCE", company_name: "Bajaj Finance", sector: "NBFC", ltp: 6890.50, change_pct: 1.95, volume: 2145800, rsi_14: 64.1, ema_status: "Bullish", matched_conditions: ["Price > SMA(200)"] },
+  ],
+  price_below_sma200: [
+    { symbol: "TATASTEEL", company_name: "Tata Steel", sector: "Metals", ltp: 128.40, change_pct: -2.15, volume: 18542300, rsi_14: 32.4, ema_status: "Bearish", matched_conditions: ["Price < SMA(200)"] },
+    { symbol: "WIPRO", company_name: "Wipro", sector: "IT", ltp: 462.75, change_pct: -1.82, volume: 5648210, rsi_14: 34.2, ema_status: "Bearish", matched_conditions: ["Price < SMA(200)"] },
+    { symbol: "INDUSINDBK", company_name: "IndusInd Bank", sector: "Banking", ltp: 1425.30, change_pct: -2.85, volume: 4215600, rsi_14: 28.5, ema_status: "Bearish", matched_conditions: ["Price < SMA(200)"] },
+    { symbol: "COALINDIA", company_name: "Coal India", sector: "Mining", ltp: 385.20, change_pct: -1.12, volume: 6542100, rsi_14: 36.8, ema_status: "Bearish", matched_conditions: ["Price < SMA(200)"] },
+    { symbol: "BPCL", company_name: "Bharat Petroleum", sector: "Energy", ltp: 285.40, change_pct: -0.95, volume: 7842500, rsi_14: 38.2, ema_status: "Bearish", matched_conditions: ["Price < SMA(200)"] },
+  ],
+  bollinger_squeeze: [
+    { symbol: "HDFCBANK", company_name: "HDFC Bank", sector: "Banking", ltp: 1725.80, change_pct: -0.12, volume: 5124300, rsi_14: 48.5, ema_status: "Neutral", matched_conditions: ["BB Width < 4%", "Squeeze"] },
+    { symbol: "ITC", company_name: "ITC Ltd", sector: "FMCG", ltp: 445.60, change_pct: 0.08, volume: 9524100, rsi_14: 50.2, ema_status: "Neutral", matched_conditions: ["BB Width < 4%", "Squeeze"] },
+    { symbol: "NESTLEIND", company_name: "Nestle India", sector: "FMCG", ltp: 2520.40, change_pct: -0.25, volume: 542800, rsi_14: 47.8, ema_status: "Neutral", matched_conditions: ["BB Width < 4%", "Squeeze"] },
+    { symbol: "BRITANNIA", company_name: "Britannia Industries", sector: "FMCG", ltp: 5180.20, change_pct: 0.15, volume: 384500, rsi_14: 49.5, ema_status: "Neutral", matched_conditions: ["BB Width < 4%", "Squeeze"] },
+    { symbol: "HINDUNILVR", company_name: "Hindustan Unilever", sector: "FMCG", ltp: 2385.60, change_pct: -0.18, volume: 1854200, rsi_14: 46.8, ema_status: "Neutral", matched_conditions: ["BB Width < 4%", "Squeeze"] },
+  ],
+  bullish_engulfing: [
+    { symbol: "TATAMOTORS", company_name: "Tata Motors", sector: "Automobile", ltp: 745.90, change_pct: 2.85, volume: 12548900, rsi_14: 45.2, ema_status: "Bullish", matched_conditions: ["Bullish Engulfing"] },
+    { symbol: "SBIN", company_name: "State Bank of India", sector: "Banking", ltp: 812.45, change_pct: 1.95, volume: 9875420, rsi_14: 42.8, ema_status: "Bullish", matched_conditions: ["Bullish Engulfing"] },
+    { symbol: "LT", company_name: "Larsen & Toubro", sector: "Infrastructure", ltp: 3425.80, change_pct: 1.52, volume: 2154800, rsi_14: 48.2, ema_status: "Bullish", matched_conditions: ["Bullish Engulfing"] },
+    { symbol: "DRREDDY", company_name: "Dr Reddy's Labs", sector: "Pharma", ltp: 5840.20, change_pct: 2.15, volume: 845600, rsi_14: 44.5, ema_status: "Bullish", matched_conditions: ["Bullish Engulfing"] },
+    { symbol: "EICHERMOT", company_name: "Eicher Motors", sector: "Automobile", ltp: 4520.80, change_pct: 1.85, volume: 542100, rsi_14: 46.8, ema_status: "Bullish", matched_conditions: ["Bullish Engulfing"] },
+  ],
+  orb_breakout_long: [
+    { symbol: "RELIANCE", company_name: "Reliance Industries", sector: "Energy", ltp: 2945.50, change_pct: 1.85, volume: 8524610, rsi_14: 58.4, ema_status: "Bullish", matched_conditions: ["Above ORB High"] },
+    { symbol: "ICICIBANK", company_name: "ICICI Bank", sector: "Banking", ltp: 1285.60, change_pct: 1.62, volume: 4521680, rsi_14: 55.8, ema_status: "Bullish", matched_conditions: ["Above ORB High"] },
+    { symbol: "TATAMOTORS", company_name: "Tata Motors", sector: "Automobile", ltp: 745.90, change_pct: 2.45, volume: 12548900, rsi_14: 52.1, ema_status: "Bullish", matched_conditions: ["Above ORB High"] },
+    { symbol: "ADANIENT", company_name: "Adani Enterprises", sector: "Conglomerate", ltp: 2450.80, change_pct: 3.12, volume: 8542300, rsi_14: 60.5, ema_status: "Bullish", matched_conditions: ["Above ORB High"] },
+    { symbol: "BAJFINANCE", company_name: "Bajaj Finance", sector: "NBFC", ltp: 6890.50, change_pct: 1.45, volume: 2145800, rsi_14: 62.8, ema_status: "Bullish", matched_conditions: ["Above ORB High"] },
+  ],
+};
+
 // Simulate live data updates
 export function getRandomPriceUpdate(stocks: LivePrice[]): LivePrice[] {
   return stocks.map(stock => {

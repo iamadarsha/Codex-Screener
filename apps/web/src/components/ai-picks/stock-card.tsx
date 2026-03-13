@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronDown,
@@ -8,6 +8,8 @@ import {
   Target,
   TrendingUp,
   Sparkles,
+  Info,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { AiSuggestion } from "@/lib/api-types";
@@ -21,8 +23,7 @@ const horizonColors: Record<string, string> = {
 const confidenceColor = (c: number) =>
   c >= 8 ? "text-bullish" : c >= 6 ? "text-warning" : "text-bearish";
 
-const confidenceBarGradient = (c: number) => {
-  const pct = (c / 10) * 100;
+const confidenceBarGradient = (_c: number) => {
   return `linear-gradient(90deg, var(--bearish) 0%, var(--warning) 50%, var(--bullish) 100%)`;
 };
 
@@ -33,7 +34,20 @@ interface StockCardProps {
 
 export function StockCard({ suggestion, index }: StockCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const [showSources, setShowSources] = useState(false);
+  const sourcesRef = useRef<HTMLDivElement>(null);
   const confidencePct = (suggestion.confidence / 10) * 100;
+
+  useEffect(() => {
+    if (!showSources) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (sourcesRef.current && !sourcesRef.current.contains(e.target as Node)) {
+        setShowSources(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showSources]);
 
   return (
     <motion.div
@@ -41,7 +55,7 @@ export function StockCard({ suggestion, index }: StockCardProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.08, duration: 0.3 }}
       className={cn(
-        "card-hover rounded-panel border border-border bg-card p-5 shadow-card cursor-pointer"
+        "card-hover rounded-panel border border-border bg-card p-5 shadow-card cursor-pointer relative"
       )}
       onClick={() => setExpanded(!expanded)}
     >
@@ -77,6 +91,18 @@ export function StockCard({ suggestion, index }: StockCardProps) {
           <p className="mt-0.5 text-xs text-text-secondary">{suggestion.name}</p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Info button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowSources(!showSources);
+            }}
+            className="rounded-md p-1 text-text-muted transition hover:bg-elevated hover:text-accent"
+            title="View news sources"
+          >
+            <Info className="h-3.5 w-3.5" />
+          </button>
           <div className="flex items-center gap-1">
             <Target className="h-3.5 w-3.5 text-text-muted" />
             <span
@@ -95,6 +121,49 @@ export function StockCard({ suggestion, index }: StockCardProps) {
           )}
         </div>
       </div>
+
+      {/* News Sources Popover */}
+      {showSources && (
+        <div
+          ref={sourcesRef}
+          className="absolute right-4 top-12 z-50 w-80 rounded-lg border border-border bg-elevated p-4 shadow-lg backdrop-blur-xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">
+            News Sources
+          </h4>
+          {suggestion.news_sources && suggestion.news_sources.length > 0 ? (
+            <div className="space-y-2">
+              {suggestion.news_sources.map((src, i) => (
+                <a
+                  key={i}
+                  href={src.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-start gap-2 rounded-md p-2 transition hover:bg-card"
+                >
+                  <ExternalLink className="mt-0.5 h-3 w-3 shrink-0 text-accent opacity-60 group-hover:opacity-100" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs leading-snug text-text-primary group-hover:text-accent">
+                      {src.title}
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-text-muted">
+                      {src.source}
+                      {src.published_at && (
+                        <> &middot; {new Date(src.published_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</>
+                      )}
+                    </p>
+                  </div>
+                </a>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-text-muted">
+              Based on market data and technical analysis
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Confidence bar */}
       <div className="mt-3">

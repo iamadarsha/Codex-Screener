@@ -7,15 +7,17 @@ import {
   runCustomScan,
 } from "@/lib/api";
 import type { CustomScanRequest, ScanResult } from "@/lib/api-types";
-import { MOCK_PREBUILT_SCANS, MOCK_SCAN_RESULTS } from "@/lib/mock-data";
+import { MOCK_PREBUILT_SCANS, MOCK_SCAN_RESULTS, MOCK_SCAN_RESULTS_BY_ID } from "@/lib/mock-data";
 
-function withMockFallback(result: ScanResult, scanName: string): ScanResult {
+function withMockFallback(result: ScanResult, scanName: string, scanId?: string): ScanResult {
   if (result.total_matches === 0 || !result.items?.length) {
+    const items = (scanId && MOCK_SCAN_RESULTS_BY_ID[scanId]) || MOCK_SCAN_RESULTS;
     return {
       ...result,
       scan_name: scanName || result.scan_name,
-      items: MOCK_SCAN_RESULTS,
-      total_matches: MOCK_SCAN_RESULTS.length,
+      items,
+      total_matches: items.length,
+      is_demo: true,
     };
   }
   return result;
@@ -40,13 +42,15 @@ export function useRunPrebuiltScan() {
     mutationFn: async (scanId: string) => {
       try {
         const result = await runPrebuiltScan(scanId);
-        return withMockFallback(result, result.scan_name);
+        return withMockFallback(result, result.scan_name, scanId);
       } catch {
+        const items = MOCK_SCAN_RESULTS_BY_ID[scanId] || MOCK_SCAN_RESULTS;
         return {
           scan_id: scanId,
           scan_name: scanId.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-          total_matches: MOCK_SCAN_RESULTS.length,
-          items: MOCK_SCAN_RESULTS,
+          total_matches: items.length,
+          items,
+          is_demo: true,
           run_at: new Date().toISOString(),
         };
       }
@@ -66,6 +70,7 @@ export function useRunCustomScan() {
           scan_name: "Custom Scan",
           total_matches: MOCK_SCAN_RESULTS.length,
           items: MOCK_SCAN_RESULTS,
+          is_demo: true,
           run_at: new Date().toISOString(),
         };
       }

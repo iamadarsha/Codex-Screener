@@ -14,9 +14,19 @@ log = logging.getLogger(__name__)
 REDIS_KEY = "ai:suggestions"
 
 RSS_FEEDS = [
+    # Google News — market overview
     "https://news.google.com/rss/search?q=indian+stock+market+NSE&hl=en-IN&gl=IN&ceid=IN:en",
     "https://news.google.com/rss/search?q=nifty+sensex+breakout&hl=en-IN&gl=IN&ceid=IN:en",
     "https://news.google.com/rss/search?q=india+equity+market+today&hl=en-IN&gl=IN&ceid=IN:en",
+    # Google News — broker reports & research
+    "https://news.google.com/rss/search?q=india+broker+report+stock+recommendation&hl=en-IN&gl=IN&ceid=IN:en",
+    "https://news.google.com/rss/search?q=motilal+oswal+OR+icici+direct+OR+hdfc+securities+stock+pick&hl=en-IN&gl=IN&ceid=IN:en",
+    # Direct financial news RSS
+    "https://www.moneycontrol.com/rss/marketreports.xml",
+    "https://www.moneycontrol.com/rss/stocksinnews.xml",
+    "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms",
+    "https://www.livemint.com/rss/markets",
+    "https://www.business-standard.com/rss/markets-106.rss",
 ]
 
 
@@ -41,31 +51,41 @@ def _compute_ttl_seconds() -> int:
     return max(int(delta), 21600)  # minimum 6 hours
 
 
-async def _fetch_news_headlines() -> list[str]:
+async def _fetch_news_headlines() -> list[dict[str, str]]:
     import feedparser
     import httpx
 
-    headlines: list[str] = []
-    async with httpx.AsyncClient(timeout=10) as client:
+    headlines: list[dict[str, str]] = []
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; CodexScreener/1.0)"}
+    async with httpx.AsyncClient(timeout=10, headers=headers) as client:
         for url in RSS_FEEDS:
             try:
                 resp = await client.get(url)
                 if resp.status_code == 200:
                     feed = feedparser.parse(resp.text)
+                    source_name = feed.feed.get("title", "News")
                     for entry in feed.entries[:10]:
                         title = entry.get("title", "")
-                        if title:
-                            headlines.append(title)
+                        if not title:
+                            continue
+                        link = entry.get("link", "")
+                        published = entry.get("published", "")
+                        headlines.append({
+                            "title": title,
+                            "url": link,
+                            "source": source_name,
+                            "published_at": published,
+                        })
             except Exception as e:
                 log.warning("rss_fetch_failed url=%s error=%s", url, e)
 
     seen: set[str] = set()
-    unique: list[str] = []
+    unique: list[dict[str, str]] = []
     for h in headlines:
-        if h not in seen:
-            seen.add(h)
+        if h["title"] not in seen:
+            seen.add(h["title"])
             unique.append(h)
-    return unique[:30]
+    return unique[:40]
 
 
 async def _get_market_summary() -> str:
@@ -135,7 +155,7 @@ async def _get_market_summary() -> str:
     return "\n".join(summary_parts) if summary_parts else "Market data unavailable."
 
 
-async def _call_gemini(headlines: list[str], market_summary: str) -> dict[str, list[dict[str, Any]]]:
+async def _call_gemini(headlines: list[dict[str, str]], market_summary: str) -> dict[str, list[dict[str, Any]]]:
     import google.generativeai as genai
 
     from app.core.config import get_settings
@@ -148,7 +168,10 @@ async def _call_gemini(headlines: list[str], market_summary: str) -> dict[str, l
     genai.configure(api_key=settings.gemini_api_key)
     model = genai.GenerativeModel("gemini-2.5-flash")
 
-    news_block = "\n".join(f"- {h}" for h in headlines)
+    news_block = "\n".join(
+        f'[{i+1}] "{h["title"]}" ({h["source"]}) — {h["url"]}'
+        for i, h in enumerate(headlines)
+    )
     today = now_ist().strftime("%Y-%m-%d")
 
     prompt = f"""You are an expert Indian stock market analyst with deep knowledge of NSE-listed equities.
@@ -156,7 +179,7 @@ async def _call_gemini(headlines: list[str], market_summary: str) -> dict[str, l
 === LIVE MARKET DATA ===
 {market_summary}
 
-=== RECENT NEWS HEADLINES ===
+=== RECENT NEWS HEADLINES (with sources) ===
 {news_block}
 
 Today's date: {today}
@@ -172,7 +195,7 @@ For EACH pick, provide ALL of these fields:
 - symbol: exact NSE trading symbol (e.g., RELIANCE, TCS, INFY)
 - name: full company name
 - sector: industry sector
-- rationale: 2-3 sentences explaining WHY, referencing specific news or market data
+- rationale: 2-3 sentences explaining WHY, referencing specific news headlines by number (e.g., "As per headline [3]...")
 - confidence: score from 1 to 100
 - catalyst: the specific news or technical catalyst driving this pick
 - target_horizon: "intraday", "weekly", or "monthly" (must match timeframe)
@@ -180,19 +203,21 @@ For EACH pick, provide ALL of these fields:
 - target_pct: expected % gain/loss target (positive number, e.g. 2.5 for 2.5%)
 - stop_loss_pct: suggested stop-loss % from entry (positive number, e.g. 1.0 for 1%)
 - tags: array of relevant tags (e.g., ["momentum", "breakout", "earnings", "sector-rotation", "news-driven"])
+- news_sources: array of the specific news sources that influenced this pick, each with {{"title":"headline text","url":"link","source":"source name","published_at":"date"}}
 
 RULES:
 - Only suggest liquid NSE stocks (Nifty 500 universe)
 - Never suggest penny stocks (price < Rs 50)
 - Mix of large-cap and mid-cap across sectors
 - Always cite which news or market data influenced each pick
+- Each pick MUST include 1-3 items in news_sources referencing the actual headlines above
 - Intraday picks should have tighter targets (0.5-3%) and stop-losses (0.3-1.5%)
 - Weekly picks: targets 2-8%, stop-losses 1-4%
 - Monthly picks: targets 5-20%, stop-losses 3-8%
 - No duplicate symbols across timeframes
 
 Return ONLY a valid JSON object (no markdown fences, no explanation outside JSON):
-{{"intraday":[{{"symbol":"...","name":"...","sector":"...","rationale":"...","confidence":75,"catalyst":"...","target_horizon":"intraday","action":"BUY","target_pct":1.5,"stop_loss_pct":0.8,"tags":["momentum","news-driven"]}}],"weekly":[...],"monthly":[...]}}"""
+{{"intraday":[{{"symbol":"...","name":"...","sector":"...","rationale":"...","confidence":75,"catalyst":"...","target_horizon":"intraday","action":"BUY","target_pct":1.5,"stop_loss_pct":0.8,"tags":["momentum","news-driven"],"news_sources":[{{"title":"...","url":"...","source":"...","published_at":"..."}}]}}],"weekly":[...],"monthly":[...]}}"""
 
     try:
         response = await model.generate_content_async(prompt)
