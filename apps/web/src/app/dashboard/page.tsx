@@ -91,9 +91,9 @@ export default function DashboardPage() {
           )}
 
           {/* Main Grid */}
-          <div className="grid gap-6 xl:grid-cols-3">
+          <div className="grid gap-6 xl:grid-cols-3 min-w-0">
             {/* Left: Breakout Feed */}
-            <div className="xl:col-span-2 space-y-6">
+            <div className="xl:col-span-2 space-y-6 min-w-0">
               <BreakoutFeed items={breakoutItems} />
               <VolumeSurges items={volumeItems} />
             </div>

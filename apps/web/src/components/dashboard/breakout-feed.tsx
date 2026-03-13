@@ -57,8 +57,8 @@ export function BreakoutFeed({ items }: BreakoutFeedProps) {
   }, [items]);
 
   return (
-    <div className="glass-card rounded-panel">
-      <div className="flex items-center gap-2 border-b border-border px-5 py-3">
+    <div className="glass-card rounded-panel overflow-hidden">
+      <div className="flex items-center gap-2 border-b border-border px-3 py-3 sm:px-5">
         <Zap className="h-4 w-4 text-warning" />
         <h3 className="text-sm font-semibold text-text-primary">Live Breakout Feed</h3>
         <Badge variant="accent" className="ml-auto">
@@ -79,7 +79,7 @@ export function BreakoutFeed({ items }: BreakoutFeedProps) {
               <Link
                 href={`/chart/${item.symbol}`}
                 className={cn(
-                  "flex items-center gap-4 px-5 py-3 transition hover:bg-elevated",
+                  "flex items-center gap-2 px-3 py-3 transition hover:bg-elevated sm:gap-4 sm:px-5",
                   idx % 2 === 0 ? "bg-transparent" : "bg-sidebar/30"
                 )}
               >
