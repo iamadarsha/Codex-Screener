@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageTransition } from "@/components/layout/page-transition";
 import { SectionHeading } from "@/components/ui/section-heading";
@@ -11,12 +12,44 @@ import {
 } from "@/hooks/use-ai-suggestions";
 import { RefreshCw, Sparkles, Clock } from "lucide-react";
 import { cn } from "@/lib/cn";
+import type { AiSuggestion } from "@/lib/api-types";
+
+type TabKey = "intraday" | "weekly" | "monthly";
+
+const TABS: { key: TabKey; label: string }[] = [
+  { key: "intraday", label: "Intraday" },
+  { key: "weekly", label: "Weekly" },
+  { key: "monthly", label: "Monthly" },
+];
 
 export default function AiPicksPage() {
   const { data, isLoading } = useAiSuggestions();
   const refresh = useRefreshAiSuggestions();
+  const [activeTab, setActiveTab] = useState<TabKey>("intraday");
 
-  const suggestions = data?.suggestions ?? [];
+  // Support both old format (flat suggestions[]) and new format (intraday/weekly/monthly)
+  const hasGroupedFormat = !!(data?.intraday || data?.weekly || data?.monthly);
+
+  const groupedPicks: Record<TabKey, AiSuggestion[]> = hasGroupedFormat
+    ? {
+        intraday: data?.intraday ?? [],
+        weekly: data?.weekly ?? [],
+        monthly: data?.monthly ?? [],
+      }
+    : {
+        intraday: (data?.suggestions ?? []).filter(
+          (s) => s.target_horizon === "intraday"
+        ),
+        weekly: (data?.suggestions ?? []).filter(
+          (s) => s.target_horizon === "swing"
+        ),
+        monthly: (data?.suggestions ?? []).filter(
+          (s) => s.target_horizon === "positional"
+        ),
+      };
+
+  const activePicks = groupedPicks[activeTab];
+
   const generatedAt = data?.generated_at
     ? new Date(data.generated_at).toLocaleString("en-IN", {
         timeZone: "Asia/Kolkata",
@@ -68,6 +101,42 @@ export default function AiPicksPage() {
             </div>
           )}
 
+          {/* Tab switcher */}
+          <div className="flex items-center gap-1 border-b border-[#232d40]">
+            {TABS.map((tab) => {
+              const count = groupedPicks[tab.key].length;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={cn(
+                    "relative flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors",
+                    activeTab === tab.key
+                      ? "text-white"
+                      : "text-[#5a6478] hover:text-[#8b95a8]"
+                  )}
+                >
+                  {tab.label}
+                  {count > 0 && (
+                    <span
+                      className={cn(
+                        "rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums",
+                        activeTab === tab.key
+                          ? "bg-[#7c5cfc]/20 text-[#7c5cfc]"
+                          : "bg-[#1c2333] text-[#5a6478]"
+                      )}
+                    >
+                      {count}
+                    </span>
+                  )}
+                  {activeTab === tab.key && (
+                    <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-[#7c5cfc]" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
           {/* Cards grid */}
           {isLoading ? (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -75,17 +144,17 @@ export default function AiPicksPage() {
                 <SkeletonCard key={i} />
               ))}
             </div>
-          ) : suggestions.length === 0 ? (
+          ) : activePicks.length === 0 ? (
             <div className="rounded-panel border border-border bg-card p-10 text-center">
               <Sparkles className="mx-auto h-8 w-8 text-[#5a6478]" />
               <p className="mt-3 text-sm text-[#8b95a8]">
-                No AI suggestions available yet. Click Refresh to generate
-                picks based on the latest market news.
+                No AI suggestions available for this timeframe. Click Refresh to
+                generate picks based on the latest market news.
               </p>
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {suggestions.map((s, i) => (
+              {activePicks.map((s, i) => (
                 <StockCard key={s.symbol} suggestion={s} index={i} />
               ))}
             </div>

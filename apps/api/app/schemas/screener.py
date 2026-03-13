@@ -35,6 +35,10 @@ class ScanResultItem(BaseModel):
     sector: str | None = None
     matched_conditions: list[str] | None = None
     score: float | None = None
+    rsi_14: float | None = None
+    ema_status: str | None = None
+    volume: float | None = None
+    signal_strength: float | None = None
 
 
 class ScanResult(BaseModel):

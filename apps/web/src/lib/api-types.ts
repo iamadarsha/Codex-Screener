@@ -87,6 +87,9 @@ export interface ScanResultItem {
   volume: number;
   signal_strength?: number;
   triggered_at?: string;
+  rsi_14?: number;
+  ema_status?: string;
+  matched_conditions?: string[];
 }
 
 export interface ScanResult {
@@ -224,10 +227,19 @@ export interface AiSuggestion {
   confidence: number;
   catalyst: string;
   target_horizon: "intraday" | "swing" | "positional";
+  action?: "BUY" | "SELL";
+  target_pct?: number;
+  stop_loss_pct?: number;
+  tags?: string[];
 }
 
 export interface AiSuggestionsResponse {
-  suggestions: AiSuggestion[];
+  /** Flat suggestions array (old format) */
+  suggestions?: AiSuggestion[];
+  /** New grouped format */
+  intraday?: AiSuggestion[];
+  weekly?: AiSuggestion[];
+  monthly?: AiSuggestion[];
   generated_at: string | null;
   headline_count?: number;
   next_refresh?: string;

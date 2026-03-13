@@ -21,6 +21,11 @@ const horizonColors: Record<string, string> = {
 const confidenceColor = (c: number) =>
   c >= 8 ? "text-[#00c796]" : c >= 6 ? "text-[#f59e0b]" : "text-[#ff5a8a]";
 
+const confidenceBarGradient = (c: number) => {
+  const pct = (c / 10) * 100;
+  return `linear-gradient(90deg, #ff5a8a 0%, #f59e0b 50%, #00c796 100%)`;
+};
+
 interface StockCardProps {
   suggestion: AiSuggestion;
   index: number;
@@ -28,6 +33,7 @@ interface StockCardProps {
 
 export function StockCard({ suggestion, index }: StockCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const confidencePct = (suggestion.confidence / 10) * 100;
 
   return (
     <motion.div
@@ -35,7 +41,7 @@ export function StockCard({ suggestion, index }: StockCardProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.08, duration: 0.3 }}
       className={cn(
-        "rounded-panel border border-border bg-card p-5 shadow-card transition-all hover:border-[#7c5cfc]/30 hover:shadow-lg cursor-pointer"
+        "card-hover rounded-panel border border-border bg-card p-5 shadow-card cursor-pointer"
       )}
       onClick={() => setExpanded(!expanded)}
     >
@@ -55,6 +61,18 @@ export function StockCard({ suggestion, index }: StockCardProps) {
             >
               {suggestion.target_horizon}
             </span>
+            {suggestion.action && (
+              <span
+                className={cn(
+                  "rounded px-1.5 py-0.5 text-[10px] font-bold uppercase",
+                  suggestion.action === "BUY"
+                    ? "bg-[#00c796]/15 text-[#00c796]"
+                    : "bg-[#ff5a8a]/15 text-[#ff5a8a]"
+                )}
+              >
+                {suggestion.action}
+              </span>
+            )}
           </div>
           <p className="mt-0.5 text-xs text-[#8b95a8]">{suggestion.name}</p>
         </div>
@@ -78,11 +96,48 @@ export function StockCard({ suggestion, index }: StockCardProps) {
         </div>
       </div>
 
-      {/* Sector badge */}
-      <div className="mt-2">
+      {/* Confidence bar */}
+      <div className="mt-3">
+        <div className="h-1.5 w-full rounded-full bg-[#1c2333] overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{
+              width: `${confidencePct}%`,
+              background: confidenceBarGradient(suggestion.confidence),
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Target & Stop loss */}
+      {(suggestion.target_pct != null || suggestion.stop_loss_pct != null) && (
+        <div className="mt-2 flex items-center gap-3 text-[11px]">
+          {suggestion.target_pct != null && (
+            <span className="text-[#00c796]">
+              Target: +{suggestion.target_pct}%
+            </span>
+          )}
+          {suggestion.stop_loss_pct != null && (
+            <span className="text-[#ff5a8a]">
+              SL: -{suggestion.stop_loss_pct}%
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Sector badge + tags */}
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <span className="rounded bg-[#1c2333] px-2 py-0.5 text-[10px] text-[#8b95a8]">
           {suggestion.sector}
         </span>
+        {suggestion.tags?.map((tag) => (
+          <span
+            key={tag}
+            className="rounded bg-[#7c5cfc]/10 px-2 py-0.5 text-[10px] font-medium text-[#7c5cfc]"
+          >
+            {tag}
+          </span>
+        ))}
       </div>
 
       {/* Expandable content */}

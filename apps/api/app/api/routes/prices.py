@@ -74,9 +74,22 @@ async def get_price_history(
     limit: int = Query(500, ge=1, le=5000),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get OHLCV history from DB."""
+    """Get OHLCV history — tries Redis cache first, falls back to DB, then yfinance."""
     symbol = symbol.upper()
 
+    # 1. Try Redis-cached OHLCV first (populated by yahoo_finance bulk compute)
+    if timeframe in ("1d", "daily"):
+        try:
+            from app.services.redis_cache import get_json
+
+            cached = await get_json(f"ohlcv:{symbol}:daily")
+            if cached and isinstance(cached, list) and len(cached) > 0:
+                data = cached[-limit:] if len(cached) > limit else cached
+                return {"symbol": symbol, "timeframe": timeframe, "count": len(data), "data": data}
+        except Exception:
+            pass
+
+    # 2. DB fallback
     if timeframe == "1m":
         query = (
             select(Ohlcv1Min)
@@ -100,36 +113,64 @@ async def get_price_history(
         if to_date:
             query = query.where(OhlcvDaily.date <= to_date)
 
-    rows = (await db.execute(query)).scalars().all()
-
     items = []
-    for r in rows:
-        if timeframe == "1m":
-            items.append(
-                {
-                    "symbol": r.symbol,
-                    "ts": r.ts.isoformat(),
-                    "open": float(r.open),
-                    "high": float(r.high),
-                    "low": float(r.low),
-                    "close": float(r.close),
-                    "volume": r.volume,
-                }
+    try:
+        rows = (await db.execute(query)).scalars().all()
+        for r in rows:
+            if timeframe == "1m":
+                items.append(
+                    {
+                        "symbol": r.symbol,
+                        "ts": r.ts.isoformat(),
+                        "open": float(r.open),
+                        "high": float(r.high),
+                        "low": float(r.low),
+                        "close": float(r.close),
+                        "volume": r.volume,
+                    }
+                )
+            else:
+                items.append(
+                    {
+                        "symbol": r.symbol,
+                        "date": r.date.isoformat(),
+                        "open": float(r.open),
+                        "high": float(r.high),
+                        "low": float(r.low),
+                        "close": float(r.close),
+                        "volume": r.volume,
+                        "week_high_52": float(r.week_high_52) if r.week_high_52 else None,
+                        "week_low_52": float(r.week_low_52) if r.week_low_52 else None,
+                    }
+                )
+    except Exception:
+        logger.warning("DB query failed for %s, trying yfinance fallback", symbol)
+
+    # 3. If DB also empty for daily, try fetching directly from yfinance
+    if not items and timeframe in ("1d", "daily"):
+        try:
+            import asyncio as _asyncio
+
+            from app.services.yahoo_finance import YFinanceProvider
+
+            records = await _asyncio.to_thread(
+                YFinanceProvider.get_historical, symbol, "6mo", "1d"
             )
-        else:
-            items.append(
-                {
-                    "symbol": r.symbol,
-                    "date": r.date.isoformat(),
-                    "open": float(r.open),
-                    "high": float(r.high),
-                    "low": float(r.low),
-                    "close": float(r.close),
-                    "volume": r.volume,
-                    "week_high_52": float(r.week_high_52) if r.week_high_52 else None,
-                    "week_low_52": float(r.week_low_52) if r.week_low_52 else None,
-                }
-            )
+            if records:
+                from datetime import datetime as _dt
+
+                for rec in records[-limit:]:
+                    epoch = int(_dt.strptime(rec["date"], "%Y-%m-%d").timestamp()) if isinstance(rec.get("date"), str) else 0
+                    items.append({
+                        "time": epoch,
+                        "open": rec["open"],
+                        "high": rec["high"],
+                        "low": rec["low"],
+                        "close": rec["close"],
+                        "volume": rec["volume"],
+                    })
+        except Exception:
+            logger.warning("yfinance fallback also failed for %s", symbol)
 
     return {"symbol": symbol, "timeframe": timeframe, "count": len(items), "data": items}
 
