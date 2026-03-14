@@ -19,7 +19,8 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.execute("CREATE EXTENSION IF NOT EXISTS timescaledb")
+    # TimescaleDB skipped — not available on Supabase free tier.
+    # OHLCV tables work as regular PostgreSQL tables.
     op.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto")
 
     op.create_table(
