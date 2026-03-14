@@ -430,59 +430,67 @@ def _extract_headline_symbols(headlines: list[dict[str, str]]) -> dict[str, list
 
 
 async def _load_stock_data() -> dict[str, dict[str, Any]]:
-    """Bulk-load price + indicator data from Redis for all stocks."""
-    from app.services.redis_cache import get_json, get_redis
+    """Bulk-load price + indicator data from Redis using pipelines for speed."""
+    from app.services.redis_cache import get_redis
 
     r = await get_redis()
     stocks: dict[str, dict[str, Any]] = {}
 
-    # Load prices — stored as JSON strings via set_json()
-    price_keys = []
+    # Collect all price keys
+    price_keys: list[str] = []
     async for key in r.scan_iter(match="price:*", count=500):
         price_keys.append(key)
     log.info("layer3_load_stock_data: found %d price keys", len(price_keys))
 
-    for pk in price_keys[:500]:
-        try:
-            raw = await r.get(pk)
-            if not raw:
-                continue
-            data = json.loads(raw) if isinstance(raw, str) else {}
-            if data:
-                symbol = data.get("symbol", pk.replace("price:", ""))
-                if isinstance(symbol, bytes):
-                    symbol = symbol.decode()
-                stocks[symbol] = {
-                    "ltp": float(data.get("ltp", data.get("last", data.get("close", 0))) or 0),
-                    "change_pct": float(data.get("change_pct", data.get("pChange", 0)) or 0),
-                    "volume": float(data.get("volume", 0) or 0),
-                }
-        except Exception as e:
-            log.debug("layer3_price_parse_error key=%s: %s", pk, e)
-            continue
+    # Pipeline GET for all price keys (much faster than sequential)
+    if price_keys:
+        pipe = r.pipeline(transaction=False)
+        for pk in price_keys[:500]:
+            pipe.get(pk)
+        results = await pipe.execute()
 
-    # Load indicators — stored as hashes with key pattern "ind:{symbol}:1d"
-    ind_keys = []
+        for pk, raw in zip(price_keys[:500], results):
+            try:
+                if not raw:
+                    continue
+                data = json.loads(raw) if isinstance(raw, str) else {}
+                if data:
+                    symbol = data.get("symbol", pk.replace("price:", ""))
+                    stocks[symbol] = {
+                        "ltp": float(data.get("ltp", data.get("last", data.get("close", 0))) or 0),
+                        "change_pct": float(data.get("change_pct", data.get("pChange", 0)) or 0),
+                        "volume": float(data.get("volume", 0) or 0),
+                    }
+            except Exception as e:
+                log.debug("layer3_price_parse_error key=%s: %s", pk, e)
+
+    # Collect all indicator keys
+    ind_keys: list[str] = []
     async for key in r.scan_iter(match="ind:*:1d", count=500):
         ind_keys.append(key)
-    log.info("layer3_load_stock_data: found %d indicator keys", len(ind_keys))
+    log.info("layer3_load_stock_data: found %d indicator keys, stocks=%d", len(ind_keys), len(stocks))
 
-    for ik in ind_keys[:500]:
-        try:
-            data = await r.hgetall(ik)
-            if not data:
+    # Pipeline HGETALL for all indicator keys
+    if ind_keys:
+        pipe = r.pipeline(transaction=False)
+        for ik in ind_keys[:500]:
+            pipe.hgetall(ik)
+        results = await pipe.execute()
+
+        for ik, data in zip(ind_keys[:500], results):
+            try:
+                if not data:
+                    continue
+                key_str = ik if isinstance(ik, str) else ik.decode()
+                parts = key_str.split(":")
+                if len(parts) >= 2:
+                    symbol = parts[1]
+                    if symbol in stocks:
+                        stocks[symbol]["rsi_14"] = float(data.get("rsi_14", 0) or 0)
+                        stocks[symbol]["ema_9"] = float(data.get("ema_9", 0) or 0)
+                        stocks[symbol]["ema_21"] = float(data.get("ema_21", 0) or 0)
+            except Exception:
                 continue
-            # Extract symbol from key like "ind:RELIANCE:1d"
-            key_str = ik if isinstance(ik, str) else ik.decode()
-            parts = key_str.split(":")
-            if len(parts) >= 2:
-                symbol = parts[1]
-                if symbol in stocks:
-                    stocks[symbol]["rsi_14"] = float(data.get("rsi_14", 0) or 0)
-                    stocks[symbol]["ema_9"] = float(data.get("ema_9", 0) or 0)
-                    stocks[symbol]["ema_21"] = float(data.get("ema_21", 0) or 0)
-        except Exception:
-            continue
 
     return stocks
 
