@@ -89,7 +89,19 @@ async def list_prebuilt_scans():
         from app.services.prebuilt_scans import get_prebuilt_scans
 
         scans = get_prebuilt_scans()
-        return [PrebuiltScanOut(**s) for s in scans]
+        out = []
+        for s in scans:
+            # Convert Condition dataclasses to dicts for Pydantic serialization
+            s_copy = dict(s)
+            if "conditions" in s_copy and s_copy["conditions"]:
+                from dataclasses import asdict, fields
+
+                s_copy["conditions"] = [
+                    asdict(c) if hasattr(c, "__dataclass_fields__") else c
+                    for c in s_copy["conditions"]
+                ]
+            out.append(PrebuiltScanOut(**s_copy))
+        return out
     except Exception as exc:
         logger.exception("Failed to load prebuilt scans")
         raise HTTPException(status_code=500, detail=str(exc)) from exc

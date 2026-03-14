@@ -166,7 +166,8 @@ async def _call_gemini(headlines: list[dict[str, str]], market_summary: str) -> 
         return {"intraday": [], "weekly": [], "monthly": []}
 
     genai.configure(api_key=settings.gemini_api_key)
-    model = genai.GenerativeModel("gemini-2.5-flash")
+    # Try gemini-2.0-flash (widely available), fall back to others
+    model = genai.GenerativeModel("gemini-2.0-flash")
 
     news_block = "\n".join(
         f'[{i+1}] "{h["title"]}" ({h["source"]}) — {h["url"]}'
@@ -249,7 +250,7 @@ Return ONLY a valid JSON object (no markdown fences, no explanation outside JSON
             return {"intraday": parsed[:5], "weekly": parsed[5:10], "monthly": parsed[10:15]}
         return {"intraday": [], "weekly": [], "monthly": []}
     except Exception as e:
-        log.error("gemini_call_failed error=%s", e)
+        log.error("gemini_call_failed error=%s type=%s", e, type(e).__name__)
         return {"intraday": [], "weekly": [], "monthly": []}
 
 
