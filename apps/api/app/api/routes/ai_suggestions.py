@@ -116,6 +116,16 @@ async def debug_ai_suggestions():
 
     headline_symbols = _extract_headline_symbols(headlines) if headlines else {}
 
+    # Try running Layer 3 directly
+    layer3_error = None
+    layer3_picks = {"intraday": [], "weekly": [], "monthly": []}
+    try:
+        from app.services.ai_suggestions import _generate_technical_picks, _load_stock_data
+        all_stocks = await _load_stock_data()
+        layer3_picks = await _generate_technical_picks(headlines)
+    except Exception as e:
+        layer3_error = f"{type(e).__name__}: {e}"
+
     return {
         "price_key_count": len(price_keys),
         "indicator_key_count": len(ind_keys),
@@ -128,4 +138,9 @@ async def debug_ai_suggestions():
         "sample_price": sample_price,
         "sample_price_keys": price_keys[:5],
         "sample_ind_keys": ind_keys[:5],
+        "layer3_stock_count": len(all_stocks) if not layer3_error else 0,
+        "layer3_error": layer3_error,
+        "layer3_intraday": len(layer3_picks.get("intraday", [])),
+        "layer3_weekly": len(layer3_picks.get("weekly", [])),
+        "layer3_monthly": len(layer3_picks.get("monthly", [])),
     }
