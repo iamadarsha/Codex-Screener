@@ -47,6 +47,7 @@ def _ensure_symbol_lookup() -> None:
     if _SYMBOL_META:
         return
     try:
+        log.info("loading nifty500_seed.json from %s (exists=%s)", _SEED_PATH, _SEED_PATH.exists())
         data = json.loads(_SEED_PATH.read_text())
         for s in data:
             sym = s["symbol"]
@@ -279,6 +280,7 @@ Return ONLY a valid JSON object (no markdown fences, no explanation outside JSON
 # LAYER 1: Gemini
 # ---------------------------------------------------------------------------
 async def _call_gemini(headlines: list[dict[str, str]], market_summary: str) -> dict[str, list[dict[str, Any]]]:
+    """Layer 1: Gemini with primary + backup key. Runs sync SDK in thread to allow real cancellation."""
     import google.generativeai as genai
 
     from app.core.config import get_settings
@@ -295,23 +297,30 @@ async def _call_gemini(headlines: list[dict[str, str]], market_summary: str) -> 
 
     prompt = _build_ai_prompt(headlines, market_summary)
 
+    def _sync_gemini_call(api_key: str) -> str:
+        """Run Gemini synchronously in a thread so timeout actually works."""
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel("gemini-2.0-flash")
+        response = model.generate_content(prompt)
+        return response.text
+
     last_error = None
+    loop = asyncio.get_event_loop()
     for i, api_key in enumerate(api_keys):
         key_label = "primary" if i == 0 else "backup"
         try:
-            genai.configure(api_key=api_key)
-            model = genai.GenerativeModel("gemini-2.0-flash")
-            response = await asyncio.wait_for(
-                model.generate_content_async(prompt),
-                timeout=15,
+            text = await asyncio.wait_for(
+                loop.run_in_executor(None, _sync_gemini_call, api_key),
+                timeout=20,
             )
-            parsed = _parse_ai_response(response.text)
+            parsed = _parse_ai_response(text)
             if parsed and _has_picks(parsed):
                 total = sum(len(v) for v in parsed.values())
                 log.info("layer1_gemini_success key=%s picks=%d", key_label, total)
                 return parsed
+            log.warning("layer1_gemini_empty key=%s", key_label)
         except asyncio.TimeoutError:
-            log.warning("layer1_gemini_timeout key=%s", key_label)
+            log.warning("layer1_gemini_timeout key=%s (20s)", key_label)
             last_error = TimeoutError(f"Gemini {key_label} timed out")
         except Exception as e:
             last_error = e
@@ -695,8 +704,25 @@ async def _generate_technical_picks(headlines: list[dict[str, str]]) -> dict[str
 # Main orchestrator
 # ---------------------------------------------------------------------------
 async def generate_suggestions() -> dict[str, Any]:
-    headlines = await _fetch_news_headlines()
-    market_summary = await _get_market_summary()
+    log.info("generate_suggestions: starting")
+    try:
+        headlines = await asyncio.wait_for(_fetch_news_headlines(), timeout=30)
+    except asyncio.TimeoutError:
+        log.warning("generate_suggestions: RSS fetch timed out")
+        headlines = []
+    except Exception as e:
+        log.warning("generate_suggestions: RSS fetch error: %s", e)
+        headlines = []
+
+    try:
+        market_summary = await asyncio.wait_for(_get_market_summary(), timeout=15)
+    except asyncio.TimeoutError:
+        log.warning("generate_suggestions: market summary timed out")
+        market_summary = "Market data unavailable."
+    except Exception as e:
+        log.warning("generate_suggestions: market summary error: %s", e)
+        market_summary = "Market data unavailable."
+
     log.info("fetched %d news headlines, market_summary_len=%d", len(headlines), len(market_summary))
 
     if not headlines and market_summary == "Market data unavailable.":
@@ -707,19 +733,41 @@ async def generate_suggestions() -> dict[str, Any]:
             "next_refresh": get_next_trading_day_9am().isoformat(),
         }
 
-    # Layer 1: Gemini
+    # Layer 1: Gemini (20s per key × 2 keys = 40s max)
     source = "gemini"
-    picks = await _call_gemini(headlines, market_summary)
+    picks: dict[str, list] = {"intraday": [], "weekly": [], "monthly": []}
+    try:
+        picks = await asyncio.wait_for(
+            _call_gemini(headlines, market_summary), timeout=45
+        )
+    except asyncio.TimeoutError:
+        log.warning("layer1_global_timeout")
+    except Exception as e:
+        log.warning("layer1_unexpected: %s %s", type(e).__name__, e)
 
-    # Layer 2: Groq / xAI
+    # Layer 2: Groq / xAI (20s max)
     if not _has_picks(picks):
         source = "groq"
-        picks = await _call_alternative_ai(headlines, market_summary)
+        try:
+            picks = await asyncio.wait_for(
+                _call_alternative_ai(headlines, market_summary), timeout=25
+            )
+        except asyncio.TimeoutError:
+            log.warning("layer2_global_timeout")
+        except Exception as e:
+            log.warning("layer2_unexpected: %s %s", type(e).__name__, e)
 
-    # Layer 3: Technical scoring engine
+    # Layer 3: Technical scoring engine (should be fast, <5s)
     if not _has_picks(picks):
         source = "technical-analysis"
-        picks = await _generate_technical_picks(headlines)
+        try:
+            picks = await asyncio.wait_for(
+                _generate_technical_picks(headlines), timeout=15
+            )
+        except asyncio.TimeoutError:
+            log.warning("layer3_global_timeout")
+        except Exception as e:
+            log.warning("layer3_unexpected: %s %s", type(e).__name__, e)
 
     total_count = sum(len(v) for k, v in picks.items() if k in ("intraday", "weekly", "monthly"))
     log.info("ai_suggestions source=%s total_picks=%d", source, total_count)
