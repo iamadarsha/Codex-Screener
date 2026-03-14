@@ -19,13 +19,19 @@ async def _background_generate():
     """Run generation in background so the endpoint returns immediately."""
     global _generating
     if _generating:
+        logger.info("background_generate: already running, skipping")
         return
     _generating = True
     try:
         from app.services.ai_suggestions import generate_suggestions
-        await generate_suggestions()
+        logger.info("background_generate: starting 3-layer generation")
+        result = await asyncio.wait_for(generate_suggestions(), timeout=90)
+        total = sum(len(result.get(k, [])) for k in ("intraday", "weekly", "monthly"))
+        logger.info("background_generate: done source=%s picks=%d", result.get("source", "?"), total)
+    except asyncio.TimeoutError:
+        logger.error("background_generate: global 90s timeout exceeded")
     except Exception as e:
-        logger.error("background_generate_failed: %s", e)
+        logger.error("background_generate_failed: %s %s", type(e).__name__, e, exc_info=True)
     finally:
         _generating = False
 
@@ -60,8 +66,11 @@ async def refresh_ai_suggestions():
     try:
         from app.services.ai_suggestions import generate_suggestions
 
-        result = await generate_suggestions()
+        result = await asyncio.wait_for(generate_suggestions(), timeout=80)
         return result
+    except asyncio.TimeoutError:
+        logger.error("refresh_ai_suggestions: 80s timeout exceeded")
+        raise HTTPException(status_code=504, detail="Generation timed out. Picks will be generated in background on next visit.")
     except Exception as exc:
         logger.exception("Failed to refresh AI suggestions")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
