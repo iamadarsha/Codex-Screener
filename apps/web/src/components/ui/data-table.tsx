@@ -10,6 +10,7 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -53,7 +54,7 @@ export function DataTable<T>({
       <table className="w-full text-sm">
         <thead>
           {table.getHeaderGroups().map((hg) => (
-            <tr key={hg.id} className="border-b border-[#2A2B35]">
+            <tr key={hg.id} className="border-b border-border">
               {hg.headers.map((header) => {
                 const canSort = header.column.getCanSort();
                 const sorted = header.column.getIsSorted();
@@ -61,8 +62,8 @@ export function DataTable<T>({
                   <th
                     key={header.id}
                     className={cn(
-                      "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#8B8D9A]",
-                      canSort && "cursor-pointer select-none hover:text-white"
+                      "px-2 sm:px-4 py-2.5 sm:py-3 text-left text-[10px] sm:text-xs font-medium uppercase tracking-wider text-text-secondary whitespace-nowrap",
+                      canSort && "cursor-pointer select-none hover:text-text-primary"
                     )}
                     onClick={header.column.getToggleSortingHandler()}
                   >
@@ -71,7 +72,7 @@ export function DataTable<T>({
                         ? null
                         : flexRender(header.column.columnDef.header, header.getContext())}
                       {canSort && (
-                        <span className="text-[#5C5D6E]">
+                        <span className="text-text-muted">
                           {sorted === "asc" ? (
                             <ArrowUp className="h-3 w-3" />
                           ) : sorted === "desc" ? (
@@ -90,27 +91,30 @@ export function DataTable<T>({
         </thead>
         <tbody>
           {table.getRowModel().rows.map((row, idx) => (
-            <tr
+            <motion.tr
               key={row.id}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, ease: "easeOut", delay: idx * 0.05 }}
               onClick={() => onRowClick?.(row.original)}
               className={cn(
-                "border-b border-[#1E1F28] transition",
-                idx % 2 === 0 ? "bg-transparent" : "bg-[#13141A]/40",
-                onRowClick && "cursor-pointer hover:bg-[#22232D]"
+                "border-b border-border transition",
+                idx % 2 === 0 ? "bg-transparent" : "bg-page/40",
+                onRowClick && "cursor-pointer hover:bg-elevated"
               )}
             >
               {row.getVisibleCells().map((cell) => (
-                <td key={cell.id} className="px-4 py-3 text-[#E8E9F0]">
+                <td key={cell.id} className="px-2 sm:px-4 py-2.5 sm:py-3 text-text-primary whitespace-nowrap">
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>
               ))}
-            </tr>
+            </motion.tr>
           ))}
           {table.getRowModel().rows.length === 0 && (
             <tr>
               <td
                 colSpan={columns.length}
-                className="px-4 py-12 text-center text-[#5C5D6E]"
+                className="px-4 py-12 text-center text-text-muted"
               >
                 No results found
               </td>

@@ -63,19 +63,20 @@ export function CustomScanBuilder({ onRun, isLoading }: CustomScanBuilderProps) 
   };
 
   const selectClass = cn(
-    "h-9 rounded-lg border border-[#2A2B35] bg-[#13141A] px-3 text-sm text-[#E8E9F0] outline-none transition",
-    "focus:border-[#7C5CFC] hover:border-[#3A3B45]"
+    "h-9 rounded-lg border border-border bg-page px-3 text-sm text-text-primary outline-none transition appearance-none cursor-pointer",
+    "focus:border-accent hover:border-border",
+    "[&>option]:bg-[#0d1117] [&>option]:text-white"
   );
 
   return (
-    <div className="rounded-panel border border-border bg-card p-5">
-      <h3 className="mb-4 text-sm font-semibold text-white">
+    <div className="glass-card rounded-panel p-5 overflow-visible">
+      <h3 className="mb-4 text-sm font-semibold text-text-primary">
         Custom Scan Builder
       </h3>
 
       <div className="mb-4 flex items-center gap-3">
         <div className="flex flex-col gap-1">
-          <label className="text-[10px] uppercase tracking-wider text-[#5C5D6E]">
+          <label className="text-[10px] uppercase tracking-wider text-text-muted">
             Universe
           </label>
           <select
@@ -89,7 +90,7 @@ export function CustomScanBuilder({ onRun, isLoading }: CustomScanBuilderProps) 
           </select>
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-[10px] uppercase tracking-wider text-[#5C5D6E]">
+          <label className="text-[10px] uppercase tracking-wider text-text-muted">
             Timeframe
           </label>
           <select
@@ -122,7 +123,7 @@ export function CustomScanBuilder({ onRun, isLoading }: CustomScanBuilderProps) 
       <div className="flex items-center gap-3">
         <button
           onClick={addCondition}
-          className="flex items-center gap-1.5 rounded-lg border border-dashed border-[#2A2B35] px-3 py-2 text-xs text-[#8B8D9A] transition hover:border-[#7C5CFC] hover:text-white"
+          className="flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-2 text-xs text-text-secondary transition hover:border-accent hover:text-text-primary"
         >
           <Plus className="h-3.5 w-3.5" />
           Add Condition

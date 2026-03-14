@@ -1,6 +1,7 @@
 "use client";
 
-import { Activity, BellRing, BarChart3, TrendingUp } from "lucide-react";
+import { TrendingUp, Bell, BarChart3, Eye } from "lucide-react";
+import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { cn } from "@/lib/cn";
@@ -28,67 +29,106 @@ export function StatCards({
       label: "Active Breakouts",
       value: breakoutCount,
       icon: TrendingUp,
-      color: "text-[#00C896]",
-      bgGlow: "from-[rgba(0,200,150,0.08)]",
+      color: "text-bullish",
+      borderGrad: "from-bullish to-bullish/0",
+      bgGlow: "from-bullish/[0.06]",
     },
     {
       label: "Triggered Alerts",
       value: alertCount,
-      icon: BellRing,
-      color: "text-[#7C5CFC]",
-      bgGlow: "from-[rgba(124,92,252,0.08)]",
+      icon: Bell,
+      color: "text-accent",
+      borderGrad: "from-accent to-accent/0",
+      bgGlow: "from-accent/[0.06]",
     },
     {
       label: "Volume Surges",
       value: volumeSurgeCount,
       icon: BarChart3,
-      color: "text-[#FFA502]",
-      bgGlow: "from-[rgba(255,165,2,0.08)]",
+      color: "text-warning",
+      borderGrad: "from-warning to-warning/0",
+      bgGlow: "from-warning/[0.06]",
     },
     {
       label: "Market Breadth",
       value: breadthPct,
-      icon: Activity,
-      color: breadthPct >= 50 ? "text-[#00C896]" : "text-[#FF4757]",
+      icon: Eye,
+      color: breadthPct >= 50 ? "text-bullish" : "text-bearish",
+      borderGrad:
+        breadthPct >= 50
+          ? "from-bullish to-bullish/0"
+          : "from-bearish to-bearish/0",
       bgGlow:
         breadthPct >= 50
-          ? "from-[rgba(0,200,150,0.08)]"
-          : "from-[rgba(255,71,87,0.08)]",
+          ? "from-bullish/[0.06]"
+          : "from-bearish/[0.06]",
       suffix: "%",
     },
   ];
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <motion.div
+      className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
+      initial="hidden"
+      animate="visible"
+      variants={{
+        hidden: {},
+        visible: { transition: { staggerChildren: 0.05 } },
+      }}
+    >
       {cards.map((card) => (
-        <Card
+        <motion.div
           key={card.label}
-          className={cn("relative overflow-hidden bg-gradient-to-br", card.bgGlow, "to-transparent")}
+          variants={{
+            hidden: { opacity: 0, y: 16, scale: 0.97 },
+            visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.3, ease: "easeOut" } },
+          }}
         >
+        <Card
+          className={cn(
+            "group relative overflow-hidden bg-gradient-to-br",
+            card.bgGlow,
+            "to-transparent"
+          )}
+        >
+          {/* Top gradient border accent */}
+          <div
+            className={cn(
+              "absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r",
+              card.borderGrad
+            )}
+          />
+
           <div className="flex items-start justify-between">
             <div>
-              <div className="text-xs font-medium uppercase tracking-wider text-[#8B8D9A]">
+              <div className="text-[10px] sm:text-[11px] font-medium uppercase tracking-wider text-text-secondary">
                 {card.label}
               </div>
-              <div className="mt-3 flex items-baseline gap-1">
+              <div className="mt-2 sm:mt-3 flex items-baseline gap-1">
                 <AnimatedNumber
                   value={card.value}
                   format={(v) => Math.round(v).toString()}
-                  className="text-3xl font-semibold text-white"
+                  className="text-2xl sm:text-3xl font-semibold tabular-nums text-text-primary"
                 />
                 {card.suffix && (
-                  <span className="text-lg font-semibold text-[#8B8D9A]">
+                  <span className="text-lg font-semibold text-text-secondary">
                     {card.suffix}
                   </span>
                 )}
               </div>
             </div>
-            <div className={cn("rounded-lg bg-[#22232D] p-2", card.color)}>
+            <div
+              className={cn(
+                "rounded-xl bg-elevated p-2.5 transition group-hover:scale-110",
+                card.color
+              )}
+            >
               <card.icon className="h-5 w-5" />
             </div>
           </div>
         </Card>
+        </motion.div>
       ))}
-    </div>
+    </motion.div>
   );
 }

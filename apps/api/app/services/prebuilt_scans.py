@@ -44,6 +44,8 @@ _PREBUILT_SCANS: list[ScanDefinition] = [
         "id": "rsi_oversold",
         "name": "RSI Oversold",
         "description": "RSI(14) below 30 -- potential reversal candidates.",
+        "category": "Momentum",
+        "icon": "activity",
         "conditions": [
             Condition(
                 left=_ind("rsi_14"),
@@ -59,6 +61,8 @@ _PREBUILT_SCANS: list[ScanDefinition] = [
         "id": "rsi_overbought",
         "name": "RSI Overbought",
         "description": "RSI(14) above 70 -- potentially overextended.",
+        "category": "Momentum",
+        "icon": "activity",
         "conditions": [
             Condition(
                 left=_ind("rsi_14"),
@@ -74,6 +78,8 @@ _PREBUILT_SCANS: list[ScanDefinition] = [
         "id": "bullish_ema_crossover",
         "name": "Bullish EMA Crossover",
         "description": "EMA(9) crosses above EMA(21) -- bullish momentum shift.",
+        "category": "Momentum",
+        "icon": "trending-up",
         "conditions": [
             Condition(
                 left=_ind("ema_9"),
@@ -89,6 +95,8 @@ _PREBUILT_SCANS: list[ScanDefinition] = [
         "id": "bearish_ema_crossover",
         "name": "Bearish EMA Crossover",
         "description": "EMA(9) crosses below EMA(21) -- bearish momentum shift.",
+        "category": "Momentum",
+        "icon": "trending-down",
         "conditions": [
             Condition(
                 left=_ind("ema_9"),
@@ -104,6 +112,8 @@ _PREBUILT_SCANS: list[ScanDefinition] = [
         "id": "price_above_sma200",
         "name": "Price Above SMA(200)",
         "description": "Close price is above the 200-day SMA -- long-term uptrend.",
+        "category": "Moving Averages",
+        "icon": "arrow-up",
         "conditions": [
             Condition(
                 left=_ind("close"),
@@ -119,6 +129,8 @@ _PREBUILT_SCANS: list[ScanDefinition] = [
         "id": "price_below_sma200",
         "name": "Price Below SMA(200)",
         "description": "Close price is below the 200-day SMA -- long-term downtrend.",
+        "category": "Moving Averages",
+        "icon": "arrow-down",
         "conditions": [
             Condition(
                 left=_ind("close"),
@@ -144,6 +156,8 @@ _PREBUILT_SCANS: list[ScanDefinition] = [
         "id": "volume_spike",
         "name": "Volume Spike (2x)",
         "description": "Current volume is more than 2x the 20-period average volume.",
+        "category": "Volume",
+        "icon": "bar-chart-2",
         "conditions": [
             Condition(
                 left=_ind("volume"),
@@ -163,6 +177,8 @@ _PREBUILT_SCANS: list[ScanDefinition] = [
         "id": "bollinger_squeeze",
         "name": "Bollinger Squeeze",
         "description": "Bollinger bandwidth < 4 % -- volatility contraction.",
+        "category": "Pattern",
+        "icon": "minimize-2",
         "conditions": [
             Condition(
                 left=_ind("bollinger_width_pct"),
@@ -181,6 +197,8 @@ _PREBUILT_SCANS: list[ScanDefinition] = [
         "id": "macd_bullish_cross",
         "name": "MACD Bullish Cross",
         "description": "MACD line crosses above Signal line.",
+        "category": "Momentum",
+        "icon": "zap",
         "conditions": [
             Condition(
                 left=_ind("macd"),
@@ -192,6 +210,23 @@ _PREBUILT_SCANS: list[ScanDefinition] = [
         "timeframe": "1d",
     },
     # 10 ---------------------------------------------------------------
+    {
+        "id": "macd_bearish_cross",
+        "name": "MACD Bearish Cross",
+        "description": "MACD line crosses below Signal line.",
+        "category": "Momentum",
+        "icon": "zap-off",
+        "conditions": [
+            Condition(
+                left=_ind("macd"),
+                operator=ConditionOperator.CROSSES_BELOW,
+                right=_ind("macd_signal"),
+            ),
+        ],
+        "universe": "nifty500",
+        "timeframe": "1d",
+    },
+    # 11 ---------------------------------------------------------------
     #   Near 52-week high:  close > 0.95 * 52-week-high
     #   The engine should inject "high_52w" from its own data source;
     #   condition: close > high_52w_95 where high_52w_95 = 0.95 * high_52w
@@ -199,6 +234,8 @@ _PREBUILT_SCANS: list[ScanDefinition] = [
         "id": "near_52_week_high",
         "name": "Near 52-Week High",
         "description": "Close is within 5 % of the 52-week high.",
+        "category": "Breakout",
+        "icon": "trophy",
         "conditions": [
             Condition(
                 left=_ind("close"),
@@ -216,6 +253,8 @@ _PREBUILT_SCANS: list[ScanDefinition] = [
         "id": "orb_breakout_long",
         "name": "ORB Breakout Long",
         "description": "Price above the Opening Range high (first 15 min).",
+        "category": "Intraday",
+        "icon": "sunrise",
         "conditions": [
             Condition(
                 left=_ind("close"),
@@ -235,6 +274,8 @@ _PREBUILT_SCANS: list[ScanDefinition] = [
         "id": "bullish_engulfing",
         "name": "Bullish Engulfing",
         "description": "Bullish engulfing candlestick pattern detected.",
+        "category": "Pattern",
+        "icon": "shield",
         "conditions": [],
         "universe": "nifty500",
         "timeframe": "1d",

@@ -12,6 +12,7 @@ interface StockSnapshotProps {
 }
 
 export function StockSnapshot({ stock, livePrice }: StockSnapshotProps) {
+  const hasPrice = livePrice != null && livePrice.ltp > 0;
   const changePct = livePrice?.change_pct ?? 0;
   const change = livePrice?.change ?? 0;
 
@@ -20,41 +21,51 @@ export function StockSnapshot({ stock, livePrice }: StockSnapshotProps) {
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h2 className="text-xl font-bold text-white">
+            <h2 className="text-xl font-bold text-text-primary">
               {stock?.symbol ?? "---"}
             </h2>
-            <Badge variant={changePct >= 0 ? "bullish" : "bearish"}>
-              {formatPercent(changePct)}
-            </Badge>
+            {hasPrice ? (
+              <Badge variant={changePct >= 0 ? "bullish" : "bearish"}>
+                {formatPercent(changePct)}
+              </Badge>
+            ) : (
+              <span className="text-xs text-text-muted">Market Closed</span>
+            )}
           </div>
-          <p className="mt-1 text-sm text-[#8B8D9A]">
+          <p className="mt-1 text-sm text-text-secondary">
             {stock?.name ?? "Loading..."}
           </p>
           {stock?.sector && (
-            <span className="mt-1 inline-block text-xs text-[#5C5D6E]">
+            <span className="mt-1 inline-block text-xs text-text-muted">
               {stock.sector}
             </span>
           )}
         </div>
         <div className="text-right">
-          <PriceCell
-            price={livePrice?.ltp ?? 0}
-            className="text-2xl font-bold"
-          />
-          <div
-            className={cn(
-              "mt-1 font-mono text-sm",
-              change >= 0 ? "text-[#00C896]" : "text-[#FF4757]"
-            )}
-          >
-            {change >= 0 ? "+" : ""}
-            {formatPrice(change)}
-          </div>
+          {hasPrice ? (
+            <>
+              <PriceCell
+                price={livePrice.ltp}
+                className="text-2xl font-bold"
+              />
+              <div
+                className={cn(
+                  "mt-1 font-mono text-sm",
+                  change >= 0 ? "text-bullish" : "text-bearish"
+                )}
+              >
+                {change >= 0 ? "+" : ""}
+                {formatPrice(change)}
+              </div>
+            </>
+          ) : (
+            <span className="font-mono text-2xl font-bold text-text-muted">—</span>
+          )}
         </div>
       </div>
 
       {livePrice && (
-        <div className="mt-4 grid grid-cols-4 gap-4 border-t border-[#1E1F28] pt-4">
+        <div className="mt-4 grid grid-cols-2 gap-3 border-t border-border pt-4 sm:grid-cols-4 sm:gap-4">
           {[
             { label: "Open", value: formatPrice(livePrice.open) },
             { label: "High", value: formatPrice(livePrice.high) },
@@ -62,10 +73,10 @@ export function StockSnapshot({ stock, livePrice }: StockSnapshotProps) {
             { label: "Volume", value: formatVolume(livePrice.volume) },
           ].map((item) => (
             <div key={item.label}>
-              <div className="text-[10px] uppercase tracking-wider text-[#5C5D6E]">
+              <div className="text-[10px] uppercase tracking-wider text-text-muted">
                 {item.label}
               </div>
-              <div className="mt-0.5 font-mono text-sm text-white">
+              <div className="mt-0.5 font-mono text-sm text-text-primary">
                 {item.value}
               </div>
             </div>

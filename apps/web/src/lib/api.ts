@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "./constants";
 import type {
+  AiSuggestionsResponse,
   Alert,
   AlertCreateRequest,
   CustomScanRequest,
@@ -24,15 +25,22 @@ import type {
 /* ------------------------------------------------------------------ */
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...init,
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`API ${res.status}: ${text || res.statusText}`);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5_000);
+  try {
+    const res = await fetch(`${API_BASE_URL}${path}`, {
+      headers: { "Content-Type": "application/json" },
+      ...init,
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`API ${res.status}: ${text || res.statusText}`);
+    }
+    return res.json() as Promise<T>;
+  } finally {
+    clearTimeout(timeout);
   }
-  return res.json() as Promise<T>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -189,5 +197,31 @@ export function fetchFundamentals(
   const qs = sp.toString();
   return apiFetch<FundamentalData[]>(
     `/api/fundamentals${qs ? `?${qs}` : ""}`
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  AI Suggestions                                                     */
+/* ------------------------------------------------------------------ */
+
+export function fetchAiSuggestions(): Promise<AiSuggestionsResponse> {
+  return apiFetch<AiSuggestionsResponse>("/api/ai-suggestions");
+}
+
+export function refreshAiSuggestions(): Promise<AiSuggestionsResponse> {
+  return apiFetch<AiSuggestionsResponse>("/api/ai-suggestions/refresh", {
+    method: "POST",
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/*  Company Info                                                       */
+/* ------------------------------------------------------------------ */
+
+export function fetchCompanyInfo(
+  symbol: string
+): Promise<import("./api-types").CompanyInfo> {
+  return apiFetch<import("./api-types").CompanyInfo>(
+    `/api/company/${symbol}`
   );
 }

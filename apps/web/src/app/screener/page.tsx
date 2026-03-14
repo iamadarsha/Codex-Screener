@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageTransition } from "@/components/layout/page-transition";
 import { SectionHeading } from "@/components/ui/section-heading";
@@ -54,8 +54,12 @@ export default function ScreenerPage() {
           />
 
           {/* Prebuilt Scans Grid */}
-          <div>
-            <h3 className="mb-3 text-sm font-semibold text-[#8B8D9A]">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <h3 className="mb-3 text-sm font-semibold text-text-secondary">
               Prebuilt Scans
             </h3>
             {scansLoading ? (
@@ -68,13 +72,19 @@ export default function ScreenerPage() {
                 isLoading={runPrebuilt.isPending}
               />
             )}
-          </div>
+          </motion.div>
 
           {/* Custom Scan Builder */}
-          <CustomScanBuilder
-            onRun={handleRunCustom}
-            isLoading={runCustom.isPending}
-          />
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
+          >
+            <CustomScanBuilder
+              onRun={handleRunCustom}
+              isLoading={runCustom.isPending}
+            />
+          </motion.div>
 
           {/* Results */}
           <AnimatePresence>

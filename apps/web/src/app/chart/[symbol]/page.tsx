@@ -1,38 +1,102 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useCallback, useRef, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { Search } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageTransition } from "@/components/layout/page-transition";
 import { PriceChart } from "@/components/chart/price-chart";
 import { TimeframeTabs } from "@/components/chart/timeframe-tabs";
 import { IndicatorPills } from "@/components/chart/indicator-pills";
 import { StockSnapshot } from "@/components/chart/stock-snapshot";
-import { VolumePanel } from "@/components/chart/volume-panel";
-import { Skeleton } from "@/components/ui/skeleton";
+import { CompanyInfoPanel } from "@/components/chart/company-info-panel";
 import { useLivePrices } from "@/hooks/use-live-prices";
-import { fetchStock, fetchPriceHistory, fetchIndicators } from "@/lib/api";
+import { fetchStock, fetchIndicators, fetchStocks, fetchLivePrice } from "@/lib/api";
+import { searchLocalStocks } from "@/lib/nse-stocks";
+import type { Stock } from "@/lib/api-types";
+import { cn } from "@/lib/cn";
 
 export default function ChartPage() {
   const params = useParams();
+  const router = useRouter();
   const symbol = (params.symbol as string)?.toUpperCase() ?? "RELIANCE";
   const [timeframe, setTimeframe] = useState("daily");
   const [activeIndicators, setActiveIndicators] = useState<string[]>([]);
+  const [chartSearch, setChartSearch] = useState("");
+  const [chartSuggestions, setChartSuggestions] = useState<Stock[]>([]);
+  const [showChartDropdown, setShowChartDropdown] = useState(false);
+  const [chartSelectedIdx, setChartSelectedIdx] = useState(-1);
+  const chartDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const symbols = useMemo(() => [symbol], [symbol]);
-  const livePrices = useLivePrices(symbols);
-  const livePrice = livePrices[symbol];
+  const searchChartStocks = useCallback((query: string) => {
+    if (chartDebounceRef.current) clearTimeout(chartDebounceRef.current);
+    if (query.length < 1) {
+      setChartSuggestions([]);
+      setShowChartDropdown(false);
+      return;
+    }
 
-  const { data: stock } = useQuery({
+    // Instant local results first
+    const local = searchLocalStocks(query, 10);
+    if (local.length > 0) {
+      setChartSuggestions(local.map((s) => ({ symbol: s.symbol, name: s.name, sector: s.sector }) as Stock));
+      setShowChartDropdown(true);
+      setChartSelectedIdx(-1);
+    }
+
+    // Then try API for potentially better results
+    chartDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetchStocks({ search: query, limit: 10 });
+        if (res.stocks && res.stocks.length > 0) {
+          setChartSuggestions(res.stocks);
+          setShowChartDropdown(true);
+          setChartSelectedIdx(-1);
+        }
+      } catch {
+        // Local results already shown — no-op
+      }
+    }, 300);
+  }, []);
+
+  const navigateToSymbol = useCallback(
+    (sym: string) => {
+      router.push(`/chart/${sym.toUpperCase()}`);
+      setChartSearch("");
+      setChartSuggestions([]);
+      setShowChartDropdown(false);
+    },
+    [router]
+  );
+
+  const livePrices = useLivePrices([symbol]);
+  const wsPrice = livePrices[symbol];
+
+  // REST fallback for when WebSocket doesn't deliver (e.g. market closed)
+  const { data: restPrice } = useQuery({
+    queryKey: ["livePrice", symbol],
+    queryFn: () => fetchLivePrice(symbol),
+    retry: 0,
+    staleTime: 30_000,
+    enabled: !wsPrice,
+  });
+  const livePrice = wsPrice ?? restPrice;
+
+  // Use local NSE data as immediate placeholder while API loads
+  const localStock = searchLocalStocks(symbol, 1)[0];
+  const placeholderStock: Stock | undefined = localStock
+    ? { symbol: localStock.symbol, name: localStock.name, sector: localStock.sector, industry: "", market_cap: 0, is_nifty50: false, is_nifty500: false }
+    : undefined;
+
+  const { data: stockData } = useQuery({
     queryKey: ["stock", symbol],
     queryFn: () => fetchStock(symbol),
+    placeholderData: placeholderStock,
+    retry: 0,
+    staleTime: 60_000,
   });
-
-  const { data: history, isLoading: historyLoading } = useQuery({
-    queryKey: ["priceHistory", symbol, timeframe],
-    queryFn: () => fetchPriceHistory(symbol, timeframe),
-  });
+  const stock = stockData ?? placeholderStock;
 
   const { data: indicators } = useQuery({
     queryKey: ["indicators", symbol],
@@ -45,17 +109,74 @@ export default function ChartPage() {
     );
   };
 
-  const candles = history?.candles ?? [];
-
   return (
     <AppShell>
       <PageTransition>
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
+          {/* Symbol Search */}
+          <div className="relative max-w-md">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (chartSelectedIdx >= 0 && chartSuggestions[chartSelectedIdx]) {
+                  navigateToSymbol(chartSuggestions[chartSelectedIdx].symbol);
+                } else if (chartSearch.trim()) {
+                  navigateToSymbol(chartSearch.trim());
+                }
+              }}
+            >
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted z-10" />
+              <input
+                type="text"
+                value={chartSearch}
+                onChange={(e) => {
+                  setChartSearch(e.target.value);
+                  searchChartStocks(e.target.value);
+                }}
+                onFocus={() => chartSuggestions.length > 0 && setShowChartDropdown(true)}
+                onBlur={() => setTimeout(() => setShowChartDropdown(false), 200)}
+                onKeyDown={(e) => {
+                  if (!showChartDropdown || chartSuggestions.length === 0) return;
+                  if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    setChartSelectedIdx((prev) => (prev < chartSuggestions.length - 1 ? prev + 1 : 0));
+                  } else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setChartSelectedIdx((prev) => (prev > 0 ? prev - 1 : chartSuggestions.length - 1));
+                  } else if (e.key === "Escape") {
+                    setShowChartDropdown(false);
+                  }
+                }}
+                placeholder="Search stocks... e.g. RELIANCE, TCS, INFY"
+                className="h-10 w-full rounded-lg border border-border bg-card pl-10 pr-4 text-sm text-text-primary placeholder-text-muted outline-none transition focus:border-accent"
+              />
+            </form>
+            {showChartDropdown && chartSuggestions.length > 0 && (
+              <div className="absolute left-0 top-full z-50 mt-1 w-full overflow-hidden rounded-lg border border-border bg-elevated shadow-lg backdrop-blur-xl">
+                {chartSuggestions.map((s, i) => (
+                  <button
+                    key={s.symbol}
+                    type="button"
+                    onMouseDown={() => navigateToSymbol(s.symbol)}
+                    className={cn(
+                      "flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm transition hover:bg-card",
+                      i === chartSelectedIdx && "bg-card"
+                    )}
+                  >
+                    <span className="font-mono font-semibold text-accent">{s.symbol}</span>
+                    <span className="truncate text-text-secondary">{s.name}</span>
+                    <span className="ml-auto text-xs text-text-muted">{s.sector}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Stock Info */}
           <StockSnapshot stock={stock} livePrice={livePrice} />
 
           {/* Chart Controls */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:justify-between sm:gap-3">
             <TimeframeTabs active={timeframe} onChange={setTimeframe} />
             <IndicatorPills
               active={activeIndicators}
@@ -63,23 +184,19 @@ export default function ChartPage() {
             />
           </div>
 
-          {/* Main Chart */}
-          {historyLoading ? (
-            <Skeleton className="h-[500px] w-full" />
-          ) : (
-            <PriceChart candles={candles} />
-          )}
+          {/* Main Chart — TradingView Widget */}
+          <PriceChart symbol={symbol} interval={timeframe} height={typeof window !== "undefined" && window.innerWidth < 640 ? 350 : 500} />
 
-          {/* Volume Panel */}
-          {candles.length > 0 && <VolumePanel candles={candles} />}
+          {/* Company Info */}
+          <CompanyInfoPanel symbol={symbol} />
 
           {/* Indicator Values */}
           {indicators && (
-            <div className="rounded-panel border border-border bg-card p-5">
-              <h3 className="mb-3 text-sm font-semibold text-white">
+            <div className="rounded-panel border border-border bg-card p-3 sm:p-5">
+              <h3 className="mb-2 sm:mb-3 text-xs sm:text-sm font-semibold text-text-primary">
                 Technical Indicators
               </h3>
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+              <div className="grid grid-cols-3 gap-3 sm:gap-4 lg:grid-cols-6">
                 {[
                   { label: "EMA 20", value: indicators.ema20 },
                   { label: "EMA 50", value: indicators.ema50 },
@@ -89,10 +206,10 @@ export default function ChartPage() {
                   { label: "ATR", value: indicators.atr },
                 ].map((ind) => (
                   <div key={ind.label}>
-                    <div className="text-[10px] uppercase tracking-wider text-[#5C5D6E]">
+                    <div className="text-[10px] uppercase tracking-wider text-text-muted">
                       {ind.label}
                     </div>
-                    <div className="mt-0.5 font-mono text-sm text-white">
+                    <div className="mt-0.5 font-mono text-sm text-text-primary">
                       {ind.value?.toFixed(2) ?? "-"}
                     </div>
                   </div>

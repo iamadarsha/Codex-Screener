@@ -1,8 +1,19 @@
 "use client";
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import { CHART_COLORS } from "@/lib/chart-colors";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+} from "recharts";
 import type { MarketBreadth } from "@/lib/api-types";
+
+const COLORS = {
+  advances: "#00c796",
+  declines: "#ff5a8a",
+  unchanged: "#232d40",
+};
 
 interface BreadthDonutProps {
   breadth?: MarketBreadth;
@@ -10,20 +21,26 @@ interface BreadthDonutProps {
 
 export function BreadthDonut({ breadth }: BreadthDonutProps) {
   const data = [
-    { name: "Advances", value: breadth?.advances ?? 0, color: CHART_COLORS.donutAdvance },
-    { name: "Declines", value: breadth?.declines ?? 0, color: CHART_COLORS.donutDecline },
-    { name: "Unchanged", value: breadth?.unchanged ?? 0, color: CHART_COLORS.donutUnchanged },
+    { name: "Advances", value: breadth?.advances ?? 0, color: COLORS.advances },
+    { name: "Declines", value: breadth?.declines ?? 0, color: COLORS.declines },
+    { name: "Unchanged", value: breadth?.unchanged ?? 0, color: COLORS.unchanged },
   ];
 
   const total = breadth?.total ?? 0;
   const ratio = breadth?.advance_decline_ratio ?? 0;
 
   return (
-    <div className="rounded-panel border border-border bg-card p-5">
-      <h3 className="mb-4 text-sm font-semibold text-white">Market Breadth</h3>
+    <div className="glass-card rounded-panel p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-text-primary">Market Breadth</h3>
+        <span className="rounded-full bg-elevated px-2 py-0.5 text-[10px] font-medium text-text-muted">
+          Last Session
+        </span>
+      </div>
 
       <div className="flex items-center gap-6">
-        <div className="h-40 w-40">
+        {/* Donut with center label */}
+        <div className="relative h-40 w-40 shrink-0">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -42,47 +59,57 @@ export function BreadthDonut({ breadth }: BreadthDonutProps) {
               </Pie>
               <Tooltip
                 contentStyle={{
-                  background: "#1A1B23",
-                  border: "1px solid #2A2B35",
+                  background: "var(--bg-elevated)",
+                  border: "1px solid var(--border)",
                   borderRadius: 8,
                   fontSize: 12,
-                  color: "#E8E9F0",
+                  color: "var(--text-primary)",
                 }}
               />
             </PieChart>
           </ResponsiveContainer>
+          {/* Center ratio text */}
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-lg font-bold tabular-nums text-text-primary">
+              {ratio.toFixed(2)}
+            </span>
+            <span className="text-[10px] text-text-muted">A/D</span>
+          </div>
         </div>
 
+        {/* Legend */}
         <div className="flex flex-col gap-3 text-sm">
           <div className="flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#00C896]" />
-            <span className="text-[#8B8D9A]">Advances</span>
-            <span className="ml-auto font-mono text-white">
+            <span className="h-2.5 w-2.5 rounded-full bg-bullish" />
+            <span className="text-text-secondary">Advances</span>
+            <span className="ml-auto font-mono tabular-nums text-text-primary">
               {breadth?.advances ?? 0}
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#FF4757]" />
-            <span className="text-[#8B8D9A]">Declines</span>
-            <span className="ml-auto font-mono text-white">
+            <span className="h-2.5 w-2.5 rounded-full bg-bearish" />
+            <span className="text-text-secondary">Declines</span>
+            <span className="ml-auto font-mono tabular-nums text-text-primary">
               {breadth?.declines ?? 0}
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#2A2B35]" />
-            <span className="text-[#8B8D9A]">Unchanged</span>
-            <span className="ml-auto font-mono text-white">
+            <span className="h-2.5 w-2.5 rounded-full bg-border" />
+            <span className="text-text-secondary">Unchanged</span>
+            <span className="ml-auto font-mono tabular-nums text-text-primary">
               {breadth?.unchanged ?? 0}
             </span>
           </div>
-          <div className="mt-2 border-t border-[#1E1F28] pt-2">
-            <div className="flex items-center justify-between text-xs text-[#8B8D9A]">
+          <div className="mt-2 border-t border-border-subtle pt-2">
+            <div className="flex items-center justify-between text-xs text-text-secondary">
               <span>A/D Ratio</span>
-              <span className="font-mono text-white">{ratio.toFixed(2)}</span>
+              <span className="font-mono tabular-nums text-text-primary">
+                {ratio.toFixed(2)}
+              </span>
             </div>
-            <div className="flex items-center justify-between text-xs text-[#8B8D9A]">
+            <div className="flex items-center justify-between text-xs text-text-secondary">
               <span>Total</span>
-              <span className="font-mono text-white">{total}</span>
+              <span className="font-mono tabular-nums text-text-primary">{total}</span>
             </div>
           </div>
         </div>

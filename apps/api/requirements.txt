@@ -1,9 +1,10 @@
 alembic
 apscheduler
 asyncpg
-celery
-curl_cffi
+brotli
 fastapi
+feedparser
+google-generativeai
 greenlet
 httpx
 orjson
@@ -18,10 +19,10 @@ pytest-cov
 python-dotenv
 python-socketio
 redis
+requests
 respx
 sqlalchemy
 structlog
-supabase
 tenacity
 upstox-python-sdk
 uvicorn[standard]
