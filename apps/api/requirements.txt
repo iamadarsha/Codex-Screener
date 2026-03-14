@@ -5,6 +5,7 @@ brotli
 fastapi
 feedparser
 google-generativeai
+groq
 greenlet
 httpx
 orjson
