@@ -231,13 +231,19 @@ Return ONLY a valid JSON object (no markdown fences, no explanation outside JSON
                 pick["confidence"] = max(1, min(10, round(c / 10)))
         return picks
 
+    import asyncio
+
     last_error = None
     for i, api_key in enumerate(api_keys):
         key_label = "primary" if i == 0 else "backup"
         try:
             genai.configure(api_key=api_key)
             model = genai.GenerativeModel("gemini-2.0-flash")
-            response = await model.generate_content_async(prompt)
+            # Timeout after 30s to prevent Railway endpoint from hanging
+            response = await asyncio.wait_for(
+                model.generate_content_async(prompt),
+                timeout=30,
+            )
             text = response.text.strip()
             fence_match = re.match(r"^```(?:\w+)?\s*\n(.*?)```\s*$", text, re.DOTALL)
             if fence_match:
@@ -252,6 +258,10 @@ Return ONLY a valid JSON object (no markdown fences, no explanation outside JSON
             if isinstance(parsed, list):
                 parsed = _normalize_confidence(parsed)
                 return {"intraday": parsed[:5], "weekly": parsed[5:10], "monthly": parsed[10:15]}
+        except asyncio.TimeoutError:
+            log.warning("gemini_call_timeout key=%s (30s)", key_label)
+            last_error = TimeoutError(f"Gemini {key_label} key timed out after 30s")
+            continue
         except Exception as e:
             last_error = e
             log.warning("gemini_call_failed key=%s error=%s type=%s", key_label, e, type(e).__name__)
