@@ -18,24 +18,9 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.execute(
-        """
-        SELECT create_hypertable(
-          'ohlcv_1min',
-          by_range('ts', INTERVAL '1 day'),
-          if_not_exists => TRUE
-        )
-        """
-    )
-    op.execute(
-        """
-        SELECT add_dimension(
-          'ohlcv_1min',
-          by_hash('symbol', 4),
-          if_not_exists => TRUE
-        )
-        """
-    )
+    # TimescaleDB hypertables skipped — not available on Supabase free tier.
+    # OHLCV tables work as regular PostgreSQL tables without partitioning.
+    pass
 
 
 def downgrade() -> None:

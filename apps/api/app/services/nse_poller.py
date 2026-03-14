@@ -60,15 +60,34 @@ async def _populate_universe(stock_data: list[dict]) -> list[str]:
     symbols: list[str] = []
     for stock in stock_data:
         symbol = stock.get("symbol", "")
-        if symbol and symbol != "NIFTY 50":
+        if symbol and symbol not in ("NIFTY 50", "NIFTY 500"):
             symbols.append(symbol)
 
     if symbols:
         await redis.delete("universe:nifty50")
-        await redis.sadd("universe:nifty50", *symbols)
+        await redis.sadd("universe:nifty50", *symbols[:50])
         await redis.delete("universe:nifty500")
         await redis.sadd("universe:nifty500", *symbols)
         log.info("Populated universe sets with %d symbols from live data", len(symbols))
+
+    return symbols
+
+
+async def _populate_universe_from_symbols(symbols: list[str]) -> list[str]:
+    """Populate universe sets directly from a list of symbols."""
+    from app.services.redis_cache import get_redis
+
+    redis = await get_redis()
+
+    if symbols:
+        await redis.delete("universe:nifty500")
+        await redis.sadd("universe:nifty500", *symbols)
+        # Keep nifty50 as the first 50 or from hardcoded list
+        nifty50 = [s for s in symbols if s in set(NIFTY_50_SYMBOLS)]
+        if nifty50:
+            await redis.delete("universe:nifty50")
+            await redis.sadd("universe:nifty50", *nifty50)
+        log.info("Universe sets updated: nifty500=%d, nifty50=%d", len(symbols), len(nifty50))
 
     return symbols
 
@@ -172,20 +191,29 @@ async def nse_poller_loop():
                 log.warning("Failed to fetch indices: %s", e)
 
             # ----------------------------------------------------------
-            # 2. Fetch Nifty 50 stock quotes for live prices
+            # 2. Fetch Nifty 500 stock quotes for live prices
+            #    NSE limits each index query to its constituents, so we
+            #    fetch NIFTY 500 which returns all ~500 stocks in one call.
+            #    We also fetch NIFTY 50 separately to tag nifty50 members.
             # ----------------------------------------------------------
             fetch_ok = False
             try:
                 http = await client._ensure_client()
-                resp = await http.get("/api/equity-stockIndices", params={"index": "NIFTY 50"})
+
+                # Fetch NIFTY 500 (covers all 500 stocks)
+                resp = await http.get("/api/equity-stockIndices", params={"index": "NIFTY 500"})
                 if resp.status_code == 403:
                     await client._refresh_cookies()
-                    resp = await http.get("/api/equity-stockIndices", params={"index": "NIFTY 50"})
+                    resp = await http.get("/api/equity-stockIndices", params={"index": "NIFTY 500"})
+
                 if resp.status_code == 200:
                     stock_data = resp.json().get("data", [])
+                    all_symbols: list[str] = []
+                    ts = datetime.now(timezone.utc).isoformat()
+
                     for stock in stock_data:
                         symbol = stock.get("symbol", "")
-                        if not symbol or symbol == "NIFTY 50":
+                        if not symbol or symbol in ("NIFTY 500", "NIFTY 50"):
                             continue
                         price_data = {
                             "symbol": symbol,
@@ -198,22 +226,51 @@ async def nse_poller_loop():
                             "change": stock.get("change", 0),
                             "change_pct": stock.get("pChange", 0),
                             "volume": stock.get("totalTradedVolume", 0),
-                            "timestamp": datetime.now(timezone.utc).isoformat(),
+                            "timestamp": ts,
                         }
                         await set_json(f"price:{symbol}", price_data, ttl=PRICE_TTL)
-
-                        # Publish to Redis pub/sub for WebSocket clients
                         await redis.publish("price_updates", json.dumps(price_data))
+                        all_symbols.append(symbol)
 
-                    log.debug("Stored + published prices for %d stocks", len(stock_data))
+                    log.info("Stored + published prices for %d Nifty 500 stocks", len(all_symbols))
                     fetch_ok = True
                     _consecutive_failures = 0
 
-                    # Update universe with live data (more accurate than hardcoded)
-                    if stock_data:
-                        _cached_symbols = await _populate_universe(stock_data)
+                    # Update universe with live data
+                    if all_symbols:
+                        _cached_symbols = await _populate_universe_from_symbols(all_symbols)
                 else:
-                    log.warning("NSE stock quotes returned status %d", resp.status_code)
+                    log.warning("NSE NIFTY 500 returned status %d, falling back to NIFTY 50", resp.status_code)
+                    # Fallback: try NIFTY 50 if 500 fails
+                    resp = await http.get("/api/equity-stockIndices", params={"index": "NIFTY 50"})
+                    if resp.status_code == 403:
+                        await client._refresh_cookies()
+                        resp = await http.get("/api/equity-stockIndices", params={"index": "NIFTY 50"})
+                    if resp.status_code == 200:
+                        stock_data = resp.json().get("data", [])
+                        ts = datetime.now(timezone.utc).isoformat()
+                        for stock in stock_data:
+                            symbol = stock.get("symbol", "")
+                            if not symbol or symbol == "NIFTY 50":
+                                continue
+                            price_data = {
+                                "symbol": symbol,
+                                "ltp": stock.get("lastPrice", 0),
+                                "open": stock.get("open", 0),
+                                "high": stock.get("dayHigh", 0),
+                                "low": stock.get("dayLow", 0),
+                                "close": stock.get("lastPrice", 0),
+                                "prev_close": stock.get("previousClose", 0),
+                                "change": stock.get("change", 0),
+                                "change_pct": stock.get("pChange", 0),
+                                "volume": stock.get("totalTradedVolume", 0),
+                                "timestamp": ts,
+                            }
+                            await set_json(f"price:{symbol}", price_data, ttl=PRICE_TTL)
+                            await redis.publish("price_updates", json.dumps(price_data))
+                        log.info("Fallback: stored prices for %d Nifty 50 stocks", len(stock_data))
+                        fetch_ok = True
+                        _consecutive_failures = 0
 
             except Exception as e:
                 log.warning("Failed to fetch stock prices: %s", e)

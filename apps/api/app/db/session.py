@@ -48,3 +48,13 @@ async def get_db_session() -> AsyncIterator[AsyncSession]:
     factory = _get_session_factory()
     async with factory() as session:
         yield session
+
+
+class _SessionLocalProxy:
+    """Proxy so ``async with SessionLocal() as session:`` works lazily."""
+
+    def __call__(self) -> AsyncSession:
+        return _get_session_factory()()
+
+
+SessionLocal = _SessionLocalProxy()
