@@ -1,6 +1,7 @@
 alembic
 apscheduler
 asyncpg
+brotli
 fastapi
 feedparser
 google-generativeai

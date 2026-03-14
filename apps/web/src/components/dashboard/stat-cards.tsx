@@ -1,6 +1,7 @@
 "use client";
 
 import { TrendingUp, Bell, BarChart3, Eye } from "lucide-react";
+import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { cn } from "@/lib/cn";
@@ -66,10 +67,24 @@ export function StatCards({
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+    <motion.div
+      className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
+      initial="hidden"
+      animate="visible"
+      variants={{
+        hidden: {},
+        visible: { transition: { staggerChildren: 0.05 } },
+      }}
+    >
       {cards.map((card) => (
-        <Card
+        <motion.div
           key={card.label}
+          variants={{
+            hidden: { opacity: 0, y: 16, scale: 0.97 },
+            visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.3, ease: "easeOut" } },
+          }}
+        >
+        <Card
           className={cn(
             "group relative overflow-hidden bg-gradient-to-br",
             card.bgGlow,
@@ -112,7 +127,8 @@ export function StatCards({
             </div>
           </div>
         </Card>
+        </motion.div>
       ))}
-    </div>
+    </motion.div>
   );
 }

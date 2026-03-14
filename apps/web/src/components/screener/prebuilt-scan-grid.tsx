@@ -16,6 +16,7 @@ import {
   Signal,
   Loader2,
 } from "lucide-react";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/cn";
 import type { PrebuiltScan } from "@/lib/api-types";
 
@@ -88,14 +89,28 @@ export function PrebuiltScanGrid({
       </div>
 
       {/* Card grid */}
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4">
+      <motion.div
+        className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3 xl:grid-cols-4"
+        initial="hidden"
+        animate="visible"
+        variants={{
+          hidden: {},
+          visible: { transition: { staggerChildren: 0.04 } },
+        }}
+      >
         {filtered.map((scan) => {
           const Icon = iconMap[scan.icon ?? ""] ?? Zap;
           const isActive = activeScanId === scan.id;
 
           return (
-            <button
+            <motion.button
               key={scan.id}
+              variants={{
+                hidden: { opacity: 0, y: 16, scale: 0.97 },
+                visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.3, ease: "easeOut" } },
+              }}
+              whileHover={{ scale: 1.02, transition: { duration: 0.15 } }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => onRunScan(scan.id)}
               disabled={isLoading && isActive}
               className={cn(
@@ -148,10 +163,10 @@ export function PrebuiltScanGrid({
                   <div className="h-full w-1/3 animate-pulse rounded-full bg-accent" />
                 </div>
               )}
-            </button>
+            </motion.button>
           );
         })}
-      </div>
+      </motion.div>
 
       {filtered.length === 0 && (
         <div className="py-12 text-center text-sm text-text-muted">

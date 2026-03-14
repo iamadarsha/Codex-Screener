@@ -210,6 +210,23 @@ _PREBUILT_SCANS: list[ScanDefinition] = [
         "timeframe": "1d",
     },
     # 10 ---------------------------------------------------------------
+    {
+        "id": "macd_bearish_cross",
+        "name": "MACD Bearish Cross",
+        "description": "MACD line crosses below Signal line.",
+        "category": "Momentum",
+        "icon": "zap-off",
+        "conditions": [
+            Condition(
+                left=_ind("macd"),
+                operator=ConditionOperator.CROSSES_BELOW,
+                right=_ind("macd_signal"),
+            ),
+        ],
+        "universe": "nifty500",
+        "timeframe": "1d",
+    },
+    # 11 ---------------------------------------------------------------
     #   Near 52-week high:  close > 0.95 * 52-week-high
     #   The engine should inject "high_52w" from its own data source;
     #   condition: close > high_52w_95 where high_52w_95 = 0.95 * high_52w

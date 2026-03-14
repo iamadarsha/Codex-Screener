@@ -16,10 +16,11 @@ export function useMarketBreadth() {
     queryFn: fetchMarketBreadth,
     refetchInterval: 15_000,
     retry: 1,
+    placeholderData: MOCK_BREADTH,
   });
   return {
     ...query,
-    data: query.data ?? (query.isError ? MOCK_BREADTH : undefined),
+    data: query.data ?? MOCK_BREADTH,
   };
 }
 
@@ -42,10 +43,11 @@ export function useMarketIndices() {
     queryFn: fetchMarketIndices,
     refetchInterval: 15_000,
     retry: 1,
+    placeholderData: MOCK_INDICES,
   });
   return {
     ...query,
-    data: query.data ?? (query.isError ? MOCK_INDICES : undefined),
+    data: query.data ?? MOCK_INDICES,
   };
 }
 

@@ -28,7 +28,8 @@ async def get_live_price(symbol: str):
                 status_code=404,
                 detail=f"No live price for {symbol}",
             )
-        return LivePrice(symbol=symbol.upper(), **data)
+        data.setdefault("symbol", symbol.upper())
+        return LivePrice(**data)
     except HTTPException:
         raise
     except Exception as exc:
@@ -56,7 +57,8 @@ async def get_batch_prices(
         for sym in symbol_list:
             data = await get_json(f"price:{sym}")
             if data:
-                results.append(LivePrice(symbol=sym, **data))
+                data.setdefault("symbol", sym)
+                results.append(LivePrice(**data))
             else:
                 results.append(LivePrice(symbol=sym, ltp=0))
     except Exception as exc:

@@ -12,7 +12,7 @@ import { IndicatorPills } from "@/components/chart/indicator-pills";
 import { StockSnapshot } from "@/components/chart/stock-snapshot";
 import { CompanyInfoPanel } from "@/components/chart/company-info-panel";
 import { useLivePrices } from "@/hooks/use-live-prices";
-import { fetchStock, fetchIndicators, fetchStocks } from "@/lib/api";
+import { fetchStock, fetchIndicators, fetchStocks, fetchLivePrice } from "@/lib/api";
 import { searchLocalStocks } from "@/lib/nse-stocks";
 import type { Stock } from "@/lib/api-types";
 import { cn } from "@/lib/cn";
@@ -71,12 +71,32 @@ export default function ChartPage() {
   );
 
   const livePrices = useLivePrices([symbol]);
-  const livePrice = livePrices[symbol];
+  const wsPrice = livePrices[symbol];
 
-  const { data: stock } = useQuery({
+  // REST fallback for when WebSocket doesn't deliver (e.g. market closed)
+  const { data: restPrice } = useQuery({
+    queryKey: ["livePrice", symbol],
+    queryFn: () => fetchLivePrice(symbol),
+    retry: 0,
+    staleTime: 30_000,
+    enabled: !wsPrice,
+  });
+  const livePrice = wsPrice ?? restPrice;
+
+  // Use local NSE data as immediate placeholder while API loads
+  const localStock = searchLocalStocks(symbol, 1)[0];
+  const placeholderStock: Stock | undefined = localStock
+    ? { symbol: localStock.symbol, name: localStock.name, sector: localStock.sector, industry: "", market_cap: 0, is_nifty50: false, is_nifty500: false }
+    : undefined;
+
+  const { data: stockData } = useQuery({
     queryKey: ["stock", symbol],
     queryFn: () => fetchStock(symbol),
+    placeholderData: placeholderStock,
+    retry: 0,
+    staleTime: 60_000,
   });
+  const stock = stockData ?? placeholderStock;
 
   const { data: indicators } = useQuery({
     queryKey: ["indicators", symbol],

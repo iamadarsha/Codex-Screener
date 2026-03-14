@@ -196,7 +196,7 @@ For EACH pick, provide ALL of these fields:
 - name: full company name
 - sector: industry sector
 - rationale: 2-3 sentences explaining WHY, referencing specific news headlines by number (e.g., "As per headline [3]...")
-- confidence: score from 1 to 100
+- confidence: score from 1 to 10 (integer)
 - catalyst: the specific news or technical catalyst driving this pick
 - target_horizon: "intraday", "weekly", or "monthly" (must match timeframe)
 - action: "BUY" or "SELL"
@@ -217,20 +217,35 @@ RULES:
 - No duplicate symbols across timeframes
 
 Return ONLY a valid JSON object (no markdown fences, no explanation outside JSON):
-{{"intraday":[{{"symbol":"...","name":"...","sector":"...","rationale":"...","confidence":75,"catalyst":"...","target_horizon":"intraday","action":"BUY","target_pct":1.5,"stop_loss_pct":0.8,"tags":["momentum","news-driven"],"news_sources":[{{"title":"...","url":"...","source":"...","published_at":"..."}}]}}],"weekly":[...],"monthly":[...]}}"""
+{{"intraday":[{{"symbol":"...","name":"...","sector":"...","rationale":"...","confidence":8,"catalyst":"...","target_horizon":"intraday","action":"BUY","target_pct":1.5,"stop_loss_pct":0.8,"tags":["momentum","news-driven"],"news_sources":[{{"title":"...","url":"...","source":"...","published_at":"..."}}]}}],"weekly":[...],"monthly":[...]}}"""
 
     try:
+        import re
+
         response = await model.generate_content_async(prompt)
         text = response.text.strip()
-        if text.startswith("```"):
-            text = text.split("\n", 1)[1]
-            text = text.rsplit("```", 1)[0].strip()
+        # Robust markdown fence removal (handles ```json, ``` etc.)
+        fence_match = re.match(r"^```(?:\w+)?\s*\n(.*?)```\s*$", text, re.DOTALL)
+        if fence_match:
+            text = fence_match.group(1).strip()
         parsed = json.loads(text)
+
+        # Normalize confidence to 1-10 scale if Gemini returned 0-100
+        def _normalize_confidence(picks: list) -> list:
+            for pick in picks:
+                c = pick.get("confidence", 5)
+                if isinstance(c, (int, float)) and c > 10:
+                    pick["confidence"] = max(1, min(10, round(c / 10)))
+            return picks
+
         # Validate structure
         if isinstance(parsed, dict) and all(k in parsed for k in ("intraday", "weekly", "monthly")):
+            for key in ("intraday", "weekly", "monthly"):
+                parsed[key] = _normalize_confidence(parsed.get(key, []))
             return parsed
         # If Gemini returned a flat list, try to bucket it
         if isinstance(parsed, list):
+            parsed = _normalize_confidence(parsed)
             return {"intraday": parsed[:5], "weekly": parsed[5:10], "monthly": parsed[10:15]}
         return {"intraday": [], "weekly": [], "monthly": []}
     except Exception as e:
@@ -266,14 +281,16 @@ async def generate_suggestions() -> dict[str, Any]:
         "next_refresh": get_next_trading_day_9am().isoformat(),
     }
 
-    try:
-        from app.services.redis_cache import set_json
+    # Only cache if we actually got picks (don't cache empty results)
+    if total_count > 0:
+        try:
+            from app.services.redis_cache import set_json
 
-        ttl = _compute_ttl_seconds()
-        await set_json(REDIS_KEY, result, ttl=ttl)
-        log.info("ai_suggestions_cached count=%d ttl=%d", total_count, ttl)
-    except Exception as e:
-        log.warning("failed to cache ai suggestions: %s", e)
+            ttl = _compute_ttl_seconds()
+            await set_json(REDIS_KEY, result, ttl=ttl)
+            log.info("ai_suggestions_cached count=%d ttl=%d", total_count, ttl)
+        except Exception as e:
+            log.warning("failed to cache ai suggestions: %s", e)
 
     return result
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageTransition } from "@/components/layout/page-transition";
 import { StatCards } from "@/components/dashboard/stat-cards";
@@ -68,30 +69,58 @@ export default function DashboardPage() {
   return (
     <AppShell>
       <PageTransition>
-        <div className="space-y-6">
-          <SectionHeading
-            title="Dashboard"
-            subtitle="Real-time market overview and breakout signals"
-          />
+        <motion.div
+          className="space-y-6"
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: {},
+            visible: { transition: { staggerChildren: 0.08 } },
+          }}
+        >
+          <motion.div
+            variants={{
+              hidden: { opacity: 0, y: 16 },
+              visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
+            }}
+          >
+            <SectionHeading
+              title="Dashboard"
+              subtitle="Real-time market overview and breakout signals"
+            />
+          </motion.div>
 
           {/* Stat Cards */}
-          {breadthLoading ? (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {[1, 2, 3, 4].map((i) => (
-                <SkeletonCard key={i} />
-              ))}
-            </div>
-          ) : (
-            <StatCards
-              breakoutCount={breakoutItems.length}
-              alertCount={alertCount}
-              volumeSurgeCount={volumeItems.length}
-              breadth={breadth}
-            />
-          )}
+          <motion.div
+            variants={{
+              hidden: { opacity: 0, y: 16 },
+              visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
+            }}
+          >
+            {breadthLoading ? (
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <SkeletonCard key={i} />
+                ))}
+              </div>
+            ) : (
+              <StatCards
+                breakoutCount={breakoutItems.length}
+                alertCount={alertCount}
+                volumeSurgeCount={volumeItems.length}
+                breadth={breadth}
+              />
+            )}
+          </motion.div>
 
           {/* Main Grid */}
-          <div className="grid gap-6 xl:grid-cols-3 min-w-0">
+          <motion.div
+            className="grid gap-6 xl:grid-cols-3 min-w-0"
+            variants={{
+              hidden: { opacity: 0, y: 16 },
+              visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
+            }}
+          >
             {/* Left: Breakout Feed */}
             <div className="xl:col-span-2 space-y-6 min-w-0">
               <BreakoutFeed items={breakoutItems} />
@@ -110,19 +139,26 @@ export default function DashboardPage() {
                 />
               ) : null}
             </div>
-          </div>
+          </motion.div>
 
           {/* Sector Heatmap */}
-          {sectorsLoading ? (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {[1, 2, 3, 4].map((i) => (
-                <SkeletonCard key={i} />
-              ))}
-            </div>
-          ) : sectors ? (
-            <SectorHeatmap sectors={sectors} />
-          ) : null}
-        </div>
+          <motion.div
+            variants={{
+              hidden: { opacity: 0, y: 16 },
+              visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
+            }}
+          >
+            {sectorsLoading ? (
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <SkeletonCard key={i} />
+                ))}
+              </div>
+            ) : sectors ? (
+              <SectorHeatmap sectors={sectors} />
+            ) : null}
+          </motion.div>
+        </motion.div>
       </PageTransition>
     </AppShell>
   );
