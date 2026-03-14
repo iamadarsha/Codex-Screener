@@ -41,6 +41,8 @@ class Settings(BaseSettings):
     indian_api_key: str = ""
     gemini_api_key: str = ""
     gemini_backup_api_key: str = ""
+    groq_api_key: str = ""
+    xai_api_key: str = ""
     telegram_bot_token: str = ""
     fcm_server_key: str = ""
     environment: str = "development"
