@@ -163,7 +163,7 @@ async def _fetch_news_headlines() -> list[dict[str, str]]:
 
 
 async def _get_market_summary() -> str:
-    from app.services.redis_cache import get_json, get_redis, hget_all
+    from app.services.redis_cache import get_json, get_redis
 
     summary_parts: list[str] = []
     try:
@@ -194,11 +194,10 @@ async def _get_market_summary() -> str:
         stocks: list[dict[str, Any]] = []
         for pk in price_keys[:500]:
             try:
-                data = await hget_all(pk)
-                if not data:
-                    raw = await r.get(pk)
-                    if raw:
-                        data = json.loads(raw) if isinstance(raw, str) else {}
+                raw = await r.get(pk)
+                if not raw:
+                    continue
+                data = json.loads(raw) if isinstance(raw, str) else {}
                 if data:
                     symbol = data.get("symbol", pk.replace("price:", ""))
                     change_pct = float(data.get("change_pct", data.get("pChange", 0)) or 0)
@@ -432,25 +431,25 @@ def _extract_headline_symbols(headlines: list[dict[str, str]]) -> dict[str, list
 
 async def _load_stock_data() -> dict[str, dict[str, Any]]:
     """Bulk-load price + indicator data from Redis for all stocks."""
-    from app.services.redis_cache import get_redis, hget_all
+    from app.services.redis_cache import get_json, get_redis
 
     r = await get_redis()
     stocks: dict[str, dict[str, Any]] = {}
 
-    # Load prices
+    # Load prices — stored as JSON strings via set_json()
     price_keys = []
     async for key in r.scan_iter(match="price:*", count=500):
         price_keys.append(key)
+    log.info("layer3_load_stock_data: found %d price keys", len(price_keys))
 
     for pk in price_keys[:500]:
         try:
-            data = await hget_all(pk)
-            if not data:
-                raw = await r.get(pk)
-                if raw:
-                    data = json.loads(raw) if isinstance(raw, str) else {}
+            raw = await r.get(pk)
+            if not raw:
+                continue
+            data = json.loads(raw) if isinstance(raw, str) else {}
             if data:
-                symbol = data.get("symbol", pk.replace("price:", "").replace("b'price:", "").rstrip("'"))
+                symbol = data.get("symbol", pk.replace("price:", ""))
                 if isinstance(symbol, bytes):
                     symbol = symbol.decode()
                 stocks[symbol] = {
@@ -458,20 +457,22 @@ async def _load_stock_data() -> dict[str, dict[str, Any]]:
                     "change_pct": float(data.get("change_pct", data.get("pChange", 0)) or 0),
                     "volume": float(data.get("volume", 0) or 0),
                 }
-        except Exception:
+        except Exception as e:
+            log.debug("layer3_price_parse_error key=%s: %s", pk, e)
             continue
 
-    # Load indicators
+    # Load indicators — stored as hashes with key pattern "ind:{symbol}:1d"
     ind_keys = []
-    async for key in r.scan_iter(match="indicator:*:1d", count=500):
+    async for key in r.scan_iter(match="ind:*:1d", count=500):
         ind_keys.append(key)
+    log.info("layer3_load_stock_data: found %d indicator keys", len(ind_keys))
 
     for ik in ind_keys[:500]:
         try:
-            data = await hget_all(ik)
+            data = await r.hgetall(ik)
             if not data:
                 continue
-            # Extract symbol from key like "indicator:RELIANCE:1d"
+            # Extract symbol from key like "ind:RELIANCE:1d"
             key_str = ik if isinstance(ik, str) else ik.decode()
             parts = key_str.split(":")
             if len(parts) >= 2:
