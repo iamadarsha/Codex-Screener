@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   BellRing,
@@ -33,6 +33,7 @@ const analysisNav = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const { data: status } = useMarketStatus();
 
@@ -150,9 +151,13 @@ export function Sidebar() {
       {/* Bottom actions */}
       <div className="mt-4 space-y-1">
         <button
+          onClick={() => router.push("/settings")}
           className={cn(
-            "flex w-full items-center rounded-lg py-2.5 text-sm text-text-muted transition hover:bg-elevated hover:text-text-primary",
-            collapsed ? "justify-center px-2" : "gap-3 px-4"
+            "flex w-full items-center rounded-lg py-2.5 text-sm transition",
+            collapsed ? "justify-center px-2" : "gap-3 px-4",
+            pathname === "/settings"
+              ? "bg-accent/10 text-text-primary"
+              : "text-text-muted hover:bg-elevated hover:text-text-primary"
           )}
         >
           <Settings className="h-[18px] w-[18px] shrink-0" />

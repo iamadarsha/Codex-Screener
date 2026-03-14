@@ -12,6 +12,7 @@ interface StockSnapshotProps {
 }
 
 export function StockSnapshot({ stock, livePrice }: StockSnapshotProps) {
+  const hasPrice = livePrice != null && livePrice.ltp > 0;
   const changePct = livePrice?.change_pct ?? 0;
   const change = livePrice?.change ?? 0;
 
@@ -23,9 +24,13 @@ export function StockSnapshot({ stock, livePrice }: StockSnapshotProps) {
             <h2 className="text-xl font-bold text-text-primary">
               {stock?.symbol ?? "---"}
             </h2>
-            <Badge variant={changePct >= 0 ? "bullish" : "bearish"}>
-              {formatPercent(changePct)}
-            </Badge>
+            {hasPrice ? (
+              <Badge variant={changePct >= 0 ? "bullish" : "bearish"}>
+                {formatPercent(changePct)}
+              </Badge>
+            ) : (
+              <span className="text-xs text-text-muted">Market Closed</span>
+            )}
           </div>
           <p className="mt-1 text-sm text-text-secondary">
             {stock?.name ?? "Loading..."}
@@ -37,19 +42,25 @@ export function StockSnapshot({ stock, livePrice }: StockSnapshotProps) {
           )}
         </div>
         <div className="text-right">
-          <PriceCell
-            price={livePrice?.ltp ?? 0}
-            className="text-2xl font-bold"
-          />
-          <div
-            className={cn(
-              "mt-1 font-mono text-sm",
-              change >= 0 ? "text-bullish" : "text-bearish"
-            )}
-          >
-            {change >= 0 ? "+" : ""}
-            {formatPrice(change)}
-          </div>
+          {hasPrice ? (
+            <>
+              <PriceCell
+                price={livePrice.ltp}
+                className="text-2xl font-bold"
+              />
+              <div
+                className={cn(
+                  "mt-1 font-mono text-sm",
+                  change >= 0 ? "text-bullish" : "text-bearish"
+                )}
+              >
+                {change >= 0 ? "+" : ""}
+                {formatPrice(change)}
+              </div>
+            </>
+          ) : (
+            <span className="font-mono text-2xl font-bold text-text-muted">—</span>
+          )}
         </div>
       </div>
 

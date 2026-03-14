@@ -90,11 +90,24 @@ export function Topbar() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(-1);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const { data: status } = useMarketStatus();
   const { data: indices } = useMarketIndices();
   const isMarketLive = useIsMarketLive();
   const { theme, toggleTheme } = useTheme();
+
+  // Global Ctrl+K / Cmd+K shortcut to focus search
+  useEffect(() => {
+    function handleGlobalKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    }
+    document.addEventListener("keydown", handleGlobalKey);
+    return () => document.removeEventListener("keydown", handleGlobalKey);
+  }, []);
 
   const searchStocks = useCallback((query: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -172,9 +185,7 @@ export function Topbar() {
               last={idx.last ?? idx.value}
               changePct={idx.change_pct}
             />
-          )) ?? (
-            <div className="text-sm text-text-muted">Loading indices...</div>
-          )}
+          ))}
         </div>
 
         {/* Mobile: App name */}
@@ -188,6 +199,7 @@ export function Topbar() {
             <form onSubmit={handleSearch}>
               <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-muted z-10" />
               <input
+                ref={searchInputRef}
                 type="text"
                 value={search}
                 onChange={(e) => {
@@ -255,9 +267,11 @@ export function Topbar() {
           )}
 
           {/* Notification bell — hidden on mobile */}
-          <button className="hidden sm:block relative rounded-lg p-2 text-text-secondary transition hover:bg-elevated hover:text-text-primary">
+          <button
+            className="hidden sm:block relative rounded-lg p-2 text-text-muted transition hover:bg-elevated cursor-default opacity-60"
+            title="Notifications coming soon"
+          >
             <Bell className="h-4 w-4" />
-            <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-bearish" />
           </button>
 
           {/* Live/Closed status pill */}

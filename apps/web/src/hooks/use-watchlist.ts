@@ -9,6 +9,9 @@ export function useWatchlist(userId: string = DEFAULT_USER_ID) {
   return useQuery({
     queryKey: ["watchlist", userId],
     queryFn: () => fetchWatchlist(userId),
+    retry: 0,
+    staleTime: 30_000,
+    gcTime: 60_000,
   });
 }
 

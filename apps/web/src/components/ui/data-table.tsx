@@ -10,6 +10,7 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -90,8 +91,11 @@ export function DataTable<T>({
         </thead>
         <tbody>
           {table.getRowModel().rows.map((row, idx) => (
-            <tr
+            <motion.tr
               key={row.id}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, ease: "easeOut", delay: idx * 0.05 }}
               onClick={() => onRowClick?.(row.original)}
               className={cn(
                 "border-b border-border transition",
@@ -104,7 +108,7 @@ export function DataTable<T>({
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>
               ))}
-            </tr>
+            </motion.tr>
           ))}
           {table.getRowModel().rows.length === 0 && (
             <tr>

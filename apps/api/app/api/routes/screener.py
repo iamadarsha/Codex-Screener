@@ -114,12 +114,13 @@ async def run_prebuilt_scan(req: ScanRequest):
             universe=req.universe,
         )
 
-        # Extract condition names from scan definition
-        condition_names = [
-            c.get("indicator", c.get("name", ""))
-            for c in (scan_def.get("conditions") or [])
-            if c.get("indicator") or c.get("name")
-        ]
+        # Extract condition names from scan definition (Condition dataclasses)
+        condition_names = []
+        for c in (scan_def.get("conditions") or []):
+            if hasattr(c, "left") and hasattr(c.left, "name"):
+                condition_names.append(c.left.name)
+            elif isinstance(c, dict):
+                condition_names.append(c.get("indicator", c.get("name", "")))
 
         # Transform engine results to ScanResultItem format
         items = []

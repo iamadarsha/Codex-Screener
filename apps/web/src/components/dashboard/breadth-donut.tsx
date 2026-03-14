@@ -31,7 +31,12 @@ export function BreadthDonut({ breadth }: BreadthDonutProps) {
 
   return (
     <div className="glass-card rounded-panel p-5">
-      <h3 className="mb-4 text-sm font-semibold text-text-primary">Market Breadth</h3>
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-text-primary">Market Breadth</h3>
+        <span className="rounded-full bg-elevated px-2 py-0.5 text-[10px] font-medium text-text-muted">
+          Last Session
+        </span>
+      </div>
 
       <div className="flex items-center gap-6">
         {/* Donut with center label */}

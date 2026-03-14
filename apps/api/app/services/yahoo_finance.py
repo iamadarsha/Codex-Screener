@@ -135,39 +135,49 @@ class YFinanceProvider:
             low = df["Low"]
             volume = df["Volume"]
 
+            # Helper: get current and previous value from a series
+            def _cur_prev(series):
+                if series is None or len(series) < 2:
+                    cur = series.iloc[-1] if series is not None and len(series) else None
+                    return cur, None
+                return series.iloc[-1], series.iloc[-2]
+
             # RSI
             rsi_series = ta.rsi(close, length=14)
-            rsi = rsi_series.iloc[-1] if rsi_series is not None and len(rsi_series) else None
+            rsi, prev_rsi = _cur_prev(rsi_series)
 
             # EMAs
             ema9_series = ta.ema(close, length=9)
-            ema9 = ema9_series.iloc[-1] if ema9_series is not None and len(ema9_series) else None
+            ema9, prev_ema9 = _cur_prev(ema9_series)
 
             ema21_series = ta.ema(close, length=21)
-            ema21 = ema21_series.iloc[-1] if ema21_series is not None and len(ema21_series) else None
+            ema21, prev_ema21 = _cur_prev(ema21_series)
 
             # SMAs
             sma20_series = ta.sma(close, length=20)
-            sma20 = sma20_series.iloc[-1] if sma20_series is not None and len(sma20_series) else None
+            sma20, prev_sma20 = _cur_prev(sma20_series)
 
             sma50_series = ta.sma(close, length=50)
-            sma50 = sma50_series.iloc[-1] if sma50_series is not None and len(sma50_series) else None
+            sma50, prev_sma50 = _cur_prev(sma50_series)
 
             sma200_series = ta.sma(close, length=200)
-            sma200 = sma200_series.iloc[-1] if sma200_series is not None and len(sma200_series) else None
+            sma200, prev_sma200 = _cur_prev(sma200_series)
 
             # MACD
             macd_df = ta.macd(close, fast=12, slow=26, signal=9)
             macd_val = None
             macd_signal = None
+            prev_macd_val = None
+            prev_macd_signal = None
             if macd_df is not None and not macd_df.empty:
                 macd_cols = macd_df.columns.tolist()
-                # pandas-ta returns columns like MACD_12_26_9, MACDh_12_26_9, MACDs_12_26_9
                 for col in macd_cols:
                     if col.startswith("MACD_"):
                         macd_val = macd_df[col].iloc[-1]
+                        prev_macd_val = macd_df[col].iloc[-2] if len(macd_df[col]) >= 2 else None
                     elif col.startswith("MACDs_"):
                         macd_signal = macd_df[col].iloc[-1]
+                        prev_macd_signal = macd_df[col].iloc[-2] if len(macd_df[col]) >= 2 else None
 
             # Bollinger Bands
             bb_df = ta.bbands(close, length=20, std=2)
@@ -234,13 +244,21 @@ class YFinanceProvider:
                 "prev_close": _safe_str(prev.get("Close")),
                 "prev_volume": _safe_str(prev.get("Volume")),
                 "rsi_14": _safe_str(rsi),
+                "prev_rsi_14": _safe_str(prev_rsi),
                 "ema_9": _safe_str(ema9),
+                "prev_ema_9": _safe_str(prev_ema9),
                 "ema_21": _safe_str(ema21),
+                "prev_ema_21": _safe_str(prev_ema21),
                 "sma_20": _safe_str(sma20),
+                "prev_sma_20": _safe_str(prev_sma20),
                 "sma_50": _safe_str(sma50),
+                "prev_sma_50": _safe_str(prev_sma50),
                 "sma_200": _safe_str(sma200),
+                "prev_sma_200": _safe_str(prev_sma200),
                 "macd": _safe_str(macd_val),
+                "prev_macd": _safe_str(prev_macd_val),
                 "macd_signal": _safe_str(macd_signal),
+                "prev_macd_signal": _safe_str(prev_macd_signal),
                 "atr_14": _safe_str(atr),
                 "adx_14": _safe_str(adx_val),
                 "vwap": _safe_str(vwap),

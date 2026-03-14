@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageTransition } from "@/components/layout/page-transition";
 import { SectionHeading } from "@/components/ui/section-heading";
@@ -12,6 +13,7 @@ import {
 } from "@/hooks/use-ai-suggestions";
 import { RefreshCw, Sparkles, Clock } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { toast } from "sonner";
 import type { AiSuggestion } from "@/lib/api-types";
 
 type TabKey = "intraday" | "weekly" | "monthly";
@@ -69,7 +71,12 @@ export default function AiPicksPage() {
               subtitle="AI-powered stock suggestions based on latest market news"
             />
             <button
-              onClick={() => refresh.mutate()}
+              onClick={() =>
+                refresh.mutate(undefined, {
+                  onSuccess: () => toast.success("AI Picks refreshed"),
+                  onError: () => toast.error("Refresh failed - try again"),
+                })
+              }
               disabled={refresh.isPending}
               className={cn(
                 "flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-text-secondary transition hover:border-accent/30 hover:text-text-primary",
@@ -155,7 +162,14 @@ export default function AiPicksPage() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {activePicks.map((s, i) => (
-                <StockCard key={s.symbol} suggestion={s} index={i} />
+                <motion.div
+                  key={s.symbol}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: i * 0.05 }}
+                >
+                  <StockCard suggestion={s} index={i} />
+                </motion.div>
               ))}
             </div>
           )}

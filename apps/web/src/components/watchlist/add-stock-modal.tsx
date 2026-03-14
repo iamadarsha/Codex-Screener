@@ -29,11 +29,14 @@ export function AddStockModal({
     [search]
   );
 
-  // API results (may take longer / may fail)
+  // API results (may take longer / may fail) — guarded with retry:0 and staleTime
   const { data } = useQuery({
     queryKey: ["stocks-search", search],
     queryFn: () => fetchStocks({ search, limit: 20 }),
-    enabled: open && search.length >= 1,
+    enabled: open && search.length >= 2,
+    staleTime: 60_000,
+    retry: 0,
+    gcTime: 60_000,
   });
 
   // Merge: prefer API results if available, otherwise use local

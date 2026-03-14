@@ -63,12 +63,13 @@ export function CustomScanBuilder({ onRun, isLoading }: CustomScanBuilderProps) 
   };
 
   const selectClass = cn(
-    "h-9 rounded-lg border border-border bg-page px-3 text-sm text-text-primary outline-none transition",
-    "focus:border-accent hover:border-border"
+    "h-9 rounded-lg border border-border bg-page px-3 text-sm text-text-primary outline-none transition appearance-none cursor-pointer",
+    "focus:border-accent hover:border-border",
+    "[&>option]:bg-[#0d1117] [&>option]:text-white"
   );
 
   return (
-    <div className="glass-card rounded-panel p-5">
+    <div className="glass-card rounded-panel p-5 overflow-visible">
       <h3 className="mb-4 text-sm font-semibold text-text-primary">
         Custom Scan Builder
       </h3>
