@@ -74,3 +74,58 @@ async def refresh_ai_suggestions():
     except Exception as exc:
         logger.exception("Failed to refresh AI suggestions")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.get("/debug")
+async def debug_ai_suggestions():
+    """Debug endpoint — shows what data is available for AI suggestion generation."""
+    from app.services.redis_cache import get_redis
+    from app.services.ai_suggestions import (
+        _ensure_symbol_lookup, _SYMBOL_META, _SEED_PATH,
+        _extract_headline_symbols, _fetch_news_headlines,
+    )
+
+    r = await get_redis()
+
+    # Count price keys
+    price_keys = []
+    async for key in r.scan_iter(match="price:*", count=500):
+        price_keys.append(key)
+
+    # Count indicator keys
+    ind_keys = []
+    async for key in r.scan_iter(match="ind:*:1d", count=500):
+        ind_keys.append(key)
+
+    # Check seed file
+    _ensure_symbol_lookup()
+    seed_exists = _SEED_PATH.exists()
+    seed_count = len(_SYMBOL_META)
+
+    # Sample a price key
+    sample_price = None
+    if price_keys:
+        raw = await r.get(price_keys[0])
+        sample_price = {"key": price_keys[0], "value": raw[:200] if raw else None}
+
+    # Check headlines
+    try:
+        headlines = await asyncio.wait_for(_fetch_news_headlines(), timeout=15)
+    except Exception:
+        headlines = []
+
+    headline_symbols = _extract_headline_symbols(headlines) if headlines else {}
+
+    return {
+        "price_key_count": len(price_keys),
+        "indicator_key_count": len(ind_keys),
+        "seed_path": str(_SEED_PATH),
+        "seed_exists": seed_exists,
+        "seed_symbol_count": seed_count,
+        "headline_count": len(headlines),
+        "headline_symbol_matches": len(headline_symbols),
+        "matched_symbols": list(headline_symbols.keys())[:20],
+        "sample_price": sample_price,
+        "sample_price_keys": price_keys[:5],
+        "sample_ind_keys": ind_keys[:5],
+    }
