@@ -122,7 +122,7 @@ async def _get_market_summary() -> str:
             price_keys.append(key)
 
         stocks: list[dict[str, Any]] = []
-        for pk in price_keys[:300]:
+        for pk in price_keys[:500]:
             try:
                 data = await hget_all(pk)
                 if not data:
@@ -161,13 +161,15 @@ async def _call_gemini(headlines: list[dict[str, str]], market_summary: str) -> 
     from app.core.config import get_settings
 
     settings = get_settings()
-    if not settings.gemini_api_key:
-        log.error("gemini_api_key not configured")
+    # Build list of API keys to try (primary + backup)
+    api_keys: list[str] = []
+    if settings.gemini_api_key:
+        api_keys.append(settings.gemini_api_key)
+    if settings.gemini_backup_api_key:
+        api_keys.append(settings.gemini_backup_api_key)
+    if not api_keys:
+        log.error("no gemini api keys configured")
         return {"intraday": [], "weekly": [], "monthly": []}
-
-    genai.configure(api_key=settings.gemini_api_key)
-    # Try gemini-2.0-flash (widely available), fall back to others
-    model = genai.GenerativeModel("gemini-2.0-flash")
 
     news_block = "\n".join(
         f'[{i+1}] "{h["title"]}" ({h["source"]}) — {h["url"]}'
@@ -207,9 +209,9 @@ For EACH pick, provide ALL of these fields:
 - news_sources: array of the specific news sources that influenced this pick, each with {{"title":"headline text","url":"link","source":"source name","published_at":"date"}}
 
 RULES:
-- Only suggest liquid NSE stocks (Nifty 500 universe)
+- IMPORTANT: Only suggest NSE-listed stocks from the NIFTY 500 index (not just Nifty 50 — include mid-caps and smaller large-caps from the full Nifty 500 universe)
 - Never suggest penny stocks (price < Rs 50)
-- Mix of large-cap and mid-cap across sectors
+- Mix of large-cap and mid-cap across diverse sectors — do NOT over-concentrate on Nifty 50 blue chips
 - Always cite which news or market data influenced each pick
 - Each pick MUST include 1-3 items in news_sources referencing the actual headlines above
 - Intraday picks should have tighter targets (0.5-3%) and stop-losses (0.3-1.5%)
@@ -220,38 +222,43 @@ RULES:
 Return ONLY a valid JSON object (no markdown fences, no explanation outside JSON):
 {{"intraday":[{{"symbol":"...","name":"...","sector":"...","rationale":"...","confidence":8,"catalyst":"...","target_horizon":"intraday","action":"BUY","target_pct":1.5,"stop_loss_pct":0.8,"tags":["momentum","news-driven"],"news_sources":[{{"title":"...","url":"...","source":"...","published_at":"..."}}]}}],"weekly":[...],"monthly":[...]}}"""
 
-    try:
-        import re
+    import re
 
-        response = await model.generate_content_async(prompt)
-        text = response.text.strip()
-        # Robust markdown fence removal (handles ```json, ``` etc.)
-        fence_match = re.match(r"^```(?:\w+)?\s*\n(.*?)```\s*$", text, re.DOTALL)
-        if fence_match:
-            text = fence_match.group(1).strip()
-        parsed = json.loads(text)
+    def _normalize_confidence(picks: list) -> list:
+        for pick in picks:
+            c = pick.get("confidence", 5)
+            if isinstance(c, (int, float)) and c > 10:
+                pick["confidence"] = max(1, min(10, round(c / 10)))
+        return picks
 
-        # Normalize confidence to 1-10 scale if Gemini returned 0-100
-        def _normalize_confidence(picks: list) -> list:
-            for pick in picks:
-                c = pick.get("confidence", 5)
-                if isinstance(c, (int, float)) and c > 10:
-                    pick["confidence"] = max(1, min(10, round(c / 10)))
-            return picks
+    last_error = None
+    for i, api_key in enumerate(api_keys):
+        key_label = "primary" if i == 0 else "backup"
+        try:
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel("gemini-2.0-flash")
+            response = await model.generate_content_async(prompt)
+            text = response.text.strip()
+            fence_match = re.match(r"^```(?:\w+)?\s*\n(.*?)```\s*$", text, re.DOTALL)
+            if fence_match:
+                text = fence_match.group(1).strip()
+            parsed = json.loads(text)
 
-        # Validate structure
-        if isinstance(parsed, dict) and all(k in parsed for k in ("intraday", "weekly", "monthly")):
-            for key in ("intraday", "weekly", "monthly"):
-                parsed[key] = _normalize_confidence(parsed.get(key, []))
-            return parsed
-        # If Gemini returned a flat list, try to bucket it
-        if isinstance(parsed, list):
-            parsed = _normalize_confidence(parsed)
-            return {"intraday": parsed[:5], "weekly": parsed[5:10], "monthly": parsed[10:15]}
-        return {"intraday": [], "weekly": [], "monthly": []}
-    except Exception as e:
-        log.error("gemini_call_failed error=%s type=%s", e, type(e).__name__)
-        return {"intraday": [], "weekly": [], "monthly": []}
+            if isinstance(parsed, dict) and all(k in parsed for k in ("intraday", "weekly", "monthly")):
+                for key in ("intraday", "weekly", "monthly"):
+                    parsed[key] = _normalize_confidence(parsed.get(key, []))
+                log.info("gemini_call_success key=%s picks=%d", key_label, sum(len(v) for v in parsed.values()))
+                return parsed
+            if isinstance(parsed, list):
+                parsed = _normalize_confidence(parsed)
+                return {"intraday": parsed[:5], "weekly": parsed[5:10], "monthly": parsed[10:15]}
+        except Exception as e:
+            last_error = e
+            log.warning("gemini_call_failed key=%s error=%s type=%s", key_label, e, type(e).__name__)
+            continue
+
+    log.error("all gemini keys exhausted last_error=%s", last_error)
+    return {"intraday": [], "weekly": [], "monthly": []}
 
 
 async def generate_suggestions() -> dict[str, Any]:
