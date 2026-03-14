@@ -669,6 +669,8 @@ async def _generate_technical_picks(headlines: list[dict[str, str]]) -> dict[str
             scored.append((symbol, score, data))
 
         scored.sort(key=lambda x: x[1], reverse=True)
+        log.info("layer3_%s scored=%d top3=%s", timeframe, len(scored),
+                 [(s, round(sc, 1)) for s, sc, _ in scored[:3]])
         picks: list[dict[str, Any]] = []
 
         for symbol, score, data in scored[:5]:
