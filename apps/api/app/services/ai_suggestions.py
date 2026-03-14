@@ -303,7 +303,7 @@ async def _call_gemini(headlines: list[dict[str, str]], market_summary: str) -> 
             model = genai.GenerativeModel("gemini-2.0-flash")
             response = await asyncio.wait_for(
                 model.generate_content_async(prompt),
-                timeout=30,
+                timeout=15,
             )
             parsed = _parse_ai_response(response.text)
             if parsed and _has_picks(parsed):
@@ -348,7 +348,7 @@ async def _call_alternative_ai(headlines: list[dict[str, str]], market_summary: 
                     temperature=0.7,
                     max_tokens=4096,
                 ),
-                timeout=30,
+                timeout=20,
             )
             text = response.choices[0].message.content or ""
             parsed = _parse_ai_response(text)
@@ -365,7 +365,7 @@ async def _call_alternative_ai(headlines: list[dict[str, str]], market_summary: 
     # Try xAI/Grok
     if settings.xai_api_key:
         try:
-            async with httpx.AsyncClient(timeout=30) as client:
+            async with httpx.AsyncClient(timeout=20) as client:
                 resp = await client.post(
                     "https://api.x.ai/v1/chat/completions",
                     headers={
