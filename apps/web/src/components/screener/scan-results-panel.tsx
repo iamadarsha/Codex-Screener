@@ -25,10 +25,12 @@ export function ScanResultsPanel({ result, onClose }: ScanResultsPanelProps) {
           <h3 className="text-sm font-semibold text-white">
             {result.scan_name}
           </h3>
-          <Badge variant="accent">{result.count} results</Badge>
-          <span className="text-xs text-[#5C5D6E]">
-            {formatTime(result.executed_at)}
-          </span>
+          <Badge variant="accent">{result.total_matches} results</Badge>
+          {result.run_at && (
+            <span className="text-xs text-[#5C5D6E]">
+              {formatTime(result.run_at)}
+            </span>
+          )}
         </div>
         <button
           onClick={onClose}
@@ -38,7 +40,7 @@ export function ScanResultsPanel({ result, onClose }: ScanResultsPanelProps) {
         </button>
       </div>
 
-      <SortableResultsTable items={result.results} />
+      <SortableResultsTable items={result.items ?? []} />
     </motion.div>
   );
 }

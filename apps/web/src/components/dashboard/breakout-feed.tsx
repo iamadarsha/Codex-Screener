@@ -52,28 +52,28 @@ export function BreakoutFeed({ items }: BreakoutFeedProps) {
                     <span className="font-mono text-sm font-semibold text-white">
                       {item.symbol}
                     </span>
-                    <span className="text-xs text-[#8B8D9A]">{item.name}</span>
+                    <span className="text-xs text-[#8B8D9A]">{item.company_name}</span>
                   </div>
                   <span className="text-xs text-[#5C5D6E]">{item.sector}</span>
                 </div>
                 <div className="text-right">
                   <div className="font-mono text-sm text-white">
-                    {formatPrice(item.ltp)}
+                    {formatPrice(item.ltp ?? 0)}
                   </div>
                   <div
                     className={cn(
                       "font-mono text-xs",
-                      item.change_pct >= 0
+                      (item.change_pct ?? 0) >= 0
                         ? "text-[#00C896]"
                         : "text-[#FF4757]"
                     )}
                   >
-                    {formatPercent(item.change_pct)}
+                    {formatPercent(item.change_pct ?? 0)}
                   </div>
                 </div>
-                {item.triggered_at && (
+                {item.matched_conditions && item.matched_conditions.length > 0 && (
                   <span className="text-xs text-[#5C5D6E]">
-                    {formatTime(item.triggered_at)}
+                    {item.matched_conditions[0]}
                   </span>
                 )}
               </Link>

@@ -78,21 +78,25 @@ export interface PrebuiltScan {
 
 export interface ScanResultItem {
   symbol: string;
-  name: string;
-  sector: string;
-  ltp: number;
-  change_pct: number;
-  volume: number;
+  company_name: string;
+  sector?: string;
+  ltp?: number;
+  change_pct?: number;
+  volume?: number;
   signal_strength?: number;
-  triggered_at?: string;
+  score?: number;
+  rsi_14?: number;
+  ema_status?: string;
+  matched_conditions?: string[];
 }
 
 export interface ScanResult {
   scan_id: string;
   scan_name: string;
-  count: number;
-  results: ScanResultItem[];
-  executed_at: string;
+  description?: string;
+  total_matches: number;
+  items: ScanResultItem[];
+  run_at: string;
 }
 
 export interface CustomScanCondition {
@@ -204,4 +208,32 @@ export interface WsSubscribeMessage {
 
 export interface WsUnsubscribeMessage {
   unsubscribe: string[];
+}
+
+/* AI Suggestions */
+export interface AiSuggestion {
+  symbol: string;
+  name?: string;
+  rationale: string;
+  confidence?: number;
+  timeframe?: string;
+}
+
+export interface AiSuggestionsResponse {
+  intraday: AiSuggestion[];
+  swing: AiSuggestion[];
+  positional: AiSuggestion[];
+  generated_at?: string;
+  model?: string;
+}
+
+/* Company Info */
+export interface CompanyInfo {
+  symbol: string;
+  name: string;
+  description?: string;
+  sector?: string;
+  industry?: string;
+  website?: string;
+  logo_url?: string;
 }

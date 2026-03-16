@@ -25,7 +25,7 @@ export function SortableResultsTable({ items }: SortableResultsTableProps) {
             <span className="font-mono font-semibold text-white">
               {row.original.symbol}
             </span>
-            <div className="text-xs text-[#5C5D6E]">{row.original.name}</div>
+            <div className="text-xs text-[#5C5D6E]">{row.original.company_name}</div>
           </div>
         ),
       },
@@ -41,7 +41,7 @@ export function SortableResultsTable({ items }: SortableResultsTableProps) {
         header: "LTP",
         cell: ({ row }) => (
           <span className="font-mono text-white">
-            {formatPrice(row.original.ltp)}
+            {formatPrice(row.original.ltp ?? 0)}
           </span>
         ),
       },
@@ -51,10 +51,10 @@ export function SortableResultsTable({ items }: SortableResultsTableProps) {
         cell: ({ row }) => (
           <Badge
             variant={
-              row.original.change_pct >= 0 ? "bullish" : "bearish"
+              (row.original.change_pct ?? 0) >= 0 ? "bullish" : "bearish"
             }
           >
-            {formatPercent(row.original.change_pct)}
+            {formatPercent(row.original.change_pct ?? 0)}
           </Badge>
         ),
       },
@@ -63,7 +63,7 @@ export function SortableResultsTable({ items }: SortableResultsTableProps) {
         header: "Volume",
         cell: ({ row }) => (
           <span className="font-mono text-[#8B8D9A]">
-            {formatVolume(row.original.volume)}
+            {formatVolume(row.original.volume ?? 0)}
           </span>
         ),
       },

@@ -24,9 +24,9 @@ import type {
 /*  Generic fetch helper                                               */
 /* ------------------------------------------------------------------ */
 
-async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+async function apiFetch<T>(path: string, init?: RequestInit & { timeoutMs?: number }): Promise<T> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 5_000);
+  const timeout = setTimeout(() => controller.abort(), init?.timeoutMs ?? 15_000);
   try {
     const res = await fetch(`${API_BASE_URL}${path}`, {
       headers: { "Content-Type": "application/json" },

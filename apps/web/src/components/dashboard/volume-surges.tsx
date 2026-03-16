@@ -50,20 +50,20 @@ export function VolumeSurges({ items }: VolumeSurgesProps) {
                   </Link>
                 </td>
                 <td className="px-5 py-2.5 text-right font-mono text-white">
-                  {formatPrice(item.ltp)}
+                  {formatPrice(item.ltp ?? 0)}
                 </td>
                 <td
                   className={cn(
                     "px-5 py-2.5 text-right font-mono",
-                    item.change_pct >= 0
+                    (item.change_pct ?? 0) >= 0
                       ? "text-[#00C896]"
                       : "text-[#FF4757]"
                   )}
                 >
-                  {formatPercent(item.change_pct)}
+                  {formatPercent(item.change_pct ?? 0)}
                 </td>
                 <td className="px-5 py-2.5 text-right font-mono text-[#FFA502]">
-                  {formatVolume(item.volume)}
+                  {formatVolume(item.volume ?? 0)}
                 </td>
               </tr>
             ))}

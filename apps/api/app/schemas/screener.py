@@ -33,6 +33,10 @@ class ScanResultItem(BaseModel):
     ltp: float | None = None
     change_pct: float | None = None
     sector: str | None = None
+    volume: float | None = None
+    rsi_14: float | None = None
+    ema_status: str | None = None
+    signal_strength: float | None = None
     matched_conditions: list[str] | None = None
     score: float | None = None
 
