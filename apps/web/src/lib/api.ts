@@ -28,19 +28,23 @@ import type {
 async function getAuthHeaders(): Promise<Record<string, string>> {
   try {
     const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error) {
+      console.warn("[api] getSession error:", error.message);
+    }
     if (session?.access_token) {
       return { Authorization: `Bearer ${session.access_token}` };
     }
-  } catch {
-    // No auth available
+    console.warn("[api] No active session — watchlist/alerts will fail");
+  } catch (e) {
+    console.warn("[api] getAuthHeaders error:", e);
   }
   return {};
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 5_000);
+  const timeout = setTimeout(() => controller.abort(), 15_000);
   const authHeaders = await getAuthHeaders();
   try {
     const res = await fetch(`${API_BASE_URL}${path}`, {
