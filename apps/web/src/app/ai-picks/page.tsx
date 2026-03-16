@@ -97,7 +97,7 @@ export default function AiPicksPage() {
           {generatedAt && (
             <div className="flex flex-wrap items-center gap-4 text-xs text-text-muted">
               <span className="flex items-center gap-1">
-                <Sparkles className="h-3 w-3" /> Powered by Gemini 2.5 Flash
+                <Sparkles className="h-3 w-3" /> Powered by Gemini 3.1 Flash
               </span>
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" /> Generated {generatedAt}

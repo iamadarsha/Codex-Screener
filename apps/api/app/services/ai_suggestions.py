@@ -1,8 +1,8 @@
 """AI-powered stock suggestions with 3-layer fallback:
 
-Layer 1: Gemini (primary + backup key)
-Layer 2: Groq Llama 3.3 70B
-Layer 3: RSS + Technical Scoring Engine (zero API dependency)
+Layer 1: Gemini 3.1 Flash Lite (primary + backup key, 500 RPD)
+Layer 2: RSS + Technical Scoring Engine (zero API dependency)
+Layer 3: Groq Llama 3.3 70B / xAI Grok
 """
 
 from __future__ import annotations
@@ -299,7 +299,7 @@ async def _call_gemini(headlines: list[dict[str, str]], market_summary: str) -> 
     def _sync_gemini_call(api_key: str) -> str:
         """Run Gemini synchronously in a thread so timeout actually works."""
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-2.0-flash")
+        model = genai.GenerativeModel("gemini-3.1-flash-lite")
         response = model.generate_content(prompt)
         return response.text
 
@@ -756,24 +756,24 @@ async def generate_suggestions() -> dict[str, Any]:
     except Exception as e:
         log.warning("layer1_unexpected: %s %s", type(e).__name__, e)
 
-    # Layer 2: Groq / xAI (20s max)
+    # Layer 2: RSS + Technical scoring engine (zero API, fast <5s)
     if not _has_picks(picks):
-        source = "groq"
+        source = "technical-analysis"
         try:
             picks = await asyncio.wait_for(
-                _call_alternative_ai(headlines, market_summary), timeout=25
+                _generate_technical_picks(headlines), timeout=15
             )
         except asyncio.TimeoutError:
             log.warning("layer2_global_timeout")
         except Exception as e:
             log.warning("layer2_unexpected: %s %s", type(e).__name__, e)
 
-    # Layer 3: Technical scoring engine (should be fast, <5s)
+    # Layer 3: Groq / xAI (20s max)
     if not _has_picks(picks):
-        source = "technical-analysis"
+        source = "groq"
         try:
             picks = await asyncio.wait_for(
-                _generate_technical_picks(headlines), timeout=15
+                _call_alternative_ai(headlines, market_summary), timeout=25
             )
         except asyncio.TimeoutError:
             log.warning("layer3_global_timeout")
