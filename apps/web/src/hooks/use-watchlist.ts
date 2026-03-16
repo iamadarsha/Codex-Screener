@@ -22,8 +22,17 @@ export function useAddToWatchlist() {
       qc.invalidateQueries({ queryKey: ["watchlist"] });
       toast.success("Added to watchlist");
     },
-    onError: () => {
-      toast.error("Failed to add to watchlist");
+    onError: (error: Error) => {
+      const msg = error.message || "";
+      if (msg.includes("401")) {
+        toast.error("Please sign in to use watchlist");
+      } else if (msg.includes("409")) {
+        toast.info("Already in your watchlist");
+      } else if (msg.includes("404")) {
+        toast.error("Stock not found in database");
+      } else {
+        toast.error("Failed to add to watchlist");
+      }
     },
   });
 }
