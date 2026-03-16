@@ -66,12 +66,16 @@ async def create_alert(
 async def update_alert(
     alert_id: str,
     req: AlertUpdateRequest,
+    user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Update an existing alert."""
+    """Update an existing alert (owner-only)."""
     aid = uuid.UUID(alert_id)
+    uid = uuid.UUID(user_id)
     alert = (
-        await db.execute(select(Alert).where(Alert.id == aid))
+        await db.execute(
+            select(Alert).where(Alert.id == aid, Alert.user_id == uid)
+        )
     ).scalar_one_or_none()
     if not alert:
         raise HTTPException(status_code=404, detail="Alert not found")
@@ -79,7 +83,9 @@ async def update_alert(
     update_data = req.model_dump(exclude_unset=True)
     if update_data:
         await db.execute(
-            update(Alert).where(Alert.id == aid).values(**update_data)
+            update(Alert)
+            .where(Alert.id == aid, Alert.user_id == uid)
+            .values(**update_data)
         )
         await db.commit()
         await db.refresh(alert)
@@ -89,11 +95,15 @@ async def update_alert(
 @router.delete("/{alert_id}", response_model=SuccessResponse)
 async def delete_alert(
     alert_id: str,
+    user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Delete an alert."""
+    """Delete an alert (owner-only)."""
     aid = uuid.UUID(alert_id)
-    result = await db.execute(delete(Alert).where(Alert.id == aid))
+    uid = uuid.UUID(user_id)
+    result = await db.execute(
+        delete(Alert).where(Alert.id == aid, Alert.user_id == uid)
+    )
     if result.rowcount == 0:
         raise HTTPException(status_code=404, detail="Alert not found")
     await db.commit()

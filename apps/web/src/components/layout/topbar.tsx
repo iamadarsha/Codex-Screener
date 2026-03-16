@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { Bell, Search, Sun, Moon } from "lucide-react";
+import { Bell, Search, Sun, Moon, LogIn, LogOut, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { LiveDot } from "@/components/ui/live-dot";
 import { CountdownBar } from "@/components/ui/countdown-bar";
@@ -9,6 +9,8 @@ import { useMarketStatus, useMarketIndices } from "@/hooks/use-market-breadth";
 import { formatPrice, formatPercent } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { useTheme } from "@/components/providers/theme-provider";
+import { useAuth } from "@/hooks/use-auth";
+import { createClient } from "@/lib/supabase/client";
 import { fetchStocks } from "@/lib/api";
 import { searchLocalStocks } from "@/lib/nse-stocks";
 import type { Stock } from "@/lib/api-types";
@@ -96,6 +98,29 @@ export function Topbar() {
   const { data: indices } = useMarketIndices();
   const isMarketLive = useIsMarketLive();
   const { theme, toggleTheme } = useTheme();
+  const { user, loading: authLoading } = useAuth();
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close user menu on click outside
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setShowUserMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const handleSignIn = () => router.push("/login");
+
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    setShowUserMenu(false);
+    router.refresh();
+  };
 
   // Global Ctrl+K / Cmd+K shortcut to focus search
   useEffect(() => {
@@ -193,7 +218,7 @@ export function Topbar() {
           Codex Screener
         </span>
 
-        <div className="flex items-center gap-1.5 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Search with autocomplete */}
           <div className="relative" ref={dropdownRef}>
             <form onSubmit={handleSearch}>
@@ -210,22 +235,22 @@ export function Topbar() {
                 onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
                 onKeyDown={handleKeyDown}
                 placeholder="Search..."
-                className="h-8 w-28 rounded-lg border border-border bg-card pl-8 pr-2 text-[13px] text-text-primary placeholder-text-muted outline-none transition focus:border-accent sm:h-9 sm:w-48 sm:pl-9 sm:pr-14 sm:focus:w-64"
+                className="h-9 w-32 rounded-xl border border-border bg-card pl-8 pr-2 text-sm text-text-primary placeholder-text-muted outline-none transition-all focus:border-accent focus:w-40 sm:h-10 sm:w-48 sm:pl-9 sm:pr-14 sm:focus:w-64"
               />
               <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border bg-page px-1.5 py-0.5 text-[10px] text-text-muted hidden sm:inline">
                 ⌘K
               </kbd>
             </form>
             {showDropdown && suggestions.length > 0 && (
-              <div className="fixed left-3 right-3 top-[52px] z-[100] overflow-hidden rounded-lg border border-border shadow-2xl sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-1 sm:w-72" style={{ backgroundColor: '#0d1117' }}>
+              <div className="fixed left-3 right-3 top-[56px] z-[100] overflow-hidden rounded-xl border border-border shadow-2xl sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-1 sm:w-80" style={{ backgroundColor: '#0d1117' }}>
                 {suggestions.map((stock, i) => (
                   <button
                     key={stock.symbol}
                     type="button"
                     onMouseDown={() => navigateToChart(stock.symbol)}
                     className={cn(
-                      "flex w-full items-center gap-2 px-3 py-2.5 text-left text-[13px] transition",
-                      i === selectedIdx ? "bg-white/10" : "hover:bg-white/10"
+                      "flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition press-scale",
+                      i === selectedIdx ? "bg-white/10" : "hover:bg-white/5"
                     )}
                   >
                     <span className="font-mono font-semibold text-accent">
@@ -243,7 +268,7 @@ export function Topbar() {
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
-            className="rounded-lg p-1.5 sm:p-2 text-text-secondary transition hover:bg-elevated hover:text-text-primary"
+            className="rounded-xl p-2 sm:p-2.5 text-text-secondary transition hover:bg-elevated hover:text-text-primary min-h-[36px] min-w-[36px] flex items-center justify-center"
             title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
           >
             {theme === "dark" ? (
@@ -274,12 +299,59 @@ export function Topbar() {
             <Bell className="h-4 w-4" />
           </button>
 
+          {/* Auth: Login CTA or User avatar */}
+          {!authLoading && (
+            user ? (
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  onClick={() => setShowUserMenu((v) => !v)}
+                  className="flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-2.5 py-1.5 sm:px-3 sm:py-2 text-accent transition hover:bg-accent/20 press-scale min-h-[36px]"
+                  title={user.email ?? "Account"}
+                >
+                  <User className="h-4 w-4" />
+                  <span className="hidden sm:inline text-xs font-semibold max-w-[80px] truncate">
+                    {user.email?.split("@")[0] ?? "Account"}
+                  </span>
+                </button>
+                {showUserMenu && (
+                  <div className="absolute right-0 top-full mt-2 z-[100] w-52 overflow-hidden rounded-xl border border-border shadow-2xl" style={{ backgroundColor: '#0d1117' }}>
+                    <div className="px-4 py-3 border-b border-border">
+                      <p className="text-xs text-text-muted truncate">{user.email}</p>
+                    </div>
+                    <button
+                      onClick={() => { setShowUserMenu(false); router.push("/settings"); }}
+                      className="flex w-full items-center gap-3 px-4 py-3 text-sm text-text-secondary hover:bg-white/10 transition"
+                    >
+                      <User className="h-4 w-4" /> Settings
+                    </button>
+                    <button
+                      onClick={handleSignOut}
+                      className="flex w-full items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-white/10 transition"
+                    >
+                      <LogOut className="h-4 w-4" /> Sign Out
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={handleSignIn}
+                className="flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-3 py-1.5 sm:px-3.5 sm:py-2 text-accent transition hover:bg-accent/20 press-scale min-h-[36px]"
+              >
+                <LogIn className="h-4 w-4" />
+                <span className="text-xs font-semibold">
+                  Sign In
+                </span>
+              </button>
+            )
+          )}
+
           {/* Live/Closed status pill */}
-          <div className="flex items-center gap-1.5 rounded-full border border-border bg-card px-2 py-1 sm:gap-2 sm:px-3 sm:py-1.5">
+          <div className="hidden sm:flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5">
             <LiveDot color={status?.is_open ? "green" : "red"} />
             <span
               className={cn(
-                "text-[9px] sm:text-[10px] font-semibold uppercase tracking-[0.15em]",
+                "text-[10px] font-semibold uppercase tracking-[0.15em]",
                 status?.is_open ? "text-bullish" : "text-bearish"
               )}
             >

@@ -101,7 +101,7 @@ export function StatCards({
 
           <div className="flex items-start justify-between">
             <div>
-              <div className="text-[10px] sm:text-[11px] font-medium uppercase tracking-wider text-text-secondary">
+              <div className="text-[11px] sm:text-xs font-medium uppercase tracking-wider text-text-secondary">
                 {card.label}
               </div>
               <div className="mt-2 sm:mt-3 flex items-baseline gap-1">

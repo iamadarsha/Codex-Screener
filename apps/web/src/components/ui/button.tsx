@@ -1,26 +1,45 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { cn } from "@/lib/cn";
 
-type ButtonVariant = "primary" | "secondary";
+type ButtonVariant = "primary" | "secondary" | "ghost";
+type ButtonSize = "sm" | "md" | "lg";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   children: ReactNode;
   variant?: ButtonVariant;
+  size?: ButtonSize;
+};
+
+const sizeStyles: Record<ButtonSize, string> = {
+  sm: "h-9 px-3 text-xs",
+  md: "h-10 sm:h-11 px-4 sm:px-5 text-sm",
+  lg: "h-12 px-6 text-base",
+};
+
+const variantStyles: Record<ButtonVariant, string> = {
+  primary:
+    "bg-gradient-to-br from-[#7C5CFC] to-[#5B3FD4] text-white shadow-accent hover:shadow-lg hover:shadow-accent/30",
+  secondary:
+    "border border-accent/40 bg-accent/5 text-accent hover:bg-accent/10 hover:border-accent/60",
+  ghost:
+    "text-text-secondary hover:bg-elevated hover:text-text-primary",
 };
 
 export function Button({
   children,
   className = "",
   variant = "primary",
+  size = "md",
   ...props
 }: ButtonProps) {
-  const variantClassName =
-    variant === "primary"
-      ? "bg-gradient-to-br from-[#7C5CFC] to-[#5B3FD4] text-white shadow-accent"
-      : "border border-accent bg-transparent text-accent";
-
   return (
     <button
-      className={`inline-flex h-8 sm:h-10 items-center justify-center rounded-lg px-3 sm:px-4 text-xs sm:text-sm font-semibold transition duration-200 hover:opacity-90 ${variantClassName} ${className}`}
+      className={cn(
+        "inline-flex items-center justify-center rounded-xl font-semibold transition-all duration-200 press-scale disabled:opacity-50 disabled:pointer-events-none",
+        sizeStyles[size],
+        variantStyles[variant],
+        className
+      )}
       {...props}
     >
       {children}

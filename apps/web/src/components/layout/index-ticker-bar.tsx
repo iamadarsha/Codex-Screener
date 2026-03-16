@@ -33,9 +33,9 @@ export function IndexTickerBar() {
   if (!indices || indices.length === 0) return null;
 
   return (
-    <div className="overflow-hidden border-b border-border-subtle bg-page/60">
+    <div className="overflow-hidden border-b border-border-subtle bg-page/60 scroll-fade-x">
       <div
-        className="flex whitespace-nowrap py-1.5"
+        className="flex whitespace-nowrap py-2"
         style={{
           animation: "ticker-scroll 30s linear infinite",
           width: "max-content",

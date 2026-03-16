@@ -24,13 +24,15 @@ function ThemedToaster() {
   return (
     <Toaster
       theme={theme}
-      position="bottom-right"
+      position="top-center"
+      offset={16}
       toastOptions={{
         style: {
           background: "var(--bg-elevated)",
           border: "1px solid var(--border)",
           color: "var(--text-primary)",
-          backdropFilter: "blur(12px)",
+          backdropFilter: "blur(16px)",
+          borderRadius: "12px",
         },
       }}
     />

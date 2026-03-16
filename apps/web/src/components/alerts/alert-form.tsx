@@ -113,15 +113,15 @@ export function AlertForm({ onSubmit, isLoading }: AlertFormProps) {
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-text-secondary">
+            <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-text-secondary">
               Condition
             </label>
             <select
               value={conditionType}
               onChange={(e) => setConditionType(e.target.value)}
-              className={cn(selectClass, "w-full")}
+              className={cn(selectClass, "w-full h-11 rounded-xl")}
             >
               {CONDITIONS.map((c) => (
                 <option key={c.value} value={c.value}>
@@ -131,13 +131,13 @@ export function AlertForm({ onSubmit, isLoading }: AlertFormProps) {
             </select>
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-text-secondary">
+            <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-text-secondary">
               Operator
             </label>
             <select
               value={operator}
               onChange={(e) => setOperator(e.target.value)}
-              className={cn(selectClass, "w-full")}
+              className={cn(selectClass, "w-full h-11 rounded-xl")}
             >
               {OPERATORS.map((o) => (
                 <option key={o.value} value={o.value}>

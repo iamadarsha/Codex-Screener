@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Plus } from "lucide-react";
+import { Plus, LogIn, Eye } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageTransition } from "@/components/layout/page-transition";
 import { SectionHeading } from "@/components/ui/section-heading";
@@ -16,12 +17,15 @@ import {
   useAddToWatchlist,
   useRemoveFromWatchlist,
 } from "@/hooks/use-watchlist";
+import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { useLivePrices } from "@/hooks/use-live-prices";
 import { fetchLivePrices } from "@/lib/api";
 import type { LivePrice } from "@/lib/api-types";
 
 export default function WatchlistPage() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [modalOpen, setModalOpen] = useState(false);
   const { data: items, isLoading, isError } = useWatchlist();
   const addMutation = useAddToWatchlist();
@@ -59,6 +63,38 @@ export default function WatchlistPage() {
       })),
     [items, livePrices]
   );
+
+  // Auth gate — show sign-in prompt if not logged in
+  if (!authLoading && !user) {
+    return (
+      <AppShell>
+        <PageTransition>
+          <div className="space-y-6">
+            <SectionHeading
+              title="Watchlist"
+              subtitle="Track your favourite stocks with live prices"
+            />
+            <div className="rounded-panel border border-border bg-card p-12 text-center">
+              <Eye className="mx-auto h-12 w-12 text-text-muted/50" />
+              <h3 className="mt-4 text-lg font-semibold text-text-primary">
+                Sign in to use Watchlist
+              </h3>
+              <p className="mt-2 text-sm text-text-secondary max-w-sm mx-auto">
+                Create a personal watchlist to track your favourite stocks with live prices, alerts, and more.
+              </p>
+              <button
+                onClick={() => router.push("/login")}
+                className="mt-6 inline-flex items-center gap-2 rounded-xl border border-accent/30 bg-accent/10 px-6 py-3 text-sm font-semibold text-accent transition hover:bg-accent/20"
+              >
+                <LogIn className="h-4 w-4" />
+                Sign In with Google
+              </button>
+            </div>
+          </div>
+        </PageTransition>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>

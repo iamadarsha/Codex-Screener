@@ -50,7 +50,7 @@ export function DataTable<T>({
   });
 
   return (
-    <div className={cn("overflow-x-auto", className)}>
+    <div className={cn("overflow-x-auto scroll-touch", className)}>
       <table className="w-full text-sm">
         <thead>
           {table.getHeaderGroups().map((hg) => (
@@ -62,7 +62,7 @@ export function DataTable<T>({
                   <th
                     key={header.id}
                     className={cn(
-                      "px-2 sm:px-4 py-2.5 sm:py-3 text-left text-[10px] sm:text-xs font-medium uppercase tracking-wider text-text-secondary whitespace-nowrap",
+                      "px-3 sm:px-4 py-3 text-left text-[11px] sm:text-xs font-medium uppercase tracking-wider text-text-secondary whitespace-nowrap",
                       canSort && "cursor-pointer select-none hover:text-text-primary"
                     )}
                     onClick={header.column.getToggleSortingHandler()}
@@ -104,7 +104,7 @@ export function DataTable<T>({
               )}
             >
               {row.getVisibleCells().map((cell) => (
-                <td key={cell.id} className="px-2 sm:px-4 py-2.5 sm:py-3 text-text-primary whitespace-nowrap">
+                <td key={cell.id} className="px-3 sm:px-4 py-3 text-text-primary whitespace-nowrap">
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>
               ))}

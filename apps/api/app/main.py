@@ -86,12 +86,21 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+_allowed_origins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "https://breakoutscan.up.railway.app",
+    "https://breakoutscan-web-production.up.railway.app",
+    "https://breakoutscan.in",
+    "https://www.breakoutscan.in",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=_allowed_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 # Include all HTTP API routes
