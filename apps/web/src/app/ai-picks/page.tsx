@@ -14,6 +14,9 @@ import {
 import { RefreshCw, Sparkles, Clock } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { useLivePrices } from "@/hooks/use-live-prices";
+import { fetchLivePrices } from "@/lib/api";
 import type { AiSuggestion } from "@/lib/api-types";
 
 type TabKey = "intraday" | "weekly" | "monthly";
@@ -51,6 +54,34 @@ export default function AiPicksPage() {
       };
 
   const activePicks = groupedPicks[activeTab];
+
+  // Collect all symbols across all tabs for live price subscription
+  const allSymbols = [...new Set([
+    ...groupedPicks.intraday,
+    ...groupedPicks.weekly,
+    ...groupedPicks.monthly,
+  ].map((s) => s.symbol))];
+  const wsLivePrices = useLivePrices(allSymbols);
+
+  // REST fallback for when WebSocket doesn't deliver (e.g. market closed)
+  const { data: restPrices } = useQuery({
+    queryKey: ["livePrices", allSymbols.join(",")],
+    queryFn: () => fetchLivePrices(allSymbols),
+    enabled: allSymbols.length > 0,
+    retry: 0,
+    staleTime: 30_000,
+  });
+
+  // Merge: WS takes priority, REST as fallback
+  const livePrices: Record<string, { change_pct: number }> = {};
+  for (const sym of allSymbols) {
+    if (wsLivePrices[sym]) {
+      livePrices[sym] = wsLivePrices[sym];
+    } else {
+      const rest = restPrices?.find((p) => p.symbol === sym);
+      if (rest) livePrices[sym] = rest;
+    }
+  }
 
   const generatedAt = data?.generated_at
     ? new Date(data.generated_at).toLocaleString("en-IN", {
@@ -168,7 +199,7 @@ export default function AiPicksPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: i * 0.05 }}
                 >
-                  <StockCard suggestion={s} index={i} />
+                  <StockCard suggestion={s} index={i} changePct={livePrices[s.symbol]?.change_pct} />
                 </motion.div>
               ))}
             </div>

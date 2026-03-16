@@ -9,18 +9,20 @@ import type { AiSuggestion } from "@/lib/api-types";
 interface StockCardProps {
   suggestion: AiSuggestion;
   index: number;
+  changePct?: number;
 }
 
-export function StockCard({ suggestion, index }: StockCardProps) {
+export function StockCard({ suggestion, index, changePct }: StockCardProps) {
   const confidence = suggestion.confidence ?? 0;
+  // Normalize: if > 1, it's already a percentage (e.g. 80), otherwise multiply
+  const confidenceNorm = confidence > 1 ? confidence : confidence * 100;
   const confidenceLabel =
-    confidence >= 0.8 ? "High" : confidence >= 0.5 ? "Medium" : "Low";
-  const confidenceColor =
-    confidence >= 0.8
-      ? "text-bullish"
-      : confidence >= 0.5
-        ? "text-[#FFA502]"
-        : "text-text-muted";
+    confidenceNorm >= 80 ? "High" : confidenceNorm >= 50 ? "Medium" : "Low";
+
+  const hasChange = changePct != null;
+  const changeColor = hasChange
+    ? changePct >= 0 ? "text-bullish" : "text-bearish"
+    : "text-text-muted";
 
   return (
     <Link
@@ -45,14 +47,14 @@ export function StockCard({ suggestion, index }: StockCardProps) {
           )}
         </div>
 
-        {confidence > 0 && (
-          <div className="text-right">
-            <div className={cn("text-sm font-bold tabular-nums", confidenceColor)}>
-              {(confidence * 100).toFixed(0)}%
-            </div>
-            <div className="text-[10px] text-text-muted">{confidenceLabel}</div>
+        <div className="text-right">
+          <div className={cn("text-sm font-bold tabular-nums", changeColor)}>
+            {hasChange
+              ? `${changePct >= 0 ? "+" : ""}${changePct.toFixed(1)}%`
+              : "—"}
           </div>
-        )}
+          <div className="text-[10px] text-text-muted">{confidenceLabel}</div>
+        </div>
       </div>
 
       {/* Rationale */}
