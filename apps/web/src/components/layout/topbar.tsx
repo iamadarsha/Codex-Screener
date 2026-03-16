@@ -242,7 +242,7 @@ export function Topbar() {
               </kbd>
             </form>
             {showDropdown && suggestions.length > 0 && (
-              <div className="fixed left-3 right-3 top-[56px] z-[100] overflow-hidden rounded-xl border border-border shadow-2xl sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-1 sm:w-80" style={{ backgroundColor: '#0d1117' }}>
+              <div className="fixed left-3 right-3 top-[56px] z-[100] max-h-[320px] overflow-y-auto rounded-xl border border-border shadow-2xl sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-1 sm:w-80" style={{ backgroundColor: '#0d1117' }}>
                 {suggestions.map((stock, i) => (
                   <button
                     key={stock.symbol}
