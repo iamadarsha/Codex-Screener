@@ -1,7 +1,7 @@
 """AI-powered stock suggestions with 3-layer fallback:
 
-Layer 1: Gemini 3.1 Flash Lite (primary + backup key, 500 RPD)
-Layer 2: RSS + Technical Scoring Engine (zero API dependency)
+Layer 1: RSS + Technical Scoring Engine (zero API dependency, fast)
+Layer 2: Gemini 3.1 Flash Lite (primary + backup key, 500 RPD)
 Layer 3: Groq Llama 3.3 70B / xAI Grok
 """
 
@@ -744,24 +744,24 @@ async def generate_suggestions() -> dict[str, Any]:
             "next_refresh": get_next_trading_day_9am().isoformat(),
         }
 
-    # Layer 1: Gemini (20s per key × 2 keys = 40s max)
-    source = "gemini"
+    # Layer 1: RSS + Technical scoring engine (zero API, fast <5s)
+    source = "technical-analysis"
     picks: dict[str, list] = {"intraday": [], "weekly": [], "monthly": []}
     try:
         picks = await asyncio.wait_for(
-            _call_gemini(headlines, market_summary), timeout=45
+            _generate_technical_picks(headlines), timeout=15
         )
     except asyncio.TimeoutError:
         log.warning("layer1_global_timeout")
     except Exception as e:
         log.warning("layer1_unexpected: %s %s", type(e).__name__, e)
 
-    # Layer 2: RSS + Technical scoring engine (zero API, fast <5s)
+    # Layer 2: Gemini (20s per key × 2 keys = 40s max)
     if not _has_picks(picks):
-        source = "technical-analysis"
+        source = "gemini"
         try:
             picks = await asyncio.wait_for(
-                _generate_technical_picks(headlines), timeout=15
+                _call_gemini(headlines, market_summary), timeout=45
             )
         except asyncio.TimeoutError:
             log.warning("layer2_global_timeout")
