@@ -88,6 +88,40 @@ def compute_indicators(
     # -- VWAP ---------------------------------------------------------------
     result["vwap"] = _compute_vwap(df)
 
+    # -- Volume SMA(20) -- needed by volume_spike scan ----------------------
+    vol_sma_20 = _last(df["volume"].rolling(window=20).mean())
+    result["sma_20_volume"] = vol_sma_20
+
+    # -- 52-week high -- needed by near_52_week_high scan -------------------
+    if len(df) >= 2:
+        result["high_52w"] = round(float(df["high"].max()), 4)
+        result["open"] = _last(df["open"])
+        result["high"] = _last(df["high"])
+        result["low"] = _last(df["low"])
+
+    # -- Previous bar values -- needed for crossover scans ------------------
+    if len(df) >= 2:
+        prev_idx = len(df) - 2
+        result["prev_close"] = round(float(df["close"].iloc[prev_idx]), 4)
+        result["prev_open"] = round(float(df["open"].iloc[prev_idx]), 4)
+        result["prev_high"] = round(float(df["high"].iloc[prev_idx]), 4)
+        result["prev_low"] = round(float(df["low"].iloc[prev_idx]), 4)
+        result["prev_volume"] = int(df["volume"].iloc[prev_idx])
+        # Previous EMA/indicator values for cross detection
+        ema9_series = df.ta.ema(length=9)
+        ema21_series = df.ta.ema(length=21)
+        if ema9_series is not None and len(ema9_series) >= 2:
+            prev_ema9 = ema9_series.iloc[-2]
+            result["prev_ema_9"] = round(float(prev_ema9), 4) if not pd.isna(prev_ema9) else None
+        if ema21_series is not None and len(ema21_series) >= 2:
+            prev_ema21 = ema21_series.iloc[-2]
+            result["prev_ema_21"] = round(float(prev_ema21), 4) if not pd.isna(prev_ema21) else None
+        if macd_df is not None and len(macd_df) >= 2:
+            prev_macd = macd_df.iloc[-2, 0]
+            prev_signal = macd_df.iloc[-2, 1]
+            result["prev_macd"] = round(float(prev_macd), 4) if not pd.isna(prev_macd) else None
+            result["prev_macd_signal"] = round(float(prev_signal), 4) if not pd.isna(prev_signal) else None
+
     result["updated_at"] = now_ist().isoformat()
     return result
 

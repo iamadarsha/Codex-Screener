@@ -48,7 +48,7 @@ export default function DashboardPage() {
             return [...newItems, ...prev].slice(0, 50);
           });
           // Volume surges from any scan with high volume
-          const volSurges = result.items.filter((r) => r.volume > 0);
+          const volSurges = result.items.filter((r) => (r.volume ?? 0) > 0);
           if (volSurges.length > 0) {
             setVolumeItems((prev) => {
               const combined = [...volSurges, ...prev];

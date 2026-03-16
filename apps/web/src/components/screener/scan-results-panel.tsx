@@ -27,14 +27,11 @@ export function ScanResultsPanel({ result, onClose }: ScanResultsPanelProps) {
             {result.scan_name}
           </h3>
           <Badge variant="accent">{result.total_matches} results</Badge>
-          {result.is_demo && (
-            <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-semibold text-warning">
-              Demo Data
+          {result.run_at && (
+            <span className="text-xs text-[#5C5D6E]">
+              {formatTime(result.run_at)}
             </span>
           )}
-          <span className="text-[10px] sm:text-xs text-text-muted">
-            {formatTime(result.run_at)}
-          </span>
         </div>
         <button
           onClick={onClose}
@@ -44,7 +41,7 @@ export function ScanResultsPanel({ result, onClose }: ScanResultsPanelProps) {
         </button>
       </div>
 
-      <SortableResultsTable items={result.items} />
+      <SortableResultsTable items={result.items ?? []} />
     </motion.div>
   );
 }

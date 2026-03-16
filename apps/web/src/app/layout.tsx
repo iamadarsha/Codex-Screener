@@ -4,7 +4,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { getQueryClient } from "@/lib/query-client";
-import { ThemeProvider, useTheme } from "@/components/providers/theme-provider";
+import { ThemeProvider } from "@/components/providers/theme-provider";
 import type { ReactNode } from "react";
 
 import "./globals.css";
@@ -65,13 +65,23 @@ export default function RootLayout({ children }: RootLayoutProps) {
         <meta name="theme-color" content="#0a0e1a" id="theme-color-meta" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
-      <body className="min-h-screen font-sans antialiased">
-        <ThemeProvider>
-          <QueryClientProvider client={queryClient}>
-            {children}
-            <ThemedToaster />
-          </QueryClientProvider>
-        </ThemeProvider>
+      <body>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+          {children}
+          </ThemeProvider>
+          <Toaster
+            theme="dark"
+            position="bottom-right"
+            toastOptions={{
+              style: {
+                background: "#1A1B23",
+                border: "1px solid #2A2B35",
+                color: "#E8E9F0",
+              },
+            }}
+          />
+        </QueryClientProvider>
       </body>
     </html>
   );

@@ -79,14 +79,12 @@ export interface PrebuiltScan {
 export interface ScanResultItem {
   symbol: string;
   company_name: string;
-  /** @deprecated Use company_name instead */
-  name?: string;
-  sector: string;
-  ltp: number;
-  change_pct: number;
-  volume: number;
+  sector?: string;
+  ltp?: number;
+  change_pct?: number;
+  volume?: number;
   signal_strength?: number;
-  triggered_at?: string;
+  score?: number;
   rsi_14?: number;
   ema_status?: string;
   matched_conditions?: string[];
@@ -95,10 +93,10 @@ export interface ScanResultItem {
 export interface ScanResult {
   scan_id: string;
   scan_name: string;
+  description?: string;
   total_matches: number;
   items: ScanResultItem[];
   run_at: string;
-  is_demo?: boolean;
 }
 
 export interface CustomScanCondition {
@@ -115,8 +113,8 @@ export interface CustomScanRequest {
 
 export interface MarketStatus {
   is_open: boolean;
-  status: string;
-  message?: string;
+  session?: string;
+  status?: string;
   next_open?: string;
   next_close?: string;
 }
@@ -132,9 +130,8 @@ export interface MarketBreadth {
 export interface IndexData {
   symbol: string;
   name: string;
-  last: number;
-  /** @deprecated Use last instead */
-  value?: number;
+  value: number;
+  last?: number;
   change: number;
   change_pct: number;
   open?: number;
@@ -218,49 +215,39 @@ export interface WsUnsubscribeMessage {
   unsubscribe: string[];
 }
 
-/* Company Info */
-export interface CompanyInfo {
-  symbol: string;
-  title: string;
-  description: string;
-  extract: string;
-  thumbnail?: string | null;
-  url: string;
-  source: string;
-}
-
 /* AI Suggestions */
-export interface NewsSource {
-  title: string;
-  url: string;
-  source: string;
-  published_at: string;
-}
-
 export interface AiSuggestion {
   symbol: string;
-  name: string;
-  sector: string;
+  name?: string;
   rationale: string;
-  confidence: number;
-  catalyst: string;
-  target_horizon: "intraday" | "swing" | "positional";
-  action?: "BUY" | "SELL";
-  target_pct?: number;
-  stop_loss_pct?: number;
-  tags?: string[];
-  news_sources?: NewsSource[];
+  confidence?: number;
+  timeframe?: string;
+  target_horizon?: string;
+  entry_range?: string;
+  stop_loss?: string;
+  target?: string;
+  sector?: string;
 }
 
 export interface AiSuggestionsResponse {
-  /** Flat suggestions array (old format) */
   suggestions?: AiSuggestion[];
-  /** New grouped format */
   intraday?: AiSuggestion[];
   weekly?: AiSuggestion[];
   monthly?: AiSuggestion[];
-  generated_at: string | null;
+  swing?: AiSuggestion[];
+  positional?: AiSuggestion[];
+  generated_at?: string;
+  model?: string;
   headline_count?: number;
-  next_refresh?: string;
-  message?: string;
+}
+
+/* Company Info */
+export interface CompanyInfo {
+  symbol: string;
+  name: string;
+  description?: string;
+  sector?: string;
+  industry?: string;
+  website?: string;
+  logo_url?: string;
 }
