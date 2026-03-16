@@ -313,3 +313,30 @@ select option {
   background: var(--bg-card);
   color: var(--text-primary);
 }
+
+/* ── View Transitions API ── */
+@supports (view-transition-name: page-content) {
+  ::view-transition-old(page-content) {
+    animation: 250ms ease-out both fade-out-slide;
+  }
+  ::view-transition-new(page-content) {
+    animation: 300ms ease-out both fade-in-slide;
+  }
+
+  @keyframes fade-out-slide {
+    from { opacity: 1; transform: translateY(0); }
+    to   { opacity: 0; transform: translateY(-8px); }
+  }
+  @keyframes fade-in-slide {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Reduced motion preference */
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-old(page-content),
+    ::view-transition-new(page-content) {
+      animation-duration: 0ms;
+    }
+  }
+}

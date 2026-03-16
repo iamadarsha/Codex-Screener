@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { fetchStocks } from "@/lib/api";
 import { cn } from "@/lib/cn";
+import { haptic } from "@/lib/haptic";
 import type { AlertCreateRequest } from "@/lib/api-types";
 
 interface AlertFormProps {
@@ -52,6 +53,7 @@ export function AlertForm({ onSubmit, isLoading }: AlertFormProps) {
 
   const handleSubmit = () => {
     if (!selectedSymbol || !conditionValue) return;
+    haptic("medium");
     onSubmit({
       symbol: selectedSymbol,
       condition_type: conditionType,

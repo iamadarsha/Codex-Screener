@@ -10,6 +10,7 @@ import {
   Eye,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { haptic } from "@/lib/haptic";
 
 const items = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
@@ -31,6 +32,7 @@ export function MobileNav() {
             <Link
               key={href}
               href={href}
+              onClick={() => haptic("light")}
               className={cn(
                 "relative flex flex-col items-center justify-center gap-0.5 rounded-xl px-3 py-2 min-h-[48px] min-w-[48px] text-[11px] font-medium transition-all press-scale",
                 isActive

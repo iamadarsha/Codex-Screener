@@ -37,6 +37,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     if (!mounted) return;
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("theme", theme);
+
+    // Update <meta name="theme-color"> for mobile browser chrome
+    const themeColor = theme === "dark" ? "#0a0e1a" : "#f0f2f8";
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) {
+      meta.setAttribute("content", themeColor);
+    }
   }, [theme, mounted]);
 
   const toggleTheme = useCallback(() => {
