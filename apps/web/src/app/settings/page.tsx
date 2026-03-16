@@ -4,9 +4,12 @@ import { AppShell } from "@/components/layout/app-shell";
 import { PageTransition } from "@/components/layout/page-transition";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { useTheme } from "@/components/providers/theme-provider";
-import { Sun, Moon, Database, Globe, Info, ExternalLink } from "lucide-react";
+import { Sun, Moon, Database, Globe, Info, ExternalLink, LogOut } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { motion } from "framer-motion";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 
 const DATA_SOURCES = [
   { name: "Yahoo Finance", desc: "OHLCV data & technical indicators", status: "active" },
@@ -22,6 +25,21 @@ const item = {
 
 export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
+  const router = useRouter();
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUserEmail(user?.email ?? null);
+    });
+  }, []);
+
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
 
   return (
     <AppShell>
@@ -106,6 +124,27 @@ export default function SettingsPage() {
                 <span className="text-text-secondary">Prebuilt Scans</span>
                 <span className="font-mono text-text-primary">13</span>
               </div>
+            </div>
+          </motion.div>
+
+          {/* Account */}
+          <motion.div variants={item} className="glass-card rounded-panel p-5">
+            <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-text-primary">
+              <LogOut className="h-4 w-4" /> Account
+            </h3>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-text-secondary">
+                  {userEmail ? `Signed in as ${userEmail}` : "Not signed in"}
+                </p>
+                <p className="text-xs text-text-muted">Sign out to switch accounts or re-authenticate</p>
+              </div>
+              <button
+                onClick={handleSignOut}
+                className="flex items-center gap-2 rounded-lg border border-red-500/30 px-4 py-2 text-sm font-medium text-red-400 transition hover:bg-red-500/10"
+              >
+                <LogOut className="h-4 w-4" /> Sign Out
+              </button>
             </div>
           </motion.div>
 
