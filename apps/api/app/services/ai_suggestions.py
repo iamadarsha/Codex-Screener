@@ -647,19 +647,30 @@ def _build_rationale(
 
 
 async def _generate_technical_picks(headlines: list[dict[str, str]]) -> dict[str, list[dict[str, Any]]]:
-    """Layer 3: Pure technical + news scoring, zero AI API needed."""
+    """Layer 1: RSS + technical scoring, zero AI API needed.
+
+    Works in two modes:
+    - With live price data: full technical + news scoring
+    - Without price data (market closed): news-headline-only scoring
+    """
     _ensure_symbol_lookup()
 
     # Extract which symbols appear in headlines
     headline_map = _extract_headline_symbols(headlines)
-    log.info("layer3_headline_symbols found=%d", len(headline_map))
+    log.info("layer1_headline_symbols found=%d", len(headline_map))
 
     # Load all stock data from Redis
     all_stocks = await _load_stock_data()
-    log.info("layer3_stock_data loaded=%d", len(all_stocks))
+    log.info("layer1_stock_data loaded=%d", len(all_stocks))
 
-    if not all_stocks:
-        log.warning("layer3_no_stock_data")
+    # Fallback: if no live price data, build stocks from headline-matched symbols
+    if not all_stocks and headline_map:
+        log.info("layer1_no_price_data: using headline-only mode with %d matched symbols", len(headline_map))
+        for sym in headline_map:
+            if sym in _SYMBOL_META:
+                all_stocks[sym] = {"ltp": 100, "change_pct": 0, "volume": 0}
+    elif not all_stocks:
+        log.warning("layer1_no_stock_data_and_no_headlines")
         return {"intraday": [], "weekly": [], "monthly": []}
 
     result: dict[str, list[dict[str, Any]]] = {}
@@ -677,7 +688,7 @@ async def _generate_technical_picks(headlines: list[dict[str, str]]) -> dict[str
             scored.append((symbol, score, data))
 
         scored.sort(key=lambda x: x[1], reverse=True)
-        log.info("layer3_%s scored=%d top3=%s", timeframe, len(scored),
+        log.info("layer1_%s scored=%d top3=%s", timeframe, len(scored),
                  [(s, round(sc, 1)) for s, sc, _ in scored[:3]])
         picks: list[dict[str, Any]] = []
 
@@ -707,7 +718,7 @@ async def _generate_technical_picks(headlines: list[dict[str, str]]) -> dict[str
         result[timeframe] = picks
 
     total = sum(len(v) for v in result.values())
-    log.info("layer3_technical_success picks=%d", total)
+    log.info("layer1_technical_success picks=%d", total)
     return result
 
 
