@@ -113,7 +113,8 @@ export interface CustomScanRequest {
 
 export interface MarketStatus {
   is_open: boolean;
-  session: string;
+  session?: string;
+  status?: string;
   next_open?: string;
   next_close?: string;
 }
@@ -130,6 +131,7 @@ export interface IndexData {
   symbol: string;
   name: string;
   value: number;
+  last?: number;
   change: number;
   change_pct: number;
 }
@@ -217,14 +219,23 @@ export interface AiSuggestion {
   rationale: string;
   confidence?: number;
   timeframe?: string;
+  target_horizon?: string;
+  entry_range?: string;
+  stop_loss?: string;
+  target?: string;
+  sector?: string;
 }
 
 export interface AiSuggestionsResponse {
-  intraday: AiSuggestion[];
-  swing: AiSuggestion[];
-  positional: AiSuggestion[];
+  suggestions?: AiSuggestion[];
+  intraday?: AiSuggestion[];
+  weekly?: AiSuggestion[];
+  monthly?: AiSuggestion[];
+  swing?: AiSuggestion[];
+  positional?: AiSuggestion[];
   generated_at?: string;
   model?: string;
+  headline_count?: number;
 }
 
 /* Company Info */

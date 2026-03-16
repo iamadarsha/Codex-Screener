@@ -4,6 +4,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { getQueryClient } from "@/lib/query-client";
+import { ThemeProvider } from "@/components/providers/theme-provider";
 import type { ReactNode } from "react";
 
 import "./globals.css";
@@ -36,7 +37,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
       </head>
       <body>
         <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
           {children}
+          </ThemeProvider>
           <Toaster
             theme="dark"
             position="bottom-right"

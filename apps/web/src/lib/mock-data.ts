@@ -1,12 +1,12 @@
 import type { IndexData, MarketBreadth, MarketStatus, PrebuiltScan, ScanResultItem, LivePrice, FundamentalData } from "./api-types";
 
 export const MOCK_INDICES: IndexData[] = [
-  { symbol: "NIFTY50", name: "NIFTY 50", last: 23340.65, change: -95.30, change_pct: -0.41 },
-  { symbol: "NIFTYBANK", name: "NIFTY BANK", last: 49520.10, change: 185.40, change_pct: 0.38 },
-  { symbol: "NIFTYIT", name: "NIFTY IT", last: 36120.75, change: -210.55, change_pct: -0.58 },
-  { symbol: "NIFTYPHARMA", name: "NIFTY PHARMA", last: 19780.30, change: 42.10, change_pct: 0.21 },
-  { symbol: "NIFTYAUTO", name: "NIFTY AUTO", last: 22050.45, change: -88.60, change_pct: -0.40 },
-  { symbol: "INDIAVIX", name: "INDIA VIX", last: 14.35, change: 0.62, change_pct: 4.52 },
+  { symbol: "NIFTY50", name: "NIFTY 50", value: 23340.65, last: 23340.65, change: -95.30, change_pct: -0.41 },
+  { symbol: "NIFTYBANK", name: "NIFTY BANK", value: 49520.10, last: 49520.10, change: 185.40, change_pct: 0.38 },
+  { symbol: "NIFTYIT", name: "NIFTY IT", value: 36120.75, last: 36120.75, change: -210.55, change_pct: -0.58 },
+  { symbol: "NIFTYPHARMA", name: "NIFTY PHARMA", value: 19780.30, last: 19780.30, change: 42.10, change_pct: 0.21 },
+  { symbol: "NIFTYAUTO", name: "NIFTY AUTO", value: 22050.45, last: 22050.45, change: -88.60, change_pct: -0.40 },
+  { symbol: "INDIAVIX", name: "INDIA VIX", value: 14.35, last: 14.35, change: 0.62, change_pct: 4.52 },
 ];
 
 export const MOCK_MARKET_STATUS: MarketStatus = {
