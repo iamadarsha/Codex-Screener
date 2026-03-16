@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_anon_key: str = ""
     supabase_service_key: str = ""
+    supabase_jwt_secret: str = ""
     next_public_api_url: str = "http://localhost:8001"
     next_public_ws_url: str = "ws://localhost:8001"
     next_public_supabase_url: str = ""

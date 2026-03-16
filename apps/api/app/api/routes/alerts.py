@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db
+from app.api.deps import get_current_user, get_db
 from app.db.models.alert import Alert
 from app.db.models.alert_history import AlertHistory
 from app.schemas.alert import (
@@ -25,8 +25,8 @@ router = APIRouter(prefix="/api/alerts", tags=["alerts"])
 
 @router.get("", response_model=list[AlertOut])
 async def list_alerts(
-    user_id: str = Query(..., description="User ID"),
     active_only: bool = Query(True),
+    user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """List the user's alerts."""
@@ -42,11 +42,12 @@ async def list_alerts(
 @router.post("", response_model=AlertOut, status_code=201)
 async def create_alert(
     req: AlertCreateRequest,
+    user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new alert."""
     alert = Alert(
-        user_id=uuid.UUID(req.user_id),
+        user_id=uuid.UUID(user_id),
         symbol=req.symbol.upper(),
         scan_id=uuid.UUID(req.scan_id) if req.scan_id else None,
         notify_email=req.notify_email,
@@ -101,8 +102,8 @@ async def delete_alert(
 
 @router.get("/history", response_model=list[AlertHistoryOut])
 async def alert_history(
-    user_id: str = Query(..., description="User ID"),
     limit: int = Query(50, ge=1, le=200),
+    user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Get alert trigger history for a user."""

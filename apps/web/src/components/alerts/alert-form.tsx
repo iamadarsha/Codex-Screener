@@ -6,7 +6,6 @@ import { BellPlus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { fetchStocks } from "@/lib/api";
-import { DEFAULT_USER_ID } from "@/lib/constants";
 import { cn } from "@/lib/cn";
 import type { AlertCreateRequest } from "@/lib/api-types";
 
@@ -54,7 +53,6 @@ export function AlertForm({ onSubmit, isLoading }: AlertFormProps) {
   const handleSubmit = () => {
     if (!selectedSymbol || !conditionValue) return;
     onSubmit({
-      user_id: DEFAULT_USER_ID,
       symbol: selectedSymbol,
       condition_type: conditionType,
       condition_value: Number(conditionValue),
