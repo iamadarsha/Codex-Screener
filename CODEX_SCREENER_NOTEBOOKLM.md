@@ -10,7 +10,7 @@
 - **Internal Codename**: BreakoutScan
 - **What It Does**: Real-time Indian stock market screener with AI-powered stock recommendations
 - **Target Users**: Indian retail traders and investors who want technical analysis for NSE and BSE stocks without paying for expensive platforms
-- **Live Website**: screenercodex.netlify.app
+- **Live Website**: breakoutscan-web-production.up.railway.app
 - **Live API**: breakoutscan-api-production.up.railway.app
 - **Repository Structure**: Monorepo with 3 apps (web frontend, Python API backend, iOS native app)
 
@@ -22,7 +22,7 @@ The project has a clear hierarchy. At the top level is the Codex Screener platfo
 
 The Web App branches into 8 pages: Dashboard, AI Picks, Screener, Charts, Watchlist, Alerts, Fundamentals, and Settings. Each page connects to specific API endpoints on the backend.
 
-The API Backend branches into 5 service modules: Market Data Service, AI Suggestions Service, Screener Engine, Price History Service, and User Features Service. The AI Suggestions Service further branches into its 3-layer fallback system: Layer 1 (Gemini), Layer 2 (Groq/Grok), and Layer 3 (Technical Scoring Engine).
+The API Backend branches into 5 service modules: Market Data Service, AI Suggestions Service, Screener Engine, Price History Service, and User Features Service. The AI Suggestions Service further branches into its 3-layer fallback system: Layer 1 (RSS + Technical Scoring, zero API), Layer 2 (Gemini 3.1 Flash Lite), and Layer 3 (Groq/xAI).
 
 The external data layer branches into 4 categories: Stock Market APIs (NSE via indianapi.in, Yahoo Finance, Upstox WebSocket), AI Services (Gemini, Groq, xAI), News Feeds (10 RSS sources), and Reference Data (Wikipedia, TradingView).
 
@@ -32,7 +32,7 @@ The external data layer branches into 4 categories: Stock Market APIs (NSE via i
 
 The frontend is built with these technologies, grouped by purpose:
 
-**Core Framework**: Next.js version 15.3.1 provides the application framework with server-side rendering. React version 19.1.0 powers the UI components. TypeScript version 5.8.3 adds static type checking.
+**Core Framework**: Next.js version 15.3.1 provides the application framework with server-side rendering. React version 19.1.0 powers the UI components. TypeScript version 5.9.3 adds static type checking.
 
 **Styling and Design**: Tailwind CSS version 3.4.17 is the utility-first CSS framework. The design follows a dark terminal theme inspired by professional trading terminals, using zinc and slate dark backgrounds with emerald green for positive price movements and red for negative movements. Framer Motion version 12.10.5 handles all animations including page transitions, card reveals, and micro-interactions.
 
@@ -42,7 +42,7 @@ The frontend is built with these technologies, grouped by purpose:
 
 **UI Components**: Lucide React version 0.503.0 provides the icon library with 1500+ SVG icons. React Hook Form version 7.56.3 handles form state with minimal re-renders. Zod version 3.24.4 provides schema validation. TanStack React Table version 8.21.3 provides headless sortable and filterable data tables. Sonner version 2.0.3 provides toast notifications.
 
-**Deployment Platform**: Netlify hosts the frontend with automatic deployments from the GitHub main branch.
+**Deployment Platform**: Railway hosts the frontend with automatic deployments from the GitHub main branch.
 
 ---
 
@@ -58,7 +58,7 @@ The backend is a Python application using these technologies:
 
 **HTTP and Data Fetching**: httpx provides async HTTP calls to external APIs. feedparser parses RSS news feeds from 10 sources. yfinance fetches historical OHLCV data from Yahoo Finance and computes technical indicators.
 
-**AI Integration**: Google Generative AI SDK connects to Gemini 2.0 Flash as the primary AI engine. Groq SDK connects to Llama 3.3 70B as the secondary fallback. xAI SDK connects to Grok as an additional fallback.
+**AI Integration**: Google Generative AI SDK connects to Gemini 3.1 Flash Lite as the primary AI engine. Groq SDK connects to Llama 3.3 70B as the secondary fallback. xAI SDK connects to Grok as an additional fallback.
 
 **Logging**: structlog provides structured JSON logging for production debugging.
 
@@ -68,16 +68,15 @@ The backend is a Python application using these technologies:
 
 ## Infographic: iOS App Tech Stack
 
-**Framework**: SwiftUI provides the declarative UI. **Web Integration**: WKWebView loads the production Netlify URL inside the native app shell. **Language**: Swift 5.9+. **IDE**: Xcode 26.3. **Features**: Purple gradient launch screen with "BS" logo, pull-to-refresh, external links open in Safari.
+**Framework**: SwiftUI provides the declarative UI. **Web Integration**: WKWebView loads the production Railway URL inside the native app shell. **Language**: Swift 5.9+. **IDE**: Xcode 26.3. **Features**: Purple gradient launch screen with "BS" logo, pull-to-refresh, external links open in Safari.
 
 ---
 
 ## Infographic: External Services and Platforms Used
 
-### Hosting Platforms (3 platforms)
-1. **Netlify** - Hosts the Next.js frontend web app. Auto-deploys from GitHub. Provides CDN distribution and SSR support.
-2. **Railway** - Hosts the FastAPI backend API and the Redis cache. Auto-deploys from GitHub using Docker builds.
-3. **Supabase** - Hosts PostgreSQL 16 with TimescaleDB in Mumbai region. Provides database dashboard, SQL editor, and connection pooling.
+### Hosting Platforms (2 platforms)
+1. **Railway** - Hosts both the Next.js frontend web app AND the FastAPI backend API. Auto-deploys from GitHub. Also hosts the Redis cache.
+2. **Supabase** - Hosts PostgreSQL 16 with TimescaleDB in Mumbai region. Provides database dashboard, SQL editor, and connection pooling.
 
 ### Stock Market Data APIs (4 sources)
 1. **NSE via indianapi.in** - Real-time NSE stock listings, trending stocks, IPO data, mutual fund data. Authenticated via API key.
@@ -86,10 +85,10 @@ The backend is a Python application using these technologies:
 4. **NSE Direct Scraping** - Fallback data source for index values and market status.
 
 ### AI and LLM Services (4 services)
-1. **Google Gemini 2.0 Flash** (Layer 1) - Primary AI engine. Two API keys for redundancy. Free-tier with daily quota.
-2. **Groq with Llama 3.3 70B** (Layer 2) - Secondary AI. ~500K free tokens/day. OpenAI-compatible.
-3. **xAI Grok** (Layer 2 alternate) - Additional AI fallback alongside Groq.
-4. **Technical Scoring Engine** (Layer 3) - Custom-built, zero API dependency. Uses RSS + Redis data + composite scoring.
+1. **Technical Scoring Engine** (Layer 1) - Custom-built, zero API dependency. Uses RSS + Redis data + composite scoring. Always runs first.
+2. **Google Gemini 3.1 Flash Lite** (Layer 2) - Primary LLM AI engine. Two API keys for redundancy. Free-tier with daily quota (500 RPD).
+3. **Groq with Llama 3.3 70B** (Layer 3) - Secondary AI fallback. ~500K free tokens/day. OpenAI-compatible.
+4. **xAI Grok** (Layer 3 alternate) - Additional AI fallback alongside Groq.
 
 ### News Sources (10 RSS Feeds)
 1. Google News India - 5 feeds: Indian stock market, NSE stocks, Indian economy, stock market trading, Nifty 50
@@ -114,11 +113,11 @@ The backend is a Python application using these technologies:
 
 The AI Stock Picker is the flagship feature. It guarantees 15 stock recommendations (5 intraday, 5 weekly, 5 monthly) regardless of API availability. The system flows through three layers in sequence.
 
-**Layer 1: Google Gemini 2.0 Flash** is tried first. It receives 40 parsed RSS headlines plus a market summary containing NIFTY 50 level, top gainers, and top losers. Gemini analyzes news sentiment and market conditions to produce 15 picks with entry price, target, stop loss, and rationale. It uses a primary API key first, then falls back to a backup key. The call is wrapped in a Python thread executor with 20-second timeout because Gemini's SDK blocks the event loop during internal retries on 429 quota-exceeded errors.
+**Layer 1: Technical Scoring Engine** (zero API, RSS-based) is tried first with zero external API dependency. Step 1: Load Nifty 500 stock list from nifty500_seed.json. Step 2: Scan 40 RSS headlines for stock symbol or company name mentions. Step 3: Bulk-read 461 price keys and 380 indicator keys from Redis using pipeline reads (2 round trips instead of 841 individual calls). Step 4: Score each stock on a 0-100 composite scale with 5 factors: News mentions (0-25 points), Price momentum (0-25 points), RSI signal (0-20 points), EMA crossover (0-15 points), Volume (0-15 points). Step 5: Apply timeframe-specific weights, select top 5 per timeframe with no duplicates. Step 6: Generate rationale strings. Timeout is 15 seconds.
 
-If Layer 1 fails, **Layer 2: Groq Llama 3.3 70B and xAI Grok** activates. It sends the same prompt and expects the same output format. Groq offers ~500K free tokens/day. Timeout is 25 seconds.
+If Layer 1 fails, **Layer 2: Google Gemini 3.1 Flash Lite** activates. It receives 40 parsed RSS headlines plus a market summary containing NIFTY 50 level, top gainers, and top losers. Gemini analyzes news sentiment and market conditions to produce 15 picks with entry price, target, stop loss, and rationale. It uses a primary API key first, then falls back to a backup key. The call is wrapped in a Python thread executor with 20-second timeout because Gemini's SDK blocks the event loop during internal retries on 429 quota-exceeded errors.
 
-If Layer 2 also fails, **Layer 3: Technical Scoring Engine** activates with zero external API dependency. Step 1: Load Nifty 500 stock list from nifty500_seed.json. Step 2: Scan 40 RSS headlines for stock symbol or company name mentions. Step 3: Bulk-read 461 price keys and 380 indicator keys from Redis using pipeline reads (2 round trips instead of 841 individual calls). Step 4: Score each stock on a 0-100 composite scale with 5 factors: News mentions (0-25 points), Price momentum (0-25 points), RSI signal (0-20 points), EMA crossover (0-15 points), Volume (0-15 points). Step 5: Apply timeframe-specific weights, select top 5 per timeframe with no duplicates. Step 6: Generate rationale strings. Timeout is 15 seconds.
+If Layer 2 fails, **Layer 3: Groq Llama 3.3 70B and xAI Grok** activates. It sends the same prompt and expects the same output format. Groq offers ~500K free tokens/day. Timeout is 25 seconds.
 
 The results are cached in Redis with TTL until 9 AM next trading day. The GET endpoint returns cached results instantly. If empty, returns "pending" and triggers background generation.
 
@@ -128,7 +127,7 @@ The results are cached in Redis with TTL until 9 AM next trading day. The GET en
 
 **Dashboard**: Main landing page. Shows stat cards (active breakouts, triggered alerts, volume surges, market breadth). Features a scrolling index ticker with NIFTY 50, NIFTY BANK, NIFTY IT, NIFTY MIDCAP 50. Includes market breadth donut chart and live breakout feed.
 
-**AI Picks**: AI-generated stock recommendations. Three timeframe tabs: Intraday (5 picks), Weekly (5 picks), Monthly (5 picks). Each pick card shows symbol, company name, entry price, target price, stop loss, rationale text, and confidence percentage.
+**AI Picks**: AI-generated stock recommendations. Three timeframe tabs: Intraday (5 picks), Weekly (5 picks), Monthly (5 picks). Each pick card shows symbol, company name, entry price, target price, stop loss, rationale text, confidence percentage, and live stock change percentages.
 
 **Screener**: Technical scan engine with 13 prebuilt scans: RSI Oversold, RSI Overbought, Bullish EMA Crossover, Bearish EMA Crossover, Price Above SMA200, Price Below SMA200, Volume Spike, Bollinger Squeeze, MACD Bullish Cross, Near 52-Week High, ORB Breakout, Bullish Engulfing, and Custom Scan Builder with AND/OR logic.
 
@@ -140,7 +139,7 @@ The results are cached in Redis with TTL until 9 AM next trading day. The GET en
 
 **Fundamentals**: Filter stocks by PE ratio, PB ratio, market cap, ROE, dividend yield, debt-to-equity.
 
-**Settings**: User preferences and configuration.
+**Settings**: User preferences and configuration. Includes dark/light theme toggle for switching between dark terminal theme and light mode.
 
 ---
 
@@ -170,7 +169,7 @@ The frontend makes REST API calls to the FastAPI backend, which reads from Redis
 
 **Phase 4 - AI Stock Picker**: Gemini API with primary + backup keys, Groq fallback with Llama 3.3 70B, RSS feed parser for 10 news sources, Technical scoring engine as zero-API fallback, 3-layer fallback chain, background generation with instant GET response.
 
-**Phase 5 - Deployment**: Railway backend auto-deploy, Netlify frontend SSR deploy, Redis on Railway with 461 cached keys, iOS SwiftUI app with WebView.
+**Phase 5 - Deployment**: Railway backend auto-deploy, Railway frontend SSR deploy, Redis on Railway with 461 cached keys, iOS SwiftUI app with WebView.
 
 **Phase 6 - Production Hardening**: Gemini thread executor fix (SDK blocks event loop), Redis pipeline reads (841 keys in 2 round trips), global timeouts on every layer, mobile UI fixes for iPhone, debug endpoint for production troubleshooting.
 
@@ -226,15 +225,15 @@ For creating an infographic, here are the counts:
 - **Frontend Technologies**: 13 (Next.js, React, TypeScript, Tailwind CSS, Zustand, React Query, TradingView Charts, Framer Motion, Recharts, Lucide Icons, React Hook Form, Zod, Sonner)
 - **Backend Technologies**: 12 (FastAPI, Python, SQLAlchemy, Alembic, Uvicorn, Pydantic, httpx, feedparser, yfinance, structlog, Google GenAI SDK, Groq SDK)
 - **Database Technologies**: 4 (PostgreSQL, TimescaleDB, Redis, Supabase)
-- **AI/LLM Services**: 4 (Gemini 2.0 Flash, Groq Llama 3.3 70B, xAI Grok, Custom Scoring Engine)
+- **AI/LLM Services**: 4 (Gemini 3.1 Flash Lite, Groq Llama 3.3 70B, xAI Grok, Custom Scoring Engine)
 - **External Data APIs**: 5 (NSE/indianapi.in, Yahoo Finance, Upstox WebSocket, NSE Direct, Wikipedia)
 - **News Sources**: 10 RSS feeds from 5 publishers
-- **Hosting Platforms**: 3 (Netlify, Railway, Supabase)
+- **Hosting Platforms**: 2 (Railway, Supabase)
 - **iOS Technologies**: 4 (SwiftUI, WKWebView, Swift, Xcode)
-- **DevOps Tools**: 4 (GitHub, Docker, Railway Auto-Deploy, Netlify Auto-Deploy)
+- **DevOps Tools**: 3 (GitHub, Docker, Railway Auto-Deploy)
 - **Development Tools**: 2 (Claude Code CLI with MCP, Mermaid.js)
 
-**Total unique technologies and services: 61**
+**Total unique technologies and services: 59**
 
 ---
 
