@@ -1,52 +1,66 @@
 "use client";
 
-import { useMarketIndices } from "@/hooks/use-market-breadth";
-import { formatPrice, formatPercent } from "@/lib/format";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
-import type { IndexData } from "@/lib/api-types";
+import { formatPrice, formatPercent } from "@/lib/format";
 
-function TickerItem({ index }: { index: IndexData }) {
-  const last = index.last ?? index.value ?? 0;
-  return (
-    <div className="flex shrink-0 items-center gap-2 px-4">
-      <span className="text-[11px] font-medium text-text-muted whitespace-nowrap">
-        {index.name ?? index.symbol}
-      </span>
-      <span className="font-mono text-xs tabular-nums text-text-primary">
-        {formatPrice(last)}
-      </span>
-      <span
-        className={cn(
-          "font-mono text-[11px] tabular-nums",
-          index.change_pct >= 0 ? "text-bullish" : "text-bearish"
-        )}
-      >
-        {formatPercent(index.change_pct)}
-      </span>
-    </div>
-  );
+interface IndexTick {
+  symbol: string;
+  name: string;
+  value: number;
+  change_pct: number;
 }
 
 export function IndexTickerBar() {
-  const { data: indices } = useMarketIndices();
+  const [indices, setIndices] = useState<IndexTick[]>([]);
 
-  if (!indices || indices.length === 0) return null;
+  useEffect(() => {
+    async function fetchIndices() {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001"}/api/market/indices`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setIndices(
+            (data ?? []).map((d: Record<string, unknown>) => ({
+              symbol: d.symbol ?? "",
+              name: d.name ?? d.symbol ?? "",
+              value: Number(d.value ?? d.last ?? 0),
+              change_pct: Number(d.change_pct ?? 0),
+            }))
+          );
+        }
+      } catch {
+        // silently ignore — ticker is non-critical
+      }
+    }
+    fetchIndices();
+    const id = setInterval(fetchIndices, 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  if (indices.length === 0) return null;
 
   return (
-    <div className="overflow-hidden border-b border-border-subtle bg-page/60 scroll-fade-x">
-      <div
-        className="flex whitespace-nowrap py-2"
-        style={{
-          animation: "ticker-scroll 30s linear infinite",
-          width: "max-content",
-        }}
-      >
-        {/* Duplicate for seamless loop */}
+    <div className="flex w-full overflow-x-auto border-b border-border bg-card/60 px-4 py-1.5 text-[11px] scrollbar-hide">
+      <div className="flex items-center gap-6 whitespace-nowrap">
         {indices.map((idx) => (
-          <TickerItem key={idx.symbol} index={idx} />
-        ))}
-        {indices.map((idx) => (
-          <TickerItem key={`dup-${idx.symbol}`} index={idx} />
+          <span key={idx.symbol} className="flex items-center gap-1.5">
+            <span className="font-medium text-text-secondary">{idx.name}</span>
+            <span className="font-mono text-text-primary">
+              {formatPrice(idx.value)}
+            </span>
+            <span
+              className={cn(
+                "font-mono",
+                idx.change_pct >= 0 ? "text-bullish" : "text-bearish"
+              )}
+            >
+              {idx.change_pct >= 0 ? "+" : ""}
+              {formatPercent(idx.change_pct)}
+            </span>
+          </span>
         ))}
       </div>
     </div>

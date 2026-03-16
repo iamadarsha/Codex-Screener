@@ -74,16 +74,17 @@ _PREBUILT_SCANS: list[ScanDefinition] = [
         "timeframe": "1d",
     },
     # 3 ----------------------------------------------------------------
+    #   Chartink-style: EMA(9) currently above EMA(21) = bullish trend
     {
         "id": "bullish_ema_crossover",
         "name": "Bullish EMA Crossover",
-        "description": "EMA(9) crosses above EMA(21) -- bullish momentum shift.",
+        "description": "EMA(9) is above EMA(21) -- bullish momentum shift.",
         "category": "Momentum",
         "icon": "trending-up",
         "conditions": [
             Condition(
                 left=_ind("ema_9"),
-                operator=ConditionOperator.CROSSES_ABOVE,
+                operator=ConditionOperator.GREATER_THAN,
                 right=_ind("ema_21"),
             ),
         ],
@@ -91,16 +92,17 @@ _PREBUILT_SCANS: list[ScanDefinition] = [
         "timeframe": "1d",
     },
     # 4 ----------------------------------------------------------------
+    #   Chartink-style: EMA(9) currently below EMA(21) = bearish trend
     {
         "id": "bearish_ema_crossover",
         "name": "Bearish EMA Crossover",
-        "description": "EMA(9) crosses below EMA(21) -- bearish momentum shift.",
+        "description": "EMA(9) is below EMA(21) -- bearish momentum shift.",
         "category": "Momentum",
         "icon": "trending-down",
         "conditions": [
             Condition(
                 left=_ind("ema_9"),
-                operator=ConditionOperator.CROSSES_BELOW,
+                operator=ConditionOperator.LESS_THAN,
                 right=_ind("ema_21"),
             ),
         ],
@@ -193,16 +195,17 @@ _PREBUILT_SCANS: list[ScanDefinition] = [
         },
     },
     # 9 ----------------------------------------------------------------
+    #   Chartink-style: MACD currently above Signal = bullish momentum
     {
         "id": "macd_bullish_cross",
         "name": "MACD Bullish Cross",
-        "description": "MACD line crosses above Signal line.",
+        "description": "MACD line is above Signal line -- bullish momentum.",
         "category": "Momentum",
         "icon": "zap",
         "conditions": [
             Condition(
                 left=_ind("macd"),
-                operator=ConditionOperator.CROSSES_ABOVE,
+                operator=ConditionOperator.GREATER_THAN,
                 right=_ind("macd_signal"),
             ),
         ],
@@ -210,16 +213,17 @@ _PREBUILT_SCANS: list[ScanDefinition] = [
         "timeframe": "1d",
     },
     # 10 ---------------------------------------------------------------
+    #   Chartink-style: MACD currently below Signal = bearish momentum
     {
         "id": "macd_bearish_cross",
         "name": "MACD Bearish Cross",
-        "description": "MACD line crosses below Signal line.",
+        "description": "MACD line is below Signal line -- bearish momentum.",
         "category": "Momentum",
         "icon": "zap-off",
         "conditions": [
             Condition(
                 left=_ind("macd"),
-                operator=ConditionOperator.CROSSES_BELOW,
+                operator=ConditionOperator.LESS_THAN,
                 right=_ind("macd_signal"),
             ),
         ],

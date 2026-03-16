@@ -25,26 +25,9 @@ import type {
 /*  Generic fetch helper                                               */
 /* ------------------------------------------------------------------ */
 
-async function getAuthHeaders(): Promise<Record<string, string>> {
-  try {
-    const supabase = createClient();
-    const { data: { session }, error } = await supabase.auth.getSession();
-    if (error) {
-      console.warn("[api] getSession error:", error.message);
-    }
-    if (session?.access_token) {
-      return { Authorization: `Bearer ${session.access_token}` };
-    }
-  } catch (e) {
-    console.warn("[api] getAuthHeaders error:", e);
-  }
-  return {};
-}
-
-/** Public API call — no auth header, faster */
-async function publicFetch<T>(path: string, init?: RequestInit): Promise<T> {
+async function apiFetch<T>(path: string, init?: RequestInit & { timeoutMs?: number }): Promise<T> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10_000);
+  const timeout = setTimeout(() => controller.abort(), init?.timeoutMs ?? 15_000);
   try {
     const res = await fetch(`${API_BASE_URL}${path}`, {
       headers: {

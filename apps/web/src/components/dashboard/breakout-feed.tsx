@@ -89,43 +89,29 @@ export function BreakoutFeed({ items }: BreakoutFeedProps) {
                     <span className="font-mono text-sm font-semibold text-text-primary">
                       {item.symbol}
                     </span>
-                    <span className="truncate text-xs text-text-secondary">
-                      {item.company_name ?? item.name}
-                    </span>
-                  </div>
-                  <div className="mt-0.5 flex items-center gap-2">
-                    <span className="text-[11px] text-text-muted">{item.sector}</span>
-                    {item.signal_strength != null && (
-                      <SignalBadge
-                        signal={
-                          item.signal_strength > 80
-                            ? "BREAKOUT"
-                            : item.signal_strength > 60
-                              ? "VOLUME"
-                              : "EMA"
-                        }
-                      />
-                    )}
+                    <span className="text-xs text-[#8B8D9A]">{item.company_name}</span>
                   </div>
                 </div>
 
                 {/* Price & change */}
                 <div className="text-right">
-                  <FlashPrice price={item.ltp} />
+                  <div className="font-mono text-sm text-white">
+                    {formatPrice(item.ltp ?? 0)}
+                  </div>
                   <div
                     className={cn(
-                      "font-mono text-xs tabular-nums",
-                      item.change_pct >= 0 ? "text-bullish" : "text-bearish"
+                      "font-mono text-xs",
+                      (item.change_pct ?? 0) >= 0
+                        ? "text-[#00C896]"
+                        : "text-[#FF4757]"
                     )}
                   >
-                    {formatPercent(item.change_pct)}
+                    {formatPercent(item.change_pct ?? 0)}
                   </div>
                 </div>
-
-                {/* Time ago */}
-                {item.triggered_at && (
-                  <span className="shrink-0 text-[10px] text-text-muted">
-                    {timeAgo(item.triggered_at)}
+                {item.matched_conditions && item.matched_conditions.length > 0 && (
+                  <span className="text-xs text-[#5C5D6E]">
+                    {item.matched_conditions[0]}
                   </span>
                 )}
               </Link>

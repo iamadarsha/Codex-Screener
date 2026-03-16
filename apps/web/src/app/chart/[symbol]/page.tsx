@@ -12,7 +12,7 @@ import { IndicatorPills } from "@/components/chart/indicator-pills";
 import { StockSnapshot } from "@/components/chart/stock-snapshot";
 import { CompanyInfoPanel } from "@/components/chart/company-info-panel";
 import { useLivePrices } from "@/hooks/use-live-prices";
-import { fetchStock, fetchIndicators, fetchStocks, fetchLivePrice } from "@/lib/api";
+import { fetchStock, fetchIndicators, fetchStocks, fetchLivePrice, fetchPriceHistory } from "@/lib/api";
 import { searchLocalStocks } from "@/lib/nse-stocks";
 import type { Stock } from "@/lib/api-types";
 import { cn } from "@/lib/cn";
@@ -86,7 +86,7 @@ export default function ChartPage() {
   // Use local NSE data as immediate placeholder while API loads
   const localStock = searchLocalStocks(symbol, 1)[0];
   const placeholderStock: Stock | undefined = localStock
-    ? { symbol: localStock.symbol, name: localStock.name, sector: localStock.sector, industry: "", market_cap: 0, is_nifty50: false, is_nifty500: false }
+    ? { symbol: localStock.symbol, name: localStock.name, sector: localStock.sector ?? "", industry: "", market_cap: 0, is_nifty50: false, is_nifty500: false }
     : undefined;
 
   const { data: stockData } = useQuery({
@@ -97,6 +97,13 @@ export default function ChartPage() {
     staleTime: 60_000,
   });
   const stock = stockData ?? placeholderStock;
+
+  const { data: priceHistory } = useQuery({
+    queryKey: ["priceHistory", symbol, timeframe],
+    queryFn: () => fetchPriceHistory(symbol, timeframe),
+    retry: 0,
+    staleTime: 30_000,
+  });
 
   const { data: indicators } = useQuery({
     queryKey: ["indicators", symbol],
@@ -184,8 +191,8 @@ export default function ChartPage() {
             />
           </div>
 
-          {/* Main Chart — TradingView Widget */}
-          <PriceChart symbol={symbol} interval={timeframe} height={typeof window !== "undefined" && window.innerWidth < 640 ? 350 : 500} />
+          {/* Main Chart */}
+          <PriceChart candles={priceHistory?.candles ?? []} height={typeof window !== "undefined" && window.innerWidth < 640 ? 350 : 500} />
 
           {/* Company Info */}
           <CompanyInfoPanel symbol={symbol} />

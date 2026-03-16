@@ -49,21 +49,21 @@ export function VolumeSurges({ items }: VolumeSurgesProps) {
                     {item.symbol}
                   </Link>
                 </td>
-                <td className="px-5 py-2.5 text-right font-mono text-text-primary">
-                  {formatPrice(item.ltp)}
+                <td className="px-5 py-2.5 text-right font-mono text-white">
+                  {formatPrice(item.ltp ?? 0)}
                 </td>
                 <td
                   className={cn(
                     "px-5 py-2.5 text-right font-mono",
-                    item.change_pct >= 0
-                      ? "text-bullish"
-                      : "text-bearish"
+                    (item.change_pct ?? 0) >= 0
+                      ? "text-[#00C896]"
+                      : "text-[#FF4757]"
                   )}
                 >
-                  {formatPercent(item.change_pct)}
+                  {formatPercent(item.change_pct ?? 0)}
                 </td>
-                <td className="px-5 py-2.5 text-right font-mono text-warning">
-                  {formatVolume(item.volume)}
+                <td className="px-5 py-2.5 text-right font-mono text-[#FFA502]">
+                  {formatVolume(item.volume ?? 0)}
                 </td>
               </tr>
             ))}
