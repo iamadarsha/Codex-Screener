@@ -12,7 +12,7 @@ import { IndicatorPills } from "@/components/chart/indicator-pills";
 import { StockSnapshot } from "@/components/chart/stock-snapshot";
 import { CompanyInfoPanel } from "@/components/chart/company-info-panel";
 import { useLivePrices } from "@/hooks/use-live-prices";
-import { fetchStock, fetchIndicators, fetchStocks, fetchLivePrice, fetchPriceHistory } from "@/lib/api";
+import { fetchStock, fetchIndicators, fetchStocks, fetchLivePrice } from "@/lib/api";
 import { searchLocalStocks } from "@/lib/nse-stocks";
 import type { Stock } from "@/lib/api-types";
 import { cn } from "@/lib/cn";
@@ -97,13 +97,6 @@ export default function ChartPage() {
     staleTime: 60_000,
   });
   const stock = stockData ?? placeholderStock;
-
-  const { data: priceHistory } = useQuery({
-    queryKey: ["priceHistory", symbol, timeframe],
-    queryFn: () => fetchPriceHistory(symbol, timeframe),
-    retry: 0,
-    staleTime: 30_000,
-  });
 
   const { data: indicators } = useQuery({
     queryKey: ["indicators", symbol],
@@ -192,7 +185,7 @@ export default function ChartPage() {
           </div>
 
           {/* Main Chart */}
-          <PriceChart candles={priceHistory?.candles ?? []} height={typeof window !== "undefined" && window.innerWidth < 640 ? 350 : 500} />
+          <PriceChart symbol={symbol} interval={timeframe} height={typeof window !== "undefined" && window.innerWidth < 640 ? 350 : 500} />
 
           {/* Company Info */}
           <CompanyInfoPanel symbol={symbol} />

@@ -112,7 +112,7 @@ export function PrebuiltScanGrid({
               whileHover={{ scale: 1.02, transition: { duration: 0.15 } }}
               whileTap={{ scale: 0.98 }}
               onClick={() => onRunScan(scan.id)}
-              disabled={isLoading && isActive}
+              disabled={isLoading}
               className={cn(
                 "group relative flex flex-col items-start rounded-xl border p-3 sm:p-4 text-left transition-all",
                 isActive

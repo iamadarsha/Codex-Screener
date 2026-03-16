@@ -24,7 +24,9 @@ export default function ScreenerPage() {
   const [result, setResult] = useState<ScanResult | null>(null);
 
   const handleRunPrebuilt = (scanId: string) => {
+    if (runPrebuilt.isPending) return;
     setActiveScanId(scanId);
+    setResult(null);
     runPrebuilt.mutate(scanId, {
       onSuccess: (data) => setResult(data),
     });

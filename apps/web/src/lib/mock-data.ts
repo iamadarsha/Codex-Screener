@@ -1,4 +1,4 @@
-import type { PrebuiltScan } from "./api-types";
+import type { PrebuiltScan, IndexData, MarketStatus, MarketBreadth } from "./api-types";
 
 export const MOCK_INDICES: IndexData[] = [
   { symbol: "NIFTY50", name: "NIFTY 50", value: 23340.65, last: 23340.65, change: -95.30, change_pct: -0.41 },
@@ -22,7 +22,7 @@ export const MOCK_BREADTH: MarketBreadth = {
   advance_decline_ratio: 1.4,
 };
 
-export const MOCK_PREBUILT_SCANS: PrebuiltScan[] = [
+export const PREBUILT_SCAN_DEFINITIONS: PrebuiltScan[] = [
   { id: "rsi_oversold", name: "RSI Oversold", description: "RSI(14) below 30 - reversal candidates", category: "Momentum", icon: "activity" },
   { id: "rsi_overbought", name: "RSI Overbought", description: "RSI(14) above 70 - overextended", category: "Momentum", icon: "activity" },
   { id: "bullish_ema_crossover", name: "Bullish EMA Cross", description: "EMA(9) crosses above EMA(21)", category: "Momentum", icon: "trending-up" },

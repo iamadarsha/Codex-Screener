@@ -1,5 +1,4 @@
 import { API_BASE_URL } from "./constants";
-import { createClient } from "./supabase/client";
 import type {
   AiSuggestionsResponse,
   Alert,
@@ -22,10 +21,11 @@ import type {
 } from "./api-types";
 
 /* ------------------------------------------------------------------ */
-/*  Generic fetch helper                                               */
+/*  Generic fetch helpers                                              */
 /* ------------------------------------------------------------------ */
 
-async function apiFetch<T>(path: string, init?: RequestInit & { timeoutMs?: number }): Promise<T> {
+/** Public API call — no auth required */
+async function publicFetch<T>(path: string, init?: RequestInit & { timeoutMs?: number }): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), init?.timeoutMs ?? 15_000);
   try {
@@ -45,6 +45,22 @@ async function apiFetch<T>(path: string, init?: RequestInit & { timeoutMs?: numb
   } finally {
     clearTimeout(timeout);
   }
+}
+
+/** Get auth headers from Supabase session (lazy import to avoid SSR issues) */
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  try {
+    if (typeof window === "undefined") return {};
+    const { createClient } = await import("./supabase/client");
+    const supabase = createClient();
+    const { data } = await supabase.auth.getSession();
+    if (data.session?.access_token) {
+      return { Authorization: `Bearer ${data.session.access_token}` };
+    }
+  } catch {
+    // No auth available — continue without token
+  }
+  return {};
 }
 
 /** Authenticated API call — includes Bearer token */
