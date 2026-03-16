@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/layout/app-shell";
 import { PageTransition } from "@/components/layout/page-transition";
 import { StatCards } from "@/components/dashboard/stat-cards";
@@ -12,15 +13,26 @@ import { SectorHeatmap } from "@/components/dashboard/sector-heatmap";
 import { ActiveScanToggles } from "@/components/dashboard/active-scan-toggles";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { SkeletonCard } from "@/components/ui/skeleton";
+import { PullToRefreshIndicator } from "@/components/ui/pull-to-refresh-indicator";
 import { useMarketBreadth, useMarketSectors } from "@/hooks/use-market-breadth";
 import { usePrebuiltScans, useRunPrebuiltScan } from "@/hooks/use-scan-run";
+import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import type { ScanResultItem } from "@/lib/api-types";
 
 export default function DashboardPage() {
+  const queryClient = useQueryClient();
   const { data: breadth, isLoading: breadthLoading } = useMarketBreadth();
   const { data: sectors, isLoading: sectorsLoading } = useMarketSectors();
   const { data: scans, isLoading: scansLoading } = usePrebuiltScans();
   const runScan = useRunPrebuiltScan();
+
+  const handleRefresh = useCallback(async () => {
+    await queryClient.invalidateQueries();
+  }, [queryClient]);
+
+  const { pullDistance, refreshing, containerRef } = usePullToRefresh({
+    onRefresh: handleRefresh,
+  });
 
   const [breakoutItems, setBreakoutItems] = useState<ScanResultItem[]>([]);
   const [volumeItems, setVolumeItems] = useState<ScanResultItem[]>([]);
@@ -69,6 +81,8 @@ export default function DashboardPage() {
   return (
     <AppShell>
       <PageTransition>
+        <div ref={containerRef}>
+        <PullToRefreshIndicator pullDistance={pullDistance} refreshing={refreshing} />
         <motion.div
           className="space-y-6"
           initial="hidden"
@@ -159,6 +173,7 @@ export default function DashboardPage() {
             ) : null}
           </motion.div>
         </motion.div>
+        </div>
       </PageTransition>
     </AppShell>
   );

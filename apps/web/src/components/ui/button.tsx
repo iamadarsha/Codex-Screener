@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { haptic } from "@/lib/haptic";
 
 type ButtonVariant = "primary" | "secondary" | "ghost";
 type ButtonSize = "sm" | "md" | "lg";
@@ -30,10 +31,17 @@ export function Button({
   className = "",
   variant = "primary",
   size = "md",
+  onClick,
   ...props
 }: ButtonProps) {
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    haptic("light");
+    onClick?.(e);
+  };
+
   return (
     <button
+      onClick={handleClick}
       className={cn(
         "inline-flex items-center justify-center rounded-xl font-semibold transition-all duration-200 press-scale disabled:opacity-50 disabled:pointer-events-none",
         sizeStyles[size],
