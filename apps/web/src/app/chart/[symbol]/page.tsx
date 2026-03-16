@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
@@ -28,6 +28,14 @@ export default function ChartPage() {
   const [showChartDropdown, setShowChartDropdown] = useState(false);
   const [chartSelectedIdx, setChartSelectedIdx] = useState(-1);
   const chartDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const [chartHeight, setChartHeight] = useState(500);
+
+  useEffect(() => {
+    const updateHeight = () => setChartHeight(window.innerWidth < 640 ? 350 : 500);
+    updateHeight();
+    window.addEventListener("resize", updateHeight);
+    return () => window.removeEventListener("resize", updateHeight);
+  }, []);
 
   const searchChartStocks = useCallback((query: string) => {
     if (chartDebounceRef.current) clearTimeout(chartDebounceRef.current);
@@ -185,7 +193,7 @@ export default function ChartPage() {
           </div>
 
           {/* Main Chart */}
-          <PriceChart symbol={symbol} interval={timeframe} height={typeof window !== "undefined" && window.innerWidth < 640 ? 350 : 500} />
+          <PriceChart symbol={symbol} interval={timeframe} height={chartHeight} />
 
           {/* Company Info */}
           <CompanyInfoPanel symbol={symbol} />
