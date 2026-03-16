@@ -171,7 +171,6 @@ export interface Alert {
 }
 
 export interface AlertCreateRequest {
-  user_id: string;
   symbol: string;
   condition_type: string;
   condition_value: number;

@@ -3,11 +3,11 @@ from __future__ import annotations
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db
+from app.api.deps import get_current_user, get_db
 from app.db.models.stock import Stock
 from app.db.models.watchlist import WatchlistItem
 from app.schemas.common import SuccessResponse
@@ -24,7 +24,7 @@ router = APIRouter(prefix="/api/watchlist", tags=["watchlist"])
 
 @router.get("", response_model=list[WatchlistItemOut])
 async def get_watchlist(
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Get the user's watchlist items with live prices."""
@@ -45,7 +45,6 @@ async def get_watchlist(
             position=wl_item.position,
             added_at=wl_item.added_at,
         )
-        # Enrich with live prices
         try:
             from app.services.redis_cache import get_json
 
@@ -63,20 +62,19 @@ async def get_watchlist(
 @router.post("", response_model=WatchlistItemOut, status_code=201)
 async def add_to_watchlist(
     req: WatchlistAddRequest,
+    user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Add a symbol to the user's watchlist."""
-    uid = uuid.UUID(req.user_id)
+    uid = uuid.UUID(user_id)
     symbol = req.symbol.upper()
 
-    # Verify stock exists
     stock = (
         await db.execute(select(Stock).where(Stock.symbol == symbol))
     ).scalar_one_or_none()
     if not stock:
         raise HTTPException(status_code=404, detail=f"Stock {symbol} not found")
 
-    # Check if already in watchlist
     existing = (
         await db.execute(
             select(WatchlistItem).where(
@@ -88,7 +86,6 @@ async def add_to_watchlist(
     if existing:
         raise HTTPException(status_code=409, detail=f"{symbol} already in watchlist")
 
-    # Get next position
     max_pos = (
         await db.execute(
             select(func.max(WatchlistItem.position)).where(
@@ -114,7 +111,7 @@ async def add_to_watchlist(
 @router.delete("/{symbol}", response_model=SuccessResponse)
 async def remove_from_watchlist(
     symbol: str,
-    user_id: str = Query(..., description="User ID"),
+    user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Remove a symbol from the user's watchlist."""
@@ -134,10 +131,11 @@ async def remove_from_watchlist(
 @router.put("/reorder", response_model=SuccessResponse)
 async def reorder_watchlist(
     req: WatchlistReorderRequest,
+    user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Reorder watchlist items."""
-    uid = uuid.UUID(req.user_id)
+    uid = uuid.UUID(user_id)
     for idx, symbol in enumerate(req.symbols):
         await db.execute(
             update(WatchlistItem)

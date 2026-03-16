@@ -21,7 +21,6 @@ class AlertOut(BaseModel):
 
 
 class AlertCreateRequest(BaseModel):
-    user_id: str
     symbol: str
     scan_id: str | None = None
     notify_email: bool = False

@@ -2,25 +2,24 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchWatchlist, addToWatchlist, removeFromWatchlist } from "@/lib/api";
-import { DEFAULT_USER_ID } from "@/lib/constants";
 import { toast } from "sonner";
 
-export function useWatchlist(userId: string = DEFAULT_USER_ID) {
+export function useWatchlist() {
   return useQuery({
-    queryKey: ["watchlist", userId],
-    queryFn: () => fetchWatchlist(userId),
+    queryKey: ["watchlist"],
+    queryFn: () => fetchWatchlist(),
     retry: 0,
     staleTime: 30_000,
     gcTime: 60_000,
   });
 }
 
-export function useAddToWatchlist(userId: string = DEFAULT_USER_ID) {
+export function useAddToWatchlist() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (symbol: string) => addToWatchlist(userId, symbol),
+    mutationFn: (symbol: string) => addToWatchlist(symbol),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["watchlist", userId] });
+      qc.invalidateQueries({ queryKey: ["watchlist"] });
       toast.success("Added to watchlist");
     },
     onError: () => {
@@ -29,12 +28,12 @@ export function useAddToWatchlist(userId: string = DEFAULT_USER_ID) {
   });
 }
 
-export function useRemoveFromWatchlist(userId: string = DEFAULT_USER_ID) {
+export function useRemoveFromWatchlist() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (symbol: string) => removeFromWatchlist(userId, symbol),
+    mutationFn: (symbol: string) => removeFromWatchlist(symbol),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["watchlist", userId] });
+      qc.invalidateQueries({ queryKey: ["watchlist"] });
       toast.success("Removed from watchlist");
     },
     onError: () => {

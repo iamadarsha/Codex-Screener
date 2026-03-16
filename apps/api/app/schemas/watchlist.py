@@ -19,9 +19,7 @@ class WatchlistItemOut(BaseModel):
 
 class WatchlistAddRequest(BaseModel):
     symbol: str
-    user_id: str
 
 
 class WatchlistReorderRequest(BaseModel):
-    user_id: str
     symbols: list[str]  # ordered list of symbols

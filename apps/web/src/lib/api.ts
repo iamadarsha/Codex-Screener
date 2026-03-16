@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "./constants";
+import { createClient } from "./supabase/client";
 import type {
   AiSuggestionsResponse,
   Alert,
@@ -24,12 +25,30 @@ import type {
 /*  Generic fetch helper                                               */
 /* ------------------------------------------------------------------ */
 
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  try {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      return { Authorization: `Bearer ${session.access_token}` };
+    }
+  } catch {
+    // No auth available
+  }
+  return {};
+}
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 5_000);
+  const authHeaders = await getAuthHeaders();
   try {
     const res = await fetch(`${API_BASE_URL}${path}`, {
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders,
+        ...(init?.headers ?? {}),
+      },
       ...init,
       signal: controller.signal,
     });
@@ -143,25 +162,19 @@ export function fetchMarketSectors(): Promise<SectorData[]> {
 /*  Watchlist                                                          */
 /* ------------------------------------------------------------------ */
 
-export function fetchWatchlist(userId: string): Promise<WatchlistItem[]> {
-  return apiFetch<WatchlistItem[]>(`/api/watchlist?user_id=${userId}`);
+export function fetchWatchlist(): Promise<WatchlistItem[]> {
+  return apiFetch<WatchlistItem[]>("/api/watchlist");
 }
 
-export function addToWatchlist(
-  userId: string,
-  symbol: string
-): Promise<WatchlistItem> {
+export function addToWatchlist(symbol: string): Promise<WatchlistItem> {
   return apiFetch<WatchlistItem>("/api/watchlist", {
     method: "POST",
-    body: JSON.stringify({ user_id: userId, symbol }),
+    body: JSON.stringify({ symbol }),
   });
 }
 
-export function removeFromWatchlist(
-  userId: string,
-  symbol: string
-): Promise<void> {
-  return apiFetch<void>(`/api/watchlist/${symbol}?user_id=${userId}`, {
+export function removeFromWatchlist(symbol: string): Promise<void> {
+  return apiFetch<void>(`/api/watchlist/${symbol}`, {
     method: "DELETE",
   });
 }
@@ -170,8 +183,8 @@ export function removeFromWatchlist(
 /*  Alerts                                                             */
 /* ------------------------------------------------------------------ */
 
-export function fetchAlerts(userId: string): Promise<Alert[]> {
-  return apiFetch<Alert[]>(`/api/alerts?user_id=${userId}`);
+export function fetchAlerts(): Promise<Alert[]> {
+  return apiFetch<Alert[]>("/api/alerts");
 }
 
 export function createAlert(req: AlertCreateRequest): Promise<Alert> {

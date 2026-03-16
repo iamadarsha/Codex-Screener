@@ -11,11 +11,11 @@ struct ContentView: View {
                 .ignoresSafeArea()
 
             WebView(
-                url: URL(string: "https://screenercodex.netlify.app")!,
+                url: URL(string: "https://screenercodex.netlify.app")!, // TODO: Update to Railway URL after deploy
                 isLoading: $isLoading,
                 loadProgress: $loadProgress
             )
-            .ignoresSafeArea(.container, edges: [.bottom, .leading, .trailing])
+            .ignoresSafeArea(.container, edges: [.top, .bottom, .leading, .trailing])
 
             if isLoading {
                 LaunchOverlay(progress: loadProgress)
@@ -168,9 +168,22 @@ struct WebView: UIViewRepresentable {
                         min-height: 100vh;
                         min-height: -webkit-fill-available;
                         box-sizing: border-box;
+                        padding-top: env(safe-area-inset-top);
+                        padding-bottom: env(safe-area-inset-bottom);
+                        padding-left: env(safe-area-inset-left);
+                        padding-right: env(safe-area-inset-right);
                     }
                     img, video, canvas, svg { max-width: 100%; }
                     table { max-width: 100%; overflow-x: auto; display: block; }
+                    button, a, [role="button"] {
+                        -webkit-tap-highlight-color: transparent;
+                        touch-action: manipulation;
+                        min-height: 44px;
+                        min-width: 44px;
+                    }
+                    [class*="dropdown"], [class*="modal"], [class*="popover"] {
+                        background-color: var(--bg-card, #1a1f2e) !important;
+                    }
                 `;
                 document.head.appendChild(style);
             })();
@@ -194,6 +207,7 @@ struct WebView: UIViewRepresentable {
                 let host = url.host ?? ""
                 if navigationAction.navigationType == .linkActivated &&
                    !host.contains("screenercodex.netlify.app") &&
+                   !host.contains(".up.railway.app") &&
                    !host.contains("localhost") {
                     UIApplication.shared.open(url)
                     decisionHandler(.cancel)

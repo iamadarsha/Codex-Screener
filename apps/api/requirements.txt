@@ -12,6 +12,7 @@ orjson
 pandas
 pandas-ta
 protobuf
+pyjwt[crypto]
 pydantic
 pydantic-settings
 pytest
