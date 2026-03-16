@@ -12,5 +12,9 @@ coverage
 __pycache__
 *.pyc
 
+# Sensitive project handoff files (contain API keys)
+PROJECT_HANDOFF.md
+PROJECT_HANDOFF_HIDDEN_KEYS.md
+
 .claude/worktrees/
 .venv-phase3/

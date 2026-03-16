@@ -12,7 +12,6 @@ import { FundamentalsResultsTable } from "@/components/fundamentals/results-tabl
 import { fetchFundamentals } from "@/lib/api";
 import type { FundamentalFilters } from "@/lib/api-types";
 import { Badge } from "@/components/ui/badge";
-import { MOCK_FUNDAMENTALS } from "@/lib/mock-data";
 
 const defaultFilters: FundamentalFilters = {};
 
@@ -28,7 +27,7 @@ export default function FundamentalsPage() {
     retry: 1,
   });
 
-  const data = (rawData && rawData.length > 0) ? rawData : (isError || (!isLoading && (!rawData || rawData.length === 0))) ? MOCK_FUNDAMENTALS : rawData;
+  const data = rawData ?? [];
 
   return (
     <AppShell>
