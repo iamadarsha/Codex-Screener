@@ -19,26 +19,6 @@ const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
 });
 
-function ThemedToaster() {
-  const { theme } = useTheme();
-  return (
-    <Toaster
-      theme={theme}
-      position="top-center"
-      offset={16}
-      toastOptions={{
-        style: {
-          background: "var(--bg-elevated)",
-          border: "1px solid var(--border)",
-          color: "var(--text-primary)",
-          backdropFilter: "blur(16px)",
-          borderRadius: "12px",
-        },
-      }}
-    />
-  );
-}
-
 interface RootLayoutProps {
   children: ReactNode;
 }
