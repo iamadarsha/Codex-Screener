@@ -35,16 +35,39 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
     if (session?.access_token) {
       return { Authorization: `Bearer ${session.access_token}` };
     }
-    console.warn("[api] No active session — watchlist/alerts will fail");
   } catch (e) {
     console.warn("[api] getAuthHeaders error:", e);
   }
   return {};
 }
 
+/** Public API call — no auth header, faster */
+async function publicFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const res = await fetch(`${API_BASE_URL}${path}`, {
+      headers: {
+        "Content-Type": "application/json",
+        ...(init?.headers ?? {}),
+      },
+      ...init,
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`API ${res.status}: ${text || res.statusText}`);
+    }
+    return res.json() as Promise<T>;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/** Authenticated API call — includes Bearer token */
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15_000);
+  const timeout = setTimeout(() => controller.abort(), 10_000);
   const authHeaders = await getAuthHeaders();
   try {
     const res = await fetch(`${API_BASE_URL}${path}`, {
@@ -86,11 +109,11 @@ export function fetchStocks(params?: {
   if (params?.nifty500) sp.set("nifty500", "true");
   if (params?.sector) sp.set("sector", params.sector);
   const qs = sp.toString();
-  return apiFetch<StockListResponse>(`/api/stocks${qs ? `?${qs}` : ""}`);
+  return publicFetch<StockListResponse>(`/api/stocks${qs ? `?${qs}` : ""}`);
 }
 
 export function fetchStock(symbol: string): Promise<Stock> {
-  return apiFetch<Stock>(`/api/stocks/${symbol}`);
+  return publicFetch<Stock>(`/api/stocks/${symbol}`);
 }
 
 /* ------------------------------------------------------------------ */
@@ -98,18 +121,18 @@ export function fetchStock(symbol: string): Promise<Stock> {
 /* ------------------------------------------------------------------ */
 
 export function fetchPrebuiltScans(): Promise<PrebuiltScan[]> {
-  return apiFetch<PrebuiltScan[]>("/api/screener/prebuilt");
+  return publicFetch<PrebuiltScan[]>("/api/screener/prebuilt");
 }
 
 export function runPrebuiltScan(scanId: string): Promise<ScanResult> {
-  return apiFetch<ScanResult>("/api/screener/run", {
+  return publicFetch<ScanResult>("/api/screener/run", {
     method: "POST",
     body: JSON.stringify({ scan_id: scanId }),
   });
 }
 
 export function runCustomScan(req: CustomScanRequest): Promise<ScanResult> {
-  return apiFetch<ScanResult>("/api/screener/custom", {
+  return publicFetch<ScanResult>("/api/screener/custom", {
     method: "POST",
     body: JSON.stringify(req),
   });
@@ -120,11 +143,11 @@ export function runCustomScan(req: CustomScanRequest): Promise<ScanResult> {
 /* ------------------------------------------------------------------ */
 
 export function fetchLivePrice(symbol: string): Promise<LivePrice> {
-  return apiFetch<LivePrice>(`/api/prices/live/${symbol}`);
+  return publicFetch<LivePrice>(`/api/prices/live/${symbol}`);
 }
 
 export function fetchLivePrices(symbols: string[]): Promise<LivePrice[]> {
-  return apiFetch<LivePrice[]>(
+  return publicFetch<LivePrice[]>(
     `/api/prices/live?symbols=${symbols.join(",")}`
   );
 }
@@ -133,13 +156,13 @@ export function fetchPriceHistory(
   symbol: string,
   timeframe: string
 ): Promise<PriceHistory> {
-  return apiFetch<PriceHistory>(
+  return publicFetch<PriceHistory>(
     `/api/prices/history/${symbol}?timeframe=${timeframe}`
   );
 }
 
 export function fetchIndicators(symbol: string): Promise<Indicators> {
-  return apiFetch<Indicators>(`/api/prices/indicators/${symbol}`);
+  return publicFetch<Indicators>(`/api/prices/indicators/${symbol}`);
 }
 
 /* ------------------------------------------------------------------ */
@@ -147,19 +170,19 @@ export function fetchIndicators(symbol: string): Promise<Indicators> {
 /* ------------------------------------------------------------------ */
 
 export function fetchMarketStatus(): Promise<MarketStatus> {
-  return apiFetch<MarketStatus>("/api/market/status");
+  return publicFetch<MarketStatus>("/api/market/status");
 }
 
 export function fetchMarketBreadth(): Promise<MarketBreadth> {
-  return apiFetch<MarketBreadth>("/api/market/breadth");
+  return publicFetch<MarketBreadth>("/api/market/breadth");
 }
 
 export function fetchMarketIndices(): Promise<IndexData[]> {
-  return apiFetch<IndexData[]>("/api/market/indices");
+  return publicFetch<IndexData[]>("/api/market/indices");
 }
 
 export function fetchMarketSectors(): Promise<SectorData[]> {
-  return apiFetch<SectorData[]>("/api/market/sectors");
+  return publicFetch<SectorData[]>("/api/market/sectors");
 }
 
 /* ------------------------------------------------------------------ */
@@ -212,7 +235,7 @@ export function fetchFundamentals(
     }
   }
   const qs = sp.toString();
-  return apiFetch<FundamentalData[]>(
+  return publicFetch<FundamentalData[]>(
     `/api/fundamentals${qs ? `?${qs}` : ""}`
   );
 }
@@ -222,11 +245,11 @@ export function fetchFundamentals(
 /* ------------------------------------------------------------------ */
 
 export function fetchAiSuggestions(): Promise<AiSuggestionsResponse> {
-  return apiFetch<AiSuggestionsResponse>("/api/ai-suggestions");
+  return publicFetch<AiSuggestionsResponse>("/api/ai-suggestions");
 }
 
 export function refreshAiSuggestions(): Promise<AiSuggestionsResponse> {
-  return apiFetch<AiSuggestionsResponse>("/api/ai-suggestions/refresh", {
+  return publicFetch<AiSuggestionsResponse>("/api/ai-suggestions/refresh", {
     method: "POST",
   });
 }
@@ -238,7 +261,7 @@ export function refreshAiSuggestions(): Promise<AiSuggestionsResponse> {
 export function fetchCompanyInfo(
   symbol: string
 ): Promise<import("./api-types").CompanyInfo> {
-  return apiFetch<import("./api-types").CompanyInfo>(
+  return publicFetch<import("./api-types").CompanyInfo>(
     `/api/company/${symbol}`
   );
 }

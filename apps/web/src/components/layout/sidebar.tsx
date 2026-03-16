@@ -9,14 +9,19 @@ import {
   ChevronLeft,
   ChevronRight,
   LayoutDashboard,
+  LogIn,
+  LogOut,
   SearchCheck,
   Sparkles,
   Target,
   Eye,
   Settings,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useMarketStatus } from "@/hooks/use-market-breadth";
+import { useAuth } from "@/hooks/use-auth";
+import { createClient } from "@/lib/supabase/client";
 
 const mainNav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -36,6 +41,13 @@ export function Sidebar() {
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const { data: status } = useMarketStatus();
+  const { user, loading: authLoading } = useAuth();
+
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.refresh();
+  };
 
   const isOpen = status?.is_open ?? false;
 
@@ -163,6 +175,42 @@ export function Sidebar() {
           <Settings className="h-[18px] w-[18px] shrink-0" />
           {!collapsed && <span>Settings</span>}
         </button>
+
+        {/* Auth button */}
+        {!authLoading && (
+          user ? (
+            <button
+              onClick={handleSignOut}
+              title={collapsed ? "Sign Out" : undefined}
+              className={cn(
+                "flex w-full items-center rounded-lg py-2.5 text-sm transition",
+                collapsed ? "justify-center px-2" : "gap-3 px-4",
+                "text-text-muted hover:bg-red-500/10 hover:text-red-400"
+              )}
+            >
+              <LogOut className="h-[18px] w-[18px] shrink-0" />
+              {!collapsed && (
+                <div className="flex flex-col items-start min-w-0">
+                  <span className="text-xs truncate max-w-[140px]">{user.email?.split("@")[0]}</span>
+                  <span className="text-[10px] text-text-muted">Sign Out</span>
+                </div>
+              )}
+            </button>
+          ) : (
+            <button
+              onClick={() => router.push("/login")}
+              title={collapsed ? "Sign In" : undefined}
+              className={cn(
+                "flex w-full items-center rounded-lg py-2.5 text-sm font-medium transition",
+                collapsed ? "justify-center px-2" : "gap-3 px-4",
+                "border border-accent/20 bg-accent/5 text-accent hover:bg-accent/10"
+              )}
+            >
+              <LogIn className="h-[18px] w-[18px] shrink-0" />
+              {!collapsed && <span>Sign In</span>}
+            </button>
+          )
+        )}
 
         <button
           onClick={() => setCollapsed(!collapsed)}

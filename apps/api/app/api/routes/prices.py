@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/prices", tags=["prices"])
 
 @router.get("/live/{symbol}", response_model=LivePrice)
 async def get_live_price(symbol: str):
-    """Get current LTP for a symbol from Redis."""
+    """Get current LTP for a symbol from Redis. Returns placeholder if Redis is down."""
     try:
         from app.services.redis_cache import get_json
 
@@ -32,9 +32,9 @@ async def get_live_price(symbol: str):
         return LivePrice(**data)
     except HTTPException:
         raise
-    except Exception as exc:
-        logger.exception("Failed to fetch live price")
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    except Exception:
+        logger.warning("Redis unavailable for live price %s — returning placeholder", symbol)
+        return LivePrice(symbol=symbol.upper(), ltp=0)
 
 
 @router.get("/live", response_model=list[LivePrice])
@@ -43,7 +43,7 @@ async def get_batch_prices(
         ..., description="Comma-separated list of symbols"
     ),
 ):
-    """Get live prices for multiple symbols."""
+    """Get live prices for multiple symbols. Gracefully degrades if Redis is down."""
     symbol_list = [s.strip().upper() for s in symbols.split(",") if s.strip()]
     if not symbol_list:
         return []
@@ -55,15 +55,18 @@ async def get_batch_prices(
         from app.services.redis_cache import get_json
 
         for sym in symbol_list:
-            data = await get_json(f"price:{sym}")
-            if data:
-                data.setdefault("symbol", sym)
-                results.append(LivePrice(**data))
-            else:
+            try:
+                data = await get_json(f"price:{sym}")
+                if data:
+                    data.setdefault("symbol", sym)
+                    results.append(LivePrice(**data))
+                else:
+                    results.append(LivePrice(symbol=sym, ltp=0))
+            except Exception:
                 results.append(LivePrice(symbol=sym, ltp=0))
-    except Exception as exc:
-        logger.exception("Failed to fetch batch prices")
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    except Exception:
+        logger.warning("Redis unavailable for batch prices — returning placeholders")
+        results = [LivePrice(symbol=sym, ltp=0) for sym in symbol_list]
     return results
 
 
@@ -180,7 +183,7 @@ async def get_price_history(
 
 @router.get("/indicators/{symbol}")
 async def get_indicators(symbol: str):
-    """Get current technical indicators for a symbol from Redis."""
+    """Get current technical indicators for a symbol from Redis. Returns empty on failure."""
     try:
         from app.services.redis_cache import get_json
 
@@ -193,6 +196,6 @@ async def get_indicators(symbol: str):
         return {"symbol": symbol.upper(), "indicators": data}
     except HTTPException:
         raise
-    except Exception as exc:
-        logger.exception("Failed to fetch indicators")
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    except Exception:
+        logger.warning("Redis unavailable for indicators %s — returning empty", symbol)
+        return {"symbol": symbol.upper(), "indicators": {}}

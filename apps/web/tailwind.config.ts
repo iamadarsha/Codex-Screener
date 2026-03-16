@@ -41,6 +41,26 @@ const config: Config = {
         "flash-bearish": "flash-bearish 0.6s ease-out",
         "pulse-dot": "pulse-dot 1.5s ease-in-out infinite",
         shimmer: "shimmer 2s ease-in-out infinite",
+        "fade-in": "fade-in 0.3s ease-out",
+        "slide-up": "slide-up 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+        "scale-in": "scale-in 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+      },
+      keyframes: {
+        "fade-in": {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
+        "slide-up": {
+          "0%": { opacity: "0", transform: "translateY(12px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        "scale-in": {
+          "0%": { opacity: "0", transform: "scale(0.95)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
+      },
+      transitionTimingFunction: {
+        "out-expo": "cubic-bezier(0.16, 1, 0.3, 1)",
       },
     },
   },

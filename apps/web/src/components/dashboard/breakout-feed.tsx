@@ -94,7 +94,7 @@ export function BreakoutFeed({ items }: BreakoutFeedProps) {
                     </span>
                   </div>
                   <div className="mt-0.5 flex items-center gap-2">
-                    <span className="text-[10px] text-text-muted">{item.sector}</span>
+                    <span className="text-[11px] text-text-muted">{item.sector}</span>
                     {item.signal_strength != null && (
                       <SignalBadge
                         signal={

@@ -38,7 +38,8 @@ export default function SettingsPage() {
   const handleSignOut = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push("/login");
+    setUserEmail(null);
+    router.refresh();
   };
 
   return (
@@ -137,14 +138,25 @@ export default function SettingsPage() {
                 <p className="text-sm text-text-secondary">
                   {userEmail ? `Signed in as ${userEmail}` : "Not signed in"}
                 </p>
-                <p className="text-xs text-text-muted">Sign out to switch accounts or re-authenticate</p>
+                <p className="text-xs text-text-muted">
+                  {userEmail ? "Sign out to switch accounts or re-authenticate" : "Sign in to access watchlist, alerts, and more"}
+                </p>
               </div>
-              <button
-                onClick={handleSignOut}
-                className="flex items-center gap-2 rounded-lg border border-red-500/30 px-4 py-2 text-sm font-medium text-red-400 transition hover:bg-red-500/10"
-              >
-                <LogOut className="h-4 w-4" /> Sign Out
-              </button>
+              {userEmail ? (
+                <button
+                  onClick={handleSignOut}
+                  className="flex items-center gap-2 rounded-lg border border-red-500/30 px-4 py-2 text-sm font-medium text-red-400 transition hover:bg-red-500/10"
+                >
+                  <LogOut className="h-4 w-4" /> Sign Out
+                </button>
+              ) : (
+                <button
+                  onClick={() => router.push("/login")}
+                  className="flex items-center gap-2 rounded-lg border border-accent/30 bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition hover:bg-accent/20"
+                >
+                  Sign In
+                </button>
+              )}
             </div>
           </motion.div>
 

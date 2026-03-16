@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,6 +29,15 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-page">
       <div className="w-full max-w-sm space-y-8 px-6">
+        {/* Back to app */}
+        <button
+          onClick={() => router.push("/")}
+          className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Dashboard
+        </button>
+
         {/* Logo */}
         <div className="text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-accent/70 text-2xl font-bold text-white shadow-accent">
@@ -71,6 +83,7 @@ export default function LoginPage() {
         )}
 
         <p className="text-center text-xs text-text-muted">
+          Sign in to access your personal watchlist and alerts.
           By signing in, you agree to use this tool for informational purposes
           only. Not financial advice.
         </p>
