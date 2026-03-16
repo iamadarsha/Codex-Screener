@@ -152,7 +152,7 @@ export default function ChartPage() {
               />
             </form>
             {showChartDropdown && chartSuggestions.length > 0 && (
-              <div className="absolute left-0 top-full z-50 mt-1 w-full overflow-hidden rounded-lg border border-border bg-elevated shadow-lg backdrop-blur-xl">
+              <div className="absolute left-0 top-full z-50 mt-1 w-full max-h-[320px] overflow-y-auto rounded-lg border border-border shadow-lg" style={{ backgroundColor: '#0d1117' }}>
                 {chartSuggestions.map((s, i) => (
                   <button
                     key={s.symbol}
