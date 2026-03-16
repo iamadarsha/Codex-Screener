@@ -11,7 +11,7 @@ struct ContentView: View {
                 .ignoresSafeArea()
 
             WebView(
-                url: URL(string: "https://screenercodex.netlify.app")!, // TODO: Update to Railway URL after deploy
+                url: URL(string: "https://breakoutscan-web-production.up.railway.app")!,
                 isLoading: $isLoading,
                 loadProgress: $loadProgress
             )
@@ -206,8 +206,9 @@ struct WebView: UIViewRepresentable {
             if let url = navigationAction.request.url {
                 let host = url.host ?? ""
                 if navigationAction.navigationType == .linkActivated &&
-                   !host.contains("screenercodex.netlify.app") &&
+                   !host.contains("breakoutscan-web-production.up.railway.app") &&
                    !host.contains(".up.railway.app") &&
+                   !host.contains("gruaokvbcnvgvklhqimw.supabase.co") &&
                    !host.contains("localhost") {
                     UIApplication.shared.open(url)
                     decisionHandler(.cancel)
