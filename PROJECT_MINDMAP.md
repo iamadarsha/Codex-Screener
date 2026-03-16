@@ -20,11 +20,13 @@ mindmap
           Intraday 5 picks
           Weekly 5 picks
           Monthly 5 picks
+          Live Price Streaming
+            WebSocket + REST fallback
         Screener
-          13 Prebuilt Scans
+          13 Prebuilt Scans (stable)
           Custom Scan Builder
         Charts
-          Lightweight Charts v5
+          TradingView Widget
           Candlestick + Volume
           RSI / MACD / BB / EMA
         Watchlist
@@ -37,10 +39,11 @@ mindmap
         Tailwind CSS
         Dark Terminal Theme
         Framer Motion
+        Dark/Light Theme Toggle
       State
         React Query
         Zustand
-      Deploy: Netlify
+      Deploy: Railway
     **Backend API**
       FastAPI + Python 3.12
         Routes
@@ -56,9 +59,9 @@ mindmap
           /auth/upstox
         Services
           AI Suggestions 3-Layer
-            Layer 1: Gemini
-            Layer 2: Groq + xAI
-            Layer 3: Technical Scoring
+            Layer 1: RSS + Technical Scoring (zero API)
+            Layer 2: Gemini 3.1 Flash Lite
+            Layer 3: Groq + xAI
           NSE Poller 30s cycle
           Yahoo Finance OHLCV
           Indicator Engine
@@ -103,11 +106,11 @@ mindmap
     **iOS App**
       SwiftUI WebView
       Bundle: com.codexscreener.app
-      Loads Netlify URL
+      Loads Railway URL
     **DevOps**
       GitHub Repo
       Railway Auto-Deploy
-      Netlify Auto-Deploy
+      Railway Frontend Deploy
       Docker Compose Local
 ```
 
@@ -139,7 +142,7 @@ flowchart TD
     end
 
     subgraph Phase4["Phase 4: AI Stock Picker"]
-        D1[Gemini API Integration<br/>Primary + Backup Keys] --> D2[Groq API Fallback<br/>Llama 3.3 70B]
+        D1[RSS + Technical Scoring<br/>Zero API Layer 1] --> D2[Gemini 3.1 Flash Lite<br/>Layer 2 AI]
         D2 --> D3[RSS Feed Parser<br/>10 News Sources]
         D3 --> D4[Technical Scoring Engine<br/>Layer 3 Zero-API]
         D4 --> D5[3-Layer Fallback Chain<br/>Always Returns Picks]
@@ -147,7 +150,7 @@ flowchart TD
     end
 
     subgraph Phase5["Phase 5: Deployment"]
-        E1[Railway Backend<br/>Auto-deploy from main] --> E2[Netlify Frontend<br/>Next.js SSR]
+        E1[Railway Backend<br/>Auto-deploy from main] --> E2[Railway Frontend<br/>Next.js SSR]
         E2 --> E3[Redis on Railway<br/>461 prices cached]
         E3 --> E4[iOS SwiftUI App<br/>WebView Wrapper]
     end
@@ -186,11 +189,11 @@ flowchart LR
     Pending --> RSS["Fetch 10 RSS Feeds"]
     RSS --> Market["Load Market Summary"]
 
-    Market --> L1{"Layer 1: Gemini"}
+    Market --> L1{"Layer 1: Technical"}
     L1 -->|Success| Cache["Cache in Redis"]
-    L1 -->|Fail| L2{"Layer 2: Groq"}
+    L1 -->|Fail| L2{"Layer 2: Gemini"}
     L2 -->|Success| Cache
-    L2 -->|Fail| L3{"Layer 3: Technical"}
+    L2 -->|Fail| L3{"Layer 3: Groq"}
 
     L3 --> Score["Score 461 Stocks"]
     Score --> Pick["Top 5 x 3 Timeframes"]
@@ -239,7 +242,7 @@ flowchart TB
         OHLCV[ohlcv table]
     end
 
-    subgraph Frontend["Next.js Frontend - Netlify"]
+    subgraph Frontend["Next.js Frontend - Railway"]
         Dashboard[Dashboard Page]
         AIPicks[AI Picks Page]
         Screener[Screener Page]
@@ -290,5 +293,5 @@ flowchart TB
 
 ---
 
-**Created**: March 15, 2026
+**Created**: March 16, 2026
 **Tool**: Claude Code + Mermaid.js
