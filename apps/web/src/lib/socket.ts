@@ -3,6 +3,23 @@ import type { LivePrice } from "./api-types";
 
 type PriceCallback = (price: LivePrice) => void;
 
+function resolveWsUrl(): string {
+  // If the configured URL doesn't point to localhost, use it as-is (production config)
+  if (!WS_PRICES_URL.includes("localhost") && !WS_PRICES_URL.includes("127.0.0.1")) {
+    return WS_PRICES_URL;
+  }
+  // In production without an explicit WS URL, derive from the current page origin.
+  // This requires the backend to be reachable at the same host (or a reverse proxy).
+  if (typeof window !== "undefined") {
+    const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
+    if (wsUrl && !wsUrl.includes("localhost")) return `${wsUrl}/ws/prices`;
+    // Last resort: same origin (only works if backend is co-located or proxied)
+    return `${proto}//${window.location.host}/ws/prices`;
+  }
+  return WS_PRICES_URL;
+}
+
 class PriceSocket {
   private ws: WebSocket | null = null;
   private subscriptions = new Set<string>();
@@ -17,7 +34,7 @@ class PriceSocket {
     this.isConnecting = true;
 
     try {
-      this.ws = new WebSocket(WS_PRICES_URL);
+      this.ws = new WebSocket(resolveWsUrl());
 
       this.ws.onopen = () => {
         this.isConnecting = false;

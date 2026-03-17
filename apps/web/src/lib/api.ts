@@ -224,19 +224,40 @@ export function createAlert(req: AlertCreateRequest): Promise<Alert> {
 /*  Fundamentals                                                       */
 /* ------------------------------------------------------------------ */
 
-export function fetchFundamentals(
+export async function fetchFundamentals(
   filters: FundamentalFilters
 ): Promise<FundamentalData[]> {
   const sp = new URLSearchParams();
-  for (const [k, v] of Object.entries(filters)) {
-    if (v !== undefined && v !== null && v !== "") {
-      sp.set(k, String(v));
-    }
-  }
+  // Map client filter keys → API query param names
+  if (filters.pe_min != null) sp.set("pe_min", String(filters.pe_min));
+  if (filters.pe_max != null) sp.set("pe_max", String(filters.pe_max));
+  if (filters.pb_min != null) sp.set("pb_min", String(filters.pb_min));
+  if (filters.pb_max != null) sp.set("pb_max", String(filters.pb_max));
+  if (filters.market_cap_min != null) sp.set("market_cap_min", String(filters.market_cap_min));
+  if (filters.market_cap_max != null) sp.set("market_cap_max", String(filters.market_cap_max));
+  if (filters.roe_min != null) sp.set("roe_min", String(filters.roe_min));
+  if (filters.dividend_yield_min != null) sp.set("div_yield_min", String(filters.dividend_yield_min));
+  if (filters.debt_to_equity_max != null) sp.set("debt_equity_max", String(filters.debt_to_equity_max));
   const qs = sp.toString();
-  return publicFetch<FundamentalData[]>(
+
+  // API returns { items: [...], total, page, ... } — extract and remap field names
+  const resp = await publicFetch<{ items: Record<string, unknown>[] }>(
     `/api/fundamentals${qs ? `?${qs}` : ""}`
   );
+  return (resp.items ?? []).map((r) => ({
+    symbol: r.symbol as string,
+    name: (r.company_name ?? r.symbol) as string,
+    sector: (r.sector ?? "") as string,
+    market_cap: r.market_cap != null ? Number(r.market_cap) : 0,
+    pe_ratio: r.pe != null ? Number(r.pe) : null,
+    pb_ratio: r.pb != null ? Number(r.pb) : null,
+    roe: r.roe != null ? Number(r.roe) : null,
+    dividend_yield: r.div_yield != null ? Number(r.div_yield) : null,
+    debt_to_equity: r.debt_equity != null ? Number(r.debt_equity) : null,
+    eps: null,
+    book_value: null,
+    face_value: null,
+  }));
 }
 
 /* ------------------------------------------------------------------ */
