@@ -83,15 +83,19 @@ async def filter_fundamentals(
         query = query.where(Stock.sector == sector)
         count_query = count_query.where(Stock.sector == sector)
 
-    total = (await db.execute(count_query)).scalar_one()
-    offset = (page - 1) * page_size
-    rows = (
-        await db.execute(
-            query.order_by(Stock.market_cap.desc().nullslast())
-            .offset(offset)
-            .limit(page_size)
-        )
-    ).scalars().all()
+    try:
+        total = (await db.execute(count_query)).scalar_one()
+        offset = (page - 1) * page_size
+        rows = (
+            await db.execute(
+                query.order_by(Stock.market_cap.desc().nullslast())
+                .offset(offset)
+                .limit(page_size)
+            )
+        ).scalars().all()
+    except Exception:
+        logger.exception("Database unavailable for filter_fundamentals — returning empty result")
+        return {"items": [], "total": 0, "page": page, "page_size": page_size, "total_pages": 1}
 
     items = []
     for row in rows:

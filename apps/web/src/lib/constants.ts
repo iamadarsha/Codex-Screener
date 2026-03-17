@@ -1,5 +1,8 @@
+// In production, API calls use relative URLs so Next.js rewrites can proxy them
+// to the backend (configured via INTERNAL_API_URL in Railway).
+// In local dev, set NEXT_PUBLIC_API_URL=http://localhost:8001 to bypass the proxy.
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
+  process.env.NEXT_PUBLIC_API_URL ?? "";
 
 export const WS_BASE_URL =
   process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8001";

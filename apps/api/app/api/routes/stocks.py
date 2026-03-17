@@ -68,6 +68,43 @@ FALLBACK_STOCKS = [
 ]
 
 
+def _apply_fallback_filters(
+    fallback: list,
+    search: str | None,
+    nifty50: bool | None,
+    nifty500: bool | None,
+    fno: bool | None,
+    sector: str | None,
+) -> list:
+    if search:
+        p = search.lower()
+        fallback = [s for s in fallback if p in s["symbol"].lower() or p in s["company_name"].lower()]
+    if nifty50 is not None:
+        fallback = [s for s in fallback if s["is_nifty50"] == nifty50]
+    if nifty500 is not None:
+        fallback = [s for s in fallback if s["is_nifty500"] == nifty500]
+    if fno is not None:
+        fallback = [s for s in fallback if s["is_fno"] == fno]
+    if sector:
+        fallback = [s for s in fallback if s["sector"] == sector]
+    return fallback
+
+
+def _build_fallback_response(
+    fallback: list, page: int, page_size: int
+) -> StockList:
+    total = len(fallback)
+    offset = (page - 1) * page_size
+    fb_page = fallback[offset:offset + page_size]
+    return StockList(
+        items=[StockOut(**s) for s in fb_page],
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=max(1, (total + page_size - 1) // page_size),
+    )
+
+
 @router.get("", response_model=StockList)
 async def list_stocks(
     page: int = Query(1, ge=1),
@@ -81,84 +118,76 @@ async def list_stocks(
     db: AsyncSession = Depends(get_db),
 ):
     """List stocks with pagination, search, and filters."""
-    query = select(Stock)
-    count_query = select(func.count()).select_from(Stock)
+    try:
+        query = select(Stock)
+        count_query = select(func.count()).select_from(Stock)
 
-    if active_only:
-        query = query.where(Stock.is_active.is_(True))
-        count_query = count_query.where(Stock.is_active.is_(True))
-    if search:
-        pattern = f"%{search}%"
-        search_filter = or_(
-            Stock.symbol.ilike(pattern),
-            Stock.company_name.ilike(pattern),
-        )
-        query = query.where(search_filter)
-        count_query = count_query.where(search_filter)
-    if nifty50 is not None:
-        query = query.where(Stock.is_nifty50 == nifty50)
-        count_query = count_query.where(Stock.is_nifty50 == nifty50)
-    if nifty500 is not None:
-        query = query.where(Stock.is_nifty500 == nifty500)
-        count_query = count_query.where(Stock.is_nifty500 == nifty500)
-    if fno is not None:
-        query = query.where(Stock.is_fno == fno)
-        count_query = count_query.where(Stock.is_fno == fno)
-    if sector:
-        query = query.where(Stock.sector == sector)
-        count_query = count_query.where(Stock.sector == sector)
-
-    total = (await db.execute(count_query)).scalar_one()
-
-    # If DB is empty, use fallback data
-    if total == 0:
-        fallback = FALLBACK_STOCKS
+        if active_only:
+            query = query.where(Stock.is_active.is_(True))
+            count_query = count_query.where(Stock.is_active.is_(True))
         if search:
-            pattern = search.lower()
-            fallback = [s for s in fallback if pattern in s["symbol"].lower() or pattern in s["company_name"].lower()]
-        fb_total = len(fallback)
+            pattern = f"%{search}%"
+            search_filter = or_(
+                Stock.symbol.ilike(pattern),
+                Stock.company_name.ilike(pattern),
+            )
+            query = query.where(search_filter)
+            count_query = count_query.where(search_filter)
+        if nifty50 is not None:
+            query = query.where(Stock.is_nifty50 == nifty50)
+            count_query = count_query.where(Stock.is_nifty50 == nifty50)
+        if nifty500 is not None:
+            query = query.where(Stock.is_nifty500 == nifty500)
+            count_query = count_query.where(Stock.is_nifty500 == nifty500)
+        if fno is not None:
+            query = query.where(Stock.is_fno == fno)
+            count_query = count_query.where(Stock.is_fno == fno)
+        if sector:
+            query = query.where(Stock.sector == sector)
+            count_query = count_query.where(Stock.sector == sector)
+
+        total = (await db.execute(count_query)).scalar_one()
+
+        # If DB is empty, use fallback data
+        if total == 0:
+            fallback = _apply_fallback_filters(list(FALLBACK_STOCKS), search, nifty50, nifty500, fno, sector)
+            return _build_fallback_response(fallback, page, page_size)
+
         offset = (page - 1) * page_size
-        fb_page = fallback[offset:offset + page_size]
-        total_pages = max(1, (fb_total + page_size - 1) // page_size)
+        rows = (
+            await db.execute(
+                query.order_by(Stock.symbol).offset(offset).limit(page_size)
+            )
+        ).scalars().all()
+
+        items = []
+        for row in rows:
+            item = StockOut.model_validate(row)
+            # Try to enrich with live price from Redis
+            try:
+                from app.services.redis_cache import get_json
+
+                price_data = await get_json(f"price:{row.symbol}")
+                if price_data:
+                    item.ltp = price_data.get("ltp")
+                    item.change = price_data.get("change")
+                    item.change_pct = price_data.get("change_pct")
+            except Exception:
+                pass
+            items.append(item)
+
+        total_pages = max(1, (total + page_size - 1) // page_size)
         return StockList(
-            items=[StockOut(**s) for s in fb_page],
-            total=fb_total,
+            items=items,
+            total=total,
             page=page,
             page_size=page_size,
             total_pages=total_pages,
         )
-
-    offset = (page - 1) * page_size
-    rows = (
-        await db.execute(
-            query.order_by(Stock.symbol).offset(offset).limit(page_size)
-        )
-    ).scalars().all()
-
-    items = []
-    for row in rows:
-        item = StockOut.model_validate(row)
-        # Try to enrich with live price from Redis
-        try:
-            from app.services.redis_cache import get_json
-
-            price_data = await get_json(f"price:{row.symbol}")
-            if price_data:
-                item.ltp = price_data.get("ltp")
-                item.change = price_data.get("change")
-                item.change_pct = price_data.get("change_pct")
-        except Exception:
-            pass
-        items.append(item)
-
-    total_pages = max(1, (total + page_size - 1) // page_size)
-    return StockList(
-        items=items,
-        total=total,
-        page=page,
-        page_size=page_size,
-        total_pages=total_pages,
-    )
+    except Exception:
+        logger.exception("Database unavailable for list_stocks — using fallback data")
+        fallback = _apply_fallback_filters(list(FALLBACK_STOCKS), search, nifty50, nifty500, fno, sector)
+        return _build_fallback_response(fallback, page, page_size)
 
 
 @router.get("/search", response_model=list[StockSearch])
