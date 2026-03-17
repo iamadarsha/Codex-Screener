@@ -21,6 +21,11 @@ def _get_engine():
         connect_args: dict = {}
         if "localhost" not in settings.database_url and "127.0.0.1" not in settings.database_url:
             connect_args["ssl"] = "require"
+        # Disable prepared statement caching for PgBouncer transaction-mode poolers
+        # (Supabase port 6543 uses PgBouncer in transaction mode, which doesn't
+        # support named prepared statements that asyncpg sends by default).
+        if ":6543" in settings.database_url:
+            connect_args["statement_cache_size"] = 0
         _engine = create_async_engine(
             settings.database_url,
             pool_pre_ping=True,
