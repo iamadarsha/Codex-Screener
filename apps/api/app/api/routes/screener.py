@@ -4,8 +4,10 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
+from app.core.config import get_settings
+from app.core.rate_limit import limiter
 from app.schemas.common import ErrorResponse
 from app.schemas.screener import (
     CustomScanRequest,
@@ -83,7 +85,8 @@ async def _enrich_items(items: list[dict[str, Any]], conditions: list[str] | Non
 
 
 @router.get("/prebuilt", response_model=list[PrebuiltScanOut])
-async def list_prebuilt_scans():
+@limiter.limit(get_settings().rate_limit_default)
+async def list_prebuilt_scans(request: Request):
     """Return all available prebuilt scans."""
     try:
         from app.services.prebuilt_scans import get_prebuilt_scans
@@ -108,7 +111,8 @@ async def list_prebuilt_scans():
 
 
 @router.post("/run", response_model=ScanResult)
-async def run_prebuilt_scan(req: ScanRequest):
+@limiter.limit(get_settings().rate_limit_screener)
+async def run_prebuilt_scan(request: Request, req: ScanRequest):
     """Run a prebuilt scan by ID and return matching symbols."""
     try:
         from app.services.prebuilt_scans import get_scan_by_id
@@ -167,7 +171,8 @@ async def run_prebuilt_scan(req: ScanRequest):
 
 
 @router.post("/custom", response_model=ScanResult)
-async def run_custom_scan(req: CustomScanRequest):
+@limiter.limit(get_settings().rate_limit_screener)
+async def run_custom_scan(request: Request, req: CustomScanRequest):
     """Run a custom scan with user-defined conditions."""
     try:
         from app.services.screener_engine import ScreenerEngine
@@ -217,7 +222,8 @@ async def run_custom_scan(req: CustomScanRequest):
 
 
 @router.get("/results/{scan_id}", response_model=ScanResult)
-async def get_cached_results(scan_id: str):
+@limiter.limit(get_settings().rate_limit_default)
+async def get_cached_results(request: Request, scan_id: str):
     """Get cached scan results by scan ID."""
     try:
         from app.services.redis_cache import get_json

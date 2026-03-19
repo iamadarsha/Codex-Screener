@@ -8,10 +8,15 @@ print("BreakoutScan: loading main module...", file=sys.stderr, flush=True)
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.routes import api_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
+from app.core.rate_limit import limiter
 from app.ws import ws_router
 
 logger = logging.getLogger(__name__)
@@ -86,21 +91,31 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-_allowed_origins = [
+# ── Rate limiting ────────────────────────────────────────────────────────────
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+
+# ── CORS ─────────────────────────────────────────────────────────────────────
+_DEFAULT_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:3001",
     "https://breakoutscan.up.railway.app",
     "https://breakoutscan-web-production.up.railway.app",
+    "https://screenercodex.netlify.app",
     "https://breakoutscan.in",
     "https://www.breakoutscan.in",
 ]
+# Allow extra origins via CORS_ALLOWED_ORIGINS env var (comma-separated)
+_extra = [o.strip() for o in settings.cors_allowed_origins.split(",") if o.strip()]
+_allowed_origins = list(dict.fromkeys(_DEFAULT_ORIGINS + _extra))  # deduplicated
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
 )
 
 # Include all HTTP API routes
