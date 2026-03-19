@@ -3,8 +3,10 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
+from app.core.config import get_settings
+from app.core.rate_limit import limiter
 from app.utils.time import now_ist
 
 logger = logging.getLogger(__name__)
@@ -37,7 +39,8 @@ async def _background_generate():
 
 
 @router.get("")
-async def get_ai_suggestions(background_tasks: BackgroundTasks):
+@limiter.limit(get_settings().rate_limit_default)
+async def get_ai_suggestions(request: Request, background_tasks: BackgroundTasks):
     """Return cached AI suggestions instantly. Triggers background generation if no cache."""
     try:
         from app.services.ai_suggestions import get_suggestions
@@ -61,7 +64,8 @@ async def get_ai_suggestions(background_tasks: BackgroundTasks):
 
 
 @router.post("/refresh")
-async def refresh_ai_suggestions():
+@limiter.limit(get_settings().rate_limit_ai_refresh)
+async def refresh_ai_suggestions(request: Request):
     """Force regenerate AI stock suggestions (may take 10-60s)."""
     try:
         from app.services.ai_suggestions import generate_suggestions
@@ -77,8 +81,12 @@ async def refresh_ai_suggestions():
 
 
 @router.get("/debug")
-async def debug_ai_suggestions():
+async def debug_ai_suggestions(request: Request):
     """Debug endpoint — shows what data is available for AI suggestion generation."""
+    _settings = get_settings()
+    if _settings.environment == "production":
+        raise HTTPException(status_code=404, detail="Not found")
+
     from app.services.redis_cache import get_redis
     from app.services.ai_suggestions import (
         _ensure_symbol_lookup, _SYMBOL_META, _SEED_PATH,

@@ -56,6 +56,14 @@ class Settings(BaseSettings):
     redis_oauth_state_ttl_seconds: int = 600
     nse_fallback_silence_seconds: int = 60
 
+    # CORS — comma-separated extra origins (added on top of hardcoded defaults)
+    cors_allowed_origins: str = ""
+
+    # Rate limiting (slowapi / limits syntax: "N/period")
+    rate_limit_default: str = "100/minute"
+    rate_limit_screener: str = "20/minute"
+    rate_limit_ai_refresh: str = "5/minute"
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

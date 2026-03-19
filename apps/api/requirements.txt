@@ -1,4 +1,5 @@
 alembic
+slowapi
 apscheduler
 asyncpg
 brotli
