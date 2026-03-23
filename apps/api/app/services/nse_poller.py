@@ -310,5 +310,14 @@ async def nse_poller_loop():
 
         except Exception as e:
             log.error("NSE poller error: %s", e)
+            _consecutive_failures += 1
 
-        await asyncio.sleep(POLL_INTERVAL)
+        # Adaptive backoff: double the sleep time for each consecutive failure
+        # (capped at 5 minutes) so a broken NSE session doesn't hammer the server.
+        if _consecutive_failures == 0:
+            sleep_time = POLL_INTERVAL
+        else:
+            sleep_time = min(POLL_INTERVAL * (2 ** min(_consecutive_failures - 1, 4)), 300)
+            log.info("NSE poller backing off: sleeping %ds (failures=%d)", sleep_time, _consecutive_failures)
+
+        await asyncio.sleep(sleep_time)

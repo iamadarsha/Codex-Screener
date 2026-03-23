@@ -24,27 +24,54 @@ import type {
 /*  Generic fetch helpers                                              */
 /* ------------------------------------------------------------------ */
 
+/** Retry a fetch-like function with exponential back-off.
+ *  Only retries on network errors or 5xx responses (not 4xx client errors). */
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxAttempts = 3,
+): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err: unknown) {
+      lastErr = err;
+      // Don't retry client errors (400–499)
+      if (err instanceof Error && /API 4\d\d/.test(err.message)) throw err;
+      if (attempt < maxAttempts - 1) {
+        await new Promise((r) => setTimeout(r, 500 * 2 ** attempt));
+      }
+    }
+  }
+  throw lastErr;
+}
+
 /** Public API call — no auth required */
 async function publicFetch<T>(path: string, init?: RequestInit & { timeoutMs?: number }): Promise<T> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), init?.timeoutMs ?? 15_000);
-  try {
-    const res = await fetch(`${API_BASE_URL}${path}`, {
+  return withRetry(() => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), init?.timeoutMs ?? 15_000);
+    return fetch(`${API_BASE_URL}${path}`, {
       headers: {
         "Content-Type": "application/json",
         ...(init?.headers ?? {}),
       },
       ...init,
       signal: controller.signal,
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`API ${res.status}: ${text || res.statusText}`);
-    }
-    return res.json() as Promise<T>;
-  } finally {
-    clearTimeout(timeout);
-  }
+    })
+      .then(async (res) => {
+        clearTimeout(timeout);
+        if (!res.ok) {
+          const text = await res.text().catch(() => "");
+          throw new Error(`API ${res.status}: ${text || res.statusText}`);
+        }
+        return res.json() as T;
+      })
+      .catch((err) => {
+        clearTimeout(timeout);
+        throw err;
+      });
+  });
 }
 
 /** Get auth headers from Supabase session (lazy import to avoid SSR issues) */
@@ -272,6 +299,34 @@ export function refreshAiSuggestions(): Promise<AiSuggestionsResponse> {
   return publicFetch<AiSuggestionsResponse>("/api/ai-suggestions/refresh", {
     method: "POST",
   });
+}
+
+/* ------------------------------------------------------------------ */
+/*  System Health                                                      */
+/* ------------------------------------------------------------------ */
+
+export interface ApiHealth {
+  status: "ok" | "degraded";
+  redis: "ok" | "unavailable";
+  poller: "running" | "stopped";
+  universe_size: number;
+  uptime_seconds: number;
+}
+
+export async function fetchApiHealth(): Promise<ApiHealth> {
+  // Use a short timeout and no retry — this is a probe, not a data call
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 5_000);
+  try {
+    const res = await fetch(`${API_BASE_URL}/health`, { signal: controller.signal });
+    clearTimeout(t);
+    if (!res.ok) throw new Error("health check failed");
+    return res.json() as Promise<ApiHealth>;
+  } catch {
+    clearTimeout(t);
+    // API completely unreachable — return a synthetic degraded status
+    return { status: "degraded", redis: "unavailable", poller: "stopped", universe_size: 0, uptime_seconds: 0 };
+  }
 }
 
 /* ------------------------------------------------------------------ */
