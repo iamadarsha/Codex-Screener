@@ -11,7 +11,7 @@ POLL_INTERVAL = 30  # seconds
 COMPUTE_INTERVAL = 300  # 5 minutes — indicator refresh cycle
 MAJOR_INDICES = ["NIFTY 50", "NIFTY BANK", "NIFTY IT", "NIFTY PHARMA", "NIFTY AUTO", "NIFTY FMCG", "INDIA VIX", "NIFTY MIDCAP 50"]
 
-# Hardcoded Nifty 50 symbols as fallback when NSE fetch fails
+# ── NIFTY 50 constituents (large-cap anchor universe) ────────────────────────
 NIFTY_50_SYMBOLS = [
     "ADANIENT", "ADANIPORTS", "APOLLOHOSP", "ASIANPAINT", "AXISBANK",
     "BAJAJ-AUTO", "BAJFINANCE", "BAJAJFINSV", "BEL", "BPCL",
@@ -23,6 +23,112 @@ NIFTY_50_SYMBOLS = [
     "ONGC", "POWERGRID", "RELIANCE", "SBILIFE", "SBIN",
     "SUNPHARMA", "TCS", "TATACONSUM", "TATAMOTORS", "TATASTEEL",
     "TECHM", "TITAN", "TRENT", "ULTRACEMCO", "WIPRO",
+]
+
+# ── NIFTY 500 static fallback (used when live NSE fetch is unavailable) ───────
+# Covers large-cap, mid-cap and small-cap across all major sectors.
+# Updated periodically; NSE live fetch supersedes this at runtime.
+NIFTY_500_SYMBOLS = [
+    # ── NIFTY 50 ──────────────────────────────────────────────────────────────
+    "ADANIENT", "ADANIPORTS", "APOLLOHOSP", "ASIANPAINT", "AXISBANK",
+    "BAJAJ-AUTO", "BAJFINANCE", "BAJAJFINSV", "BEL", "BPCL",
+    "BHARTIARTL", "BRITANNIA", "CIPLA", "COALINDIA", "DRREDDY",
+    "EICHERMOT", "ETERNAL", "GRASIM", "HCLTECH", "HDFCBANK",
+    "HDFCLIFE", "HEROMOTOCO", "HINDALCO", "HINDUNILVR", "ICICIBANK",
+    "ITC", "INDUSINDBK", "INFY", "JSWSTEEL", "KOTAKBANK",
+    "LT", "M&M", "MARUTI", "NESTLEIND", "NTPC",
+    "ONGC", "POWERGRID", "RELIANCE", "SBILIFE", "SBIN",
+    "SUNPHARMA", "TCS", "TATACONSUM", "TATAMOTORS", "TATASTEEL",
+    "TECHM", "TITAN", "TRENT", "ULTRACEMCO", "WIPRO",
+    # ── NIFTY NEXT 50 ─────────────────────────────────────────────────────────
+    "ABB", "AMBUJACEM", "ATGL", "DELHIVERY", "DIVISLAB",
+    "DLF", "HAVELLS", "HAL", "INDIAMART", "IOC",
+    "IRCTC", "JUBLFOOD", "LODHA", "MARICO", "MUTHOOTFIN",
+    "NAUKRI", "NBCC", "NHPC", "NMDC", "OFSS",
+    "PAYTM", "PFC", "PIDILITIND", "RECLTD", "SRF",
+    "SAIL", "SIEMENS", "TORNTPHARM", "TATAPOWER", "TVSMOTOR",
+    "UNITDSPR", "VBL", "VEDL", "ZOMATO", "ZYDUSLIFE",
+    "GODREJCP", "INDUSTOWER", "IRFC", "JSWINFRA", "LUPIN",
+    "MAXHEALTH", "MOTHERSON", "RVNL", "SHREECEM", "SHRIRAMFIN",
+    "TATAELXSI", "TORNTPOWER", "OBEROIRLTY", "CGPOWER", "DIXON",
+    # ── Banking & Finance ──────────────────────────────────────────────────────
+    "BANKBARODA", "CANBK", "IDFCFIRSTB", "FEDERALBNK", "PNB",
+    "UNIONBANK", "YESBANK", "BANDHANBNK", "AUBANK", "RBLBANK",
+    "KARURVYSYA", "CITYUNIONBK", "DCBBANK", "SOUTHBANK", "EQUITASBNK",
+    "UJJIVANSFB", "ESAFSFB", "IDBI", "MAHABANK", "J&KBANK",
+    "CHOLAFIN", "MANAPPURAM", "LICHSGFIN", "IIFL", "MOTILALOFS",
+    "ANGELONE", "SBICARD", "ICICIPRULI", "ICICIGI", "HDFCAMC",
+    "NIPPONLIFE", "ABSLAMC", "UTIAMC", "360ONE", "NUVAMA",
+    "BAJAJHFL", "LICI", "POONAWALLA", "CREDITACC", "APTUS",
+    # ── IT & Technology ───────────────────────────────────────────────────────
+    "MPHASIS", "LTI", "LTIM", "COFORGE", "PERSISTENT",
+    "KPITTECH", "CYIENT", "MASTEK", "SONATSOFTW", "BIRLASOFT",
+    "RATEGAIN", "TATATECH", "TANLA", "NEWGEN", "INTELLECT",
+    "NUCLEUS", "RAMCO", "ROUTE", "HAPPSTMNDS", "ZENSAR",
+    "HEXAWARE", "NIIT", "DATAMATICS", "SUBEXLTD", "SAKSOFT",
+    # ── Pharma & Healthcare ───────────────────────────────────────────────────
+    "BIOCON", "AUROPHARMA", "ALKEM", "GLENMARK", "IPCA",
+    "LAURUSLABS", "GRANULES", "NATCOPHARMA", "SYNGENE", "PFIZER",
+    "ABBOTINDIA", "GLAXO", "WOCKPHARMA", "ERIS", "JBCHEPHARM",
+    "ASTRAZEN", "SUVEN", "LALPATHLAB", "METROPOLIS", "DRREDDYLAB",
+    "IPCALAB", "FORTIS", "NARAYANA", "RAINBOW", "VIJAYABANK",
+    "MEDANTA", "KRSNAA", "PRISTINE", "POLYMED", "ESTEEMEDCARE",
+    # ── Auto & Auto Ancillaries ───────────────────────────────────────────────
+    "ASHOKLEY", "BALKRISIND", "BHARATFORG", "ENDURANCE", "SUNDRMFAST",
+    "MINDA", "BOSCH", "TIINDIA", "SOMICONVEY", "EXIDEIND",
+    "AMARAJABAT", "CEATLTD", "APOLLOTYRE", "MFSL", "SUPRAJIT",
+    "GABRIEL", "SUBROS", "LUMAX", "MINDAIND", "SAMVARDHANA",
+    "SCHAEFFLER", "TIMKEN", "SKFINDIA", "FAGBEARINGS", "WABCO",
+    # ── Energy & Power ────────────────────────────────────────────────────────
+    "GAIL", "ADANIGREEN", "SJVN", "CESC", "JSPL",
+    "HINDPETRO", "MRPL", "PETRONET", "GUJTGAS", "IGL",
+    "MGL", "ADANIENSOL", "IRCON", "KNRCON", "PNBHOUSING",
+    "JSWENERGY", "GREENKO", "SUZLON", "INOXWIND", "WIPRO",
+    "KALPATPOWR", "RPOWER", "GVK", "LNTECC", "BHEL",
+    # ── FMCG & Consumer ───────────────────────────────────────────────────────
+    "DABUR", "EMAMILTD", "BAJAJCON", "JYOTHYLAB", "RADICO",
+    "MCDOWELL-N", "COLPAL", "GILLETTE", "PGHH", "HATSUN",
+    "HERITGFOOD", "DODLA", "DEVYANI", "WESTLIFE", "BARBEQUE",
+    "SAPIENT", "TASTYBITE", "BIKAJI", "GOPAL", "AVANTIFEED",
+    # ── Infrastructure & Real Estate ──────────────────────────────────────────
+    "GMRINFRA", "IRB", "GRSE", "MDL", "NLC",
+    "AHLUCONT", "HG INFRA", "PNC INFRATECH", "KEC", "KALINDEE",
+    "JKCEMENT", "RAMCOCEM", "HEIDELBERG", "DALMIA", "NUVOCO",
+    "ACC", "STARCEMENT", "BIRLACORPN", "PRISM", "WONDER",
+    "SOBHA", "PRESTIGE", "BRIGADE", "GODREJPROP", "SUNTECK",
+    "KOLTEPATIL", "MAHINDLIFE", "IBREALEST", "PHOENIXLTD", "NESCO",
+    # ── Metals & Mining ───────────────────────────────────────────────────────
+    "NATIONALUM", "WELCORP", "APL", "RATNAMANI", "APLAPOLLO",
+    "JINDALSTEL", "MOIL", "GMDC", "EDELWEISS", "TINPLATE",
+    "HINDUSTAN ZINC", "HINDCOPPER", "HINDZINC", "BALCO", "NALCO",
+    # ── Telecom & Media ───────────────────────────────────────────────────────
+    "IDEA", "TTML", "STLTELECOM", "HFCL", "TEJAS",
+    "SUNTV", "ZEEL", "PVR", "INOX", "SAREGAMA",
+    "NAZARA", "NXTDIGITAL", "DBCORP", "JUBLPHARMA", "NETWORK18",
+    # ── Capital Goods & Engineering ───────────────────────────────────────────
+    "CUMMINSIND", "THERMAX", "BHARAT FORGE", "GRINDWELL", "CARBORUNIV",
+    "ELGIEQUIP", "KIRLOSKER", "KIRLOSBROS", "KIRILINDS", "PRAJ",
+    "JYOTISTRUC", "AIAENG", "GREAVES", "TRIVENI", "BLUESTAR",
+    "WHIRLPOOL", "VOLTAS", "SYMPHONY", "ORIENTELEC", "AMBER",
+    "DIXON", "VGUARD", "POLYCAB", "KEI", "FINOLEX",
+    # ── Chemicals & Specialty ─────────────────────────────────────────────────
+    "AARTI", "AARTIDRUGS", "DEEPAKNI", "DEEPAKNTR", "FINEORG",
+    "GALAXYSURF", "NAVINFLUOR", "FLUOROCHEM", "ALKYLAMINE", "CLEAN",
+    "BALAJI AMINES", "NEOGEN", "TATACHEM", "GSFC", "GNFC",
+    "COROMANDEL", "CHAMBAL", "BASF", "ATUL", "VINATI",
+    # ── Retail & E-commerce ───────────────────────────────────────────────────
+    "DMART", "TRENT", "ABFRL", "MANYAVAR", "VEDANT",
+    "SHOPERSTOP", "V2RETAIL", "VMART", "THANGAMAYL", "SENCO",
+    "METRO", "BATA", "RELAXO", "KHADIM", "LIBERTY",
+    # ── Logistics & Shipping ─────────────────────────────────────────────────
+    "BLUEDART", "MAHLOG", "ALLCARGO", "GATI", "CONCOR",
+    "AEGISLOG", "TCI", "VRLLOG", "MAHSEAMLESS", "GATEWAY",
+    # ── Hospitality & Tourism ─────────────────────────────────────────────────
+    "INDHOTEL", "EIHOTEL", "CHALET", "LEMONTREE", "MAHINDHOLIDAY",
+    "THOMASCOOK", "SOTL", "MHRIL", "EIHASSOC", "TAJGVK",
+    # ── Agri & Food Processing ────────────────────────────────────────────────
+    "UBL", "KRBL", "LTFOODS", "RUCHI", "GODREJAGRO",
+    "BALRAMCHIN", "DWARIKESH", "TRIVENI ENG", "EID PARRY", "SHREERAMA",
 ]
 
 # TTL values (seconds)
@@ -39,16 +145,25 @@ _consecutive_failures: int = 0
 
 
 async def populate_universe_fallback() -> list[str]:
-    """Populate universe with hardcoded Nifty 50 symbols (called at startup)."""
+    """Populate both universe sets from the static fallback lists.
+
+    nifty50  → 50 large-cap symbols
+    nifty500 → full ~500-symbol static list (superseded by live NSE data once
+               the poller fetches successfully)
+    """
     from app.services.redis_cache import get_redis
 
     redis = await get_redis()
     await redis.delete("universe:nifty50")
     await redis.sadd("universe:nifty50", *NIFTY_50_SYMBOLS)
     await redis.delete("universe:nifty500")
-    await redis.sadd("universe:nifty500", *NIFTY_50_SYMBOLS)
-    log.info("Populated universe with %d hardcoded Nifty 50 symbols", len(NIFTY_50_SYMBOLS))
-    return list(NIFTY_50_SYMBOLS)
+    await redis.sadd("universe:nifty500", *NIFTY_500_SYMBOLS)
+    log.info(
+        "Universe fallback loaded — nifty50=%d nifty500=%d",
+        len(NIFTY_50_SYMBOLS),
+        len(NIFTY_500_SYMBOLS),
+    )
+    return list(NIFTY_500_SYMBOLS)
 
 
 async def _populate_universe(stock_data: list[dict]) -> list[str]:
