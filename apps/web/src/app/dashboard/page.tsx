@@ -65,16 +65,42 @@ export default function DashboardPage() {
     [runScan]
   );
 
-  // Auto-run a default scan on mount
+  // Auto-run three high-yield scans on mount.
+  // "bullish_ema_crossover" and "price_above_sma200" reliably return results
+  // in normal / bullish markets; "volume_spike" catches intraday surges.
+  // We avoid "rsi_oversold" as the default — it returns 0 on bullish days.
   useEffect(() => {
-    if (scans && scans.length > 0 && breakoutItems.length === 0) {
-      handleRunScan(scans[0].id);
-    }
+    if (!scans || scans.length === 0) return;
+    const DEFAULT_SCANS = ["bullish_ema_crossover", "price_above_sma200", "volume_spike"];
+    const scanIds = DEFAULT_SCANS.filter((id) =>
+      scans.some((s) => s.id === id)
+    );
+    // Fall back to first available scan if none of the preferred IDs exist
+    const toRun = scanIds.length > 0 ? scanIds : [scans[0].id];
+    toRun.forEach((id) => handleRunScan(id));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scans]);
 
+  // Periodically refresh breakout data every 30 seconds while market is open
+  useEffect(() => {
+    if (!scans || scans.length === 0) return;
+    const REFRESH_IDS = ["bullish_ema_crossover", "volume_spike"];
+    const ids = REFRESH_IDS.filter((id) => scans.some((s) => s.id === id));
+    if (ids.length === 0) return;
+    const timer = setInterval(() => {
+      ids.forEach((id) => handleRunScan(id));
+    }, 30_000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scans]);
+
+  // alertCount: all breakout items count as signals (signal_strength is
+  // populated only when the backend stores a score — use length as fallback)
   const alertCount = useMemo(
-    () => breakoutItems.filter((i) => i.signal_strength && i.signal_strength > 0.7).length,
+    () =>
+      breakoutItems.filter(
+        (i) => (i.signal_strength != null ? i.signal_strength > 0.5 : true)
+      ).length,
     [breakoutItems]
   );
 

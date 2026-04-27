@@ -97,6 +97,19 @@ async def lifespan(_app: FastAPI):
             logger.info("Universe pre-populated with %d symbols", _universe_size)
         except Exception as e:
             logger.warning("Failed to pre-populate universe: %s", e)
+            symbols = []
+
+        # Fire indicator compute immediately — don't wait for first NSE poll cycle.
+        # This ensures Redis has RSI/EMA/SMA data before the first user scan request.
+        if symbols:
+            try:
+                from app.services.nse_poller import _run_bulk_compute
+                asyncio.create_task(
+                    _run_bulk_compute(symbols), name="bulk_compute_startup"
+                )
+                logger.info("Startup bulk indicator compute fired for %d symbols", len(symbols))
+            except Exception as e:
+                logger.warning("Failed to fire startup bulk compute: %s", e)
 
         # Start self-healing watchdog (replaces the bare create_task)
         watchdog_task = asyncio.create_task(_poller_watchdog(), name="poller_watchdog")
