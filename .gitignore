@@ -18,3 +18,17 @@ PROJECT_HANDOFF_HIDDEN_KEYS.md
 
 .claude/worktrees/
 .venv-phase3/
+
+# Build artifacts
+*.tsbuildinfo
+.claude-flow/
+
+# Generated / temp
+claude_code_templates_output/
+firebase-debug.log
+chat_history_*.md
+*CHAT_HISTORY*.md
+
+# Binary assets (track source, not outputs)
+*.pdf
+*.pptx
