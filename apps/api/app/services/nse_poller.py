@@ -2,6 +2,7 @@
 import asyncio
 import json
 import logging
+import pathlib
 import time
 from datetime import datetime, timezone
 
@@ -25,111 +26,50 @@ NIFTY_50_SYMBOLS = [
     "TECHM", "TITAN", "TRENT", "ULTRACEMCO", "WIPRO",
 ]
 
-# ── NIFTY 500 static fallback (used when live NSE fetch is unavailable) ───────
-# Covers large-cap, mid-cap and small-cap across all major sectors.
-# Updated periodically; NSE live fetch supersedes this at runtime.
-NIFTY_500_SYMBOLS = [
-    # ── NIFTY 50 ──────────────────────────────────────────────────────────────
-    "ADANIENT", "ADANIPORTS", "APOLLOHOSP", "ASIANPAINT", "AXISBANK",
-    "BAJAJ-AUTO", "BAJFINANCE", "BAJAJFINSV", "BEL", "BPCL",
-    "BHARTIARTL", "BRITANNIA", "CIPLA", "COALINDIA", "DRREDDY",
-    "EICHERMOT", "ETERNAL", "GRASIM", "HCLTECH", "HDFCBANK",
-    "HDFCLIFE", "HEROMOTOCO", "HINDALCO", "HINDUNILVR", "ICICIBANK",
-    "ITC", "INDUSINDBK", "INFY", "JSWSTEEL", "KOTAKBANK",
-    "LT", "M&M", "MARUTI", "NESTLEIND", "NTPC",
-    "ONGC", "POWERGRID", "RELIANCE", "SBILIFE", "SBIN",
-    "SUNPHARMA", "TCS", "TATACONSUM", "TATAMOTORS", "TATASTEEL",
-    "TECHM", "TITAN", "TRENT", "ULTRACEMCO", "WIPRO",
-    # ── NIFTY NEXT 50 ─────────────────────────────────────────────────────────
-    "ABB", "AMBUJACEM", "ATGL", "DELHIVERY", "DIVISLAB",
-    "DLF", "HAVELLS", "HAL", "INDIAMART", "IOC",
-    "IRCTC", "JUBLFOOD", "LODHA", "MARICO", "MUTHOOTFIN",
-    "NAUKRI", "NBCC", "NHPC", "NMDC", "OFSS",
-    "PAYTM", "PFC", "PIDILITIND", "RECLTD", "SRF",
-    "SAIL", "SIEMENS", "TORNTPHARM", "TATAPOWER", "TVSMOTOR",
-    "UNITDSPR", "VBL", "VEDL", "ZOMATO", "ZYDUSLIFE",
-    "GODREJCP", "INDUSTOWER", "IRFC", "JSWINFRA", "LUPIN",
-    "MAXHEALTH", "MOTHERSON", "RVNL", "SHREECEM", "SHRIRAMFIN",
-    "TATAELXSI", "TORNTPOWER", "OBEROIRLTY", "CGPOWER", "DIXON",
-    # ── Banking & Finance ──────────────────────────────────────────────────────
-    "BANKBARODA", "CANBK", "IDFCFIRSTB", "FEDERALBNK", "PNB",
-    "UNIONBANK", "YESBANK", "BANDHANBNK", "AUBANK", "RBLBANK",
-    "KARURVYSYA", "CITYUNIONBK", "DCBBANK", "SOUTHBANK", "EQUITASBNK",
-    "UJJIVANSFB", "ESAFSFB", "IDBI", "MAHABANK", "J&KBANK",
-    "CHOLAFIN", "MANAPPURAM", "LICHSGFIN", "IIFL", "MOTILALOFS",
-    "ANGELONE", "SBICARD", "ICICIPRULI", "ICICIGI", "HDFCAMC",
-    "NIPPONLIFE", "ABSLAMC", "UTIAMC", "360ONE", "NUVAMA",
-    "BAJAJHFL", "LICI", "POONAWALLA", "CREDITACC", "APTUS",
-    # ── IT & Technology ───────────────────────────────────────────────────────
-    "MPHASIS", "LTI", "LTIM", "COFORGE", "PERSISTENT",
-    "KPITTECH", "CYIENT", "MASTEK", "SONATSOFTW", "BIRLASOFT",
-    "RATEGAIN", "TATATECH", "TANLA", "NEWGEN", "INTELLECT",
-    "NUCLEUS", "RAMCO", "ROUTE", "HAPPSTMNDS", "ZENSAR",
-    "HEXAWARE", "NIIT", "DATAMATICS", "SUBEXLTD", "SAKSOFT",
-    # ── Pharma & Healthcare ───────────────────────────────────────────────────
-    "BIOCON", "AUROPHARMA", "ALKEM", "GLENMARK", "IPCA",
-    "LAURUSLABS", "GRANULES", "NATCOPHARMA", "SYNGENE", "PFIZER",
-    "ABBOTINDIA", "GLAXO", "WOCKPHARMA", "ERIS", "JBCHEPHARM",
-    "ASTRAZEN", "SUVEN", "LALPATHLAB", "METROPOLIS", "DRREDDYLAB",
-    "IPCALAB", "FORTIS", "NARAYANA", "RAINBOW", "VIJAYABANK",
-    "MEDANTA", "KRSNAA", "PRISTINE", "POLYMED", "ESTEEMEDCARE",
-    # ── Auto & Auto Ancillaries ───────────────────────────────────────────────
-    "ASHOKLEY", "BALKRISIND", "BHARATFORG", "ENDURANCE", "SUNDRMFAST",
-    "MINDA", "BOSCH", "TIINDIA", "SOMICONVEY", "EXIDEIND",
-    "AMARAJABAT", "CEATLTD", "APOLLOTYRE", "MFSL", "SUPRAJIT",
-    "GABRIEL", "SUBROS", "LUMAX", "MINDAIND", "SAMVARDHANA",
-    "SCHAEFFLER", "TIMKEN", "SKFINDIA", "FAGBEARINGS", "WABCO",
-    # ── Energy & Power ────────────────────────────────────────────────────────
-    "GAIL", "ADANIGREEN", "SJVN", "CESC", "JSPL",
-    "HINDPETRO", "MRPL", "PETRONET", "GUJTGAS", "IGL",
-    "MGL", "ADANIENSOL", "IRCON", "KNRCON", "PNBHOUSING",
-    "JSWENERGY", "GREENKO", "SUZLON", "INOXWIND", "TORNTPOWER",
-    "KALPATPOWR", "RPOWER", "GVK", "LNTECC", "BHEL",
-    # ── FMCG & Consumer ───────────────────────────────────────────────────────
-    "DABUR", "EMAMILTD", "BAJAJCON", "JYOTHYLAB", "RADICO",
-    "MCDOWELL-N", "COLPAL", "GILLETTE", "PGHH", "HATSUN",
-    "HERITGFOOD", "DODLA", "DEVYANI", "WESTLIFE", "BARBEQUE",
-    "SAPIENT", "TASTYBITE", "BIKAJI", "GOPAL", "AVANTIFEED",
-    # ── Infrastructure & Real Estate ──────────────────────────────────────────
-    "GMRINFRA", "IRB", "GRSE", "MDL", "NLC",
-    "AHLUCONT", "HGINFRA", "PNCINFRATECH", "KEC", "KALINDEE",
-    "JKCEMENT", "RAMCOCEM", "HEIDELBERG", "DALMIA", "NUVOCO",
-    "ACC", "STARCEMENT", "BIRLACORPN", "PRISM", "WONDER",
-    "SOBHA", "PRESTIGE", "BRIGADE", "GODREJPROP", "SUNTECK",
-    "KOLTEPATIL", "MAHINDLIFE", "IBREALEST", "PHOENIXLTD", "NESCO",
-    # ── Metals & Mining ───────────────────────────────────────────────────────
-    "NATIONALUM", "WELCORP", "APL", "RATNAMANI", "APLAPOLLO",
-    "JINDALSTEL", "MOIL", "GMDC", "EDELWEISS", "TINPLATE",
-    "HINDZINC", "HINDCOPPER", "BALCO", "NALCO", "WELSPUNLIV",
-    # ── Telecom & Media ───────────────────────────────────────────────────────
-    "IDEA", "TTML", "STLTELECOM", "HFCL", "TEJAS",
-    "SUNTV", "ZEEL", "PVR", "INOX", "SAREGAMA",
-    "NAZARA", "NXTDIGITAL", "DBCORP", "JUBLPHARMA", "NETWORK18",
-    # ── Capital Goods & Engineering ───────────────────────────────────────────
-    "CUMMINSIND", "THERMAX", "KAYNES", "GRINDWELL", "CARBORUNIV",
-    "ELGIEQUIP", "KIRLOSKER", "KIRLOSBROS", "KIRILINDS", "PRAJ",
-    "JYOTISTRUC", "AIAENG", "GREAVES", "TRIVENI", "BLUESTAR",
-    "WHIRLPOOL", "VOLTAS", "SYMPHONY", "ORIENTELEC", "AMBER",
-    "APARINDS", "VGUARD", "POLYCAB", "KEI", "FINOLEX",
-    # ── Chemicals & Specialty ─────────────────────────────────────────────────
-    "AARTI", "AARTIDRUGS", "DEEPAKNI", "DEEPAKNTR", "FINEORG",
-    "GALAXYSURF", "NAVINFLUOR", "FLUOROCHEM", "ALKYLAMINE", "CLEAN",
-    "BALAMINES", "NEOGEN", "TATACHEM", "GSFC", "GNFC",
-    "COROMANDEL", "CHAMBAL", "BASF", "ATUL", "VINATI",
-    # ── Retail & E-commerce ───────────────────────────────────────────────────
-    "DMART", "TRENT", "ABFRL", "MANYAVAR", "VEDANT",
-    "SHOPERSTOP", "V2RETAIL", "VMART", "THANGAMAYL", "SENCO",
-    "METRO", "BATA", "RELAXO", "KHADIM", "LIBERTY",
-    # ── Logistics & Shipping ─────────────────────────────────────────────────
-    "BLUEDART", "MAHLOG", "ALLCARGO", "GATI", "CONCOR",
-    "AEGISLOG", "TCI", "VRLLOG", "MAHSEAMLESS", "GATEWAY",
-    # ── Hospitality & Tourism ─────────────────────────────────────────────────
-    "INDHOTEL", "EIHOTEL", "CHALET", "LEMONTREE", "MAHINDHOLIDAY",
-    "THOMASCOOK", "SOTL", "MHRIL", "EIHASSOC", "TAJGVK",
-    # ── Agri & Food Processing ────────────────────────────────────────────────
-    "UBL", "KRBL", "LTFOODS", "RUCHI", "GODREJAGRO",
-    "BALRAMCHIN", "DWARIKESH", "TRIVENIENG", "EIDPARRY", "SHREERAMA",
-]
+# ── NIFTY 500 universe — loaded from data/nifty500_seed.json ──────────────────
+# Single source of truth: 500 verified NSE-listed NIFTY 500 symbols with full
+# metadata (ISIN, sector, F&O flag, market cap). The seed JSON is also used by
+# ai_suggestions.py for headline-to-symbol matching, so updating one place
+# refreshes everything. Live NSE fetch supersedes this at runtime.
+def _load_nifty500_seed() -> list[str]:
+    """Load NIFTY 500 symbols from the seed JSON file.
+
+    Falls back to NIFTY_50_SYMBOLS if the seed file is missing or malformed,
+    so the service NEVER fails to start because of a data file issue.
+    """
+    seed_path = (
+        pathlib.Path(__file__).resolve().parents[2] / "data" / "nifty500_seed.json"
+    )
+    try:
+        data = json.loads(seed_path.read_text())
+        symbols: list[str] = []
+        seen: set[str] = set()
+        for entry in data:
+            sym = entry.get("symbol", "").strip()
+            if not sym or sym in seen:
+                continue
+            if not entry.get("is_active", True):
+                continue
+            if not entry.get("is_nifty500", True):
+                continue
+            seen.add(sym)
+            symbols.append(sym)
+        log.info(
+            "nifty500_seed_loaded count=%d path=%s",
+            len(symbols),
+            seed_path.name,
+        )
+        return symbols
+    except Exception as exc:
+        log.warning(
+            "nifty500_seed_load_failed path=%s error=%s — falling back to NIFTY 50",
+            seed_path,
+            exc,
+        )
+        return list(NIFTY_50_SYMBOLS)
+
+
+NIFTY_500_SYMBOLS: list[str] = _load_nifty500_seed()
 
 # TTL values (seconds)
 PRICE_TTL = 300       # 5 min — survives between poll cycles
