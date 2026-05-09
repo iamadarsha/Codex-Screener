@@ -101,13 +101,16 @@ async def lifespan(_app: FastAPI):
 
         # Fire indicator compute immediately — don't wait for first NSE poll cycle.
         # This ensures Redis has RSI/EMA/SMA data before the first user scan request.
+        # Limit startup compute to NIFTY 50 (50 symbols) to avoid OOM; the NSE poller
+        # will incrementally compute the full universe once the server is stable.
         if symbols:
             try:
-                from app.services.nse_poller import _run_bulk_compute
+                from app.services.nse_poller import _run_bulk_compute, NIFTY_50_SYMBOLS
+                startup_symbols = NIFTY_50_SYMBOLS  # ~50 symbols — safe for startup
                 asyncio.create_task(
-                    _run_bulk_compute(symbols), name="bulk_compute_startup"
+                    _run_bulk_compute(startup_symbols), name="bulk_compute_startup"
                 )
-                logger.info("Startup bulk indicator compute fired for %d symbols", len(symbols))
+                logger.info("Startup bulk indicator compute fired for %d symbols (NIFTY 50)", len(startup_symbols))
             except Exception as e:
                 logger.warning("Failed to fire startup bulk compute: %s", e)
 

@@ -92,7 +92,7 @@ NIFTY_500_SYMBOLS = [
     "SAPIENT", "TASTYBITE", "BIKAJI", "GOPAL", "AVANTIFEED",
     # ── Infrastructure & Real Estate ──────────────────────────────────────────
     "GMRINFRA", "IRB", "GRSE", "MDL", "NLC",
-    "AHLUCONT", "HG INFRA", "PNC INFRATECH", "KEC", "KALINDEE",
+    "AHLUCONT", "HGINFRA", "PNCINFRATECH", "KEC", "KALINDEE",
     "JKCEMENT", "RAMCOCEM", "HEIDELBERG", "DALMIA", "NUVOCO",
     "ACC", "STARCEMENT", "BIRLACORPN", "PRISM", "WONDER",
     "SOBHA", "PRESTIGE", "BRIGADE", "GODREJPROP", "SUNTECK",
@@ -100,13 +100,13 @@ NIFTY_500_SYMBOLS = [
     # ── Metals & Mining ───────────────────────────────────────────────────────
     "NATIONALUM", "WELCORP", "APL", "RATNAMANI", "APLAPOLLO",
     "JINDALSTEL", "MOIL", "GMDC", "EDELWEISS", "TINPLATE",
-    "HINDUSTAN ZINC", "HINDCOPPER", "HINDZINC", "BALCO", "NALCO",
+    "HINDZINC", "HINDCOPPER", "BALCO", "NALCO", "WELSPUNLIV",
     # ── Telecom & Media ───────────────────────────────────────────────────────
     "IDEA", "TTML", "STLTELECOM", "HFCL", "TEJAS",
     "SUNTV", "ZEEL", "PVR", "INOX", "SAREGAMA",
     "NAZARA", "NXTDIGITAL", "DBCORP", "JUBLPHARMA", "NETWORK18",
     # ── Capital Goods & Engineering ───────────────────────────────────────────
-    "CUMMINSIND", "THERMAX", "BHARAT FORGE", "GRINDWELL", "CARBORUNIV",
+    "CUMMINSIND", "THERMAX", "KAYNES", "GRINDWELL", "CARBORUNIV",
     "ELGIEQUIP", "KIRLOSKER", "KIRLOSBROS", "KIRILINDS", "PRAJ",
     "JYOTISTRUC", "AIAENG", "GREAVES", "TRIVENI", "BLUESTAR",
     "WHIRLPOOL", "VOLTAS", "SYMPHONY", "ORIENTELEC", "AMBER",
@@ -114,7 +114,7 @@ NIFTY_500_SYMBOLS = [
     # ── Chemicals & Specialty ─────────────────────────────────────────────────
     "AARTI", "AARTIDRUGS", "DEEPAKNI", "DEEPAKNTR", "FINEORG",
     "GALAXYSURF", "NAVINFLUOR", "FLUOROCHEM", "ALKYLAMINE", "CLEAN",
-    "BALAJI AMINES", "NEOGEN", "TATACHEM", "GSFC", "GNFC",
+    "BALAMINES", "NEOGEN", "TATACHEM", "GSFC", "GNFC",
     "COROMANDEL", "CHAMBAL", "BASF", "ATUL", "VINATI",
     # ── Retail & E-commerce ───────────────────────────────────────────────────
     "DMART", "TRENT", "ABFRL", "MANYAVAR", "VEDANT",
@@ -128,7 +128,7 @@ NIFTY_500_SYMBOLS = [
     "THOMASCOOK", "SOTL", "MHRIL", "EIHASSOC", "TAJGVK",
     # ── Agri & Food Processing ────────────────────────────────────────────────
     "UBL", "KRBL", "LTFOODS", "RUCHI", "GODREJAGRO",
-    "BALRAMCHIN", "DWARIKESH", "TRIVENI ENG", "EID PARRY", "SHREERAMA",
+    "BALRAMCHIN", "DWARIKESH", "TRIVENIENG", "EIDPARRY", "SHREERAMA",
 ]
 
 # TTL values (seconds)
