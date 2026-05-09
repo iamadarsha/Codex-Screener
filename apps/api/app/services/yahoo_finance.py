@@ -129,6 +129,18 @@ class YFinanceProvider:
             # Ensure columns are simple strings
             df.columns = [str(c) for c in df.columns]
 
+            # Coerce OHLCV columns to numeric — yfinance can return mixed types
+            # for newly-listed or recently-split stocks (e.g. object dtype columns).
+            for _col in ["Open", "High", "Low", "Close", "Volume"]:
+                if _col in df.columns:
+                    df[_col] = pd.to_numeric(df[_col], errors="coerce")
+            df = df.dropna(subset=["Close", "High", "Low", "Open"])
+            df["Volume"] = df["Volume"].fillna(0)
+
+            if df.empty:
+                log.warning("yfinance_no_numeric_data", symbol=symbol)
+                return False
+
             # --- Compute indicators ----------------------------------------
             close = df["Close"]
             high = df["High"]
@@ -208,8 +220,8 @@ class YFinanceProvider:
             vwap_series = ta.vwap(high, low, close, volume)
             vwap = vwap_series.iloc[-1] if vwap_series is not None and len(vwap_series) else None
 
-            # Volume SMA(20)
-            vol_sma20_series = ta.sma(volume.astype(float), length=20)
+            # Volume SMA(20) — volume already coerced to numeric above
+            vol_sma20_series = ta.sma(volume, length=20)
             vol_sma20 = (
                 vol_sma20_series.iloc[-1]
                 if vol_sma20_series is not None and len(vol_sma20_series)

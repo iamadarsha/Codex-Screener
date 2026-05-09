@@ -290,9 +290,10 @@ async def nse_poller_loop():
                         indices_list.append(index_data)
 
                     if name == "NIFTY 50":
-                        breadth["advances"] = idx.get("advances", 0) or 0
-                        breadth["declines"] = idx.get("declines", 0) or 0
-                        breadth["unchanged"] = idx.get("unchanged", 0) or 0
+                        # NSE API sometimes returns these as strings — cast defensively
+                        breadth["advances"] = int(idx.get("advances", 0) or 0)
+                        breadth["declines"] = int(idx.get("declines", 0) or 0)
+                        breadth["unchanged"] = int(idx.get("unchanged", 0) or 0)
 
                 if indices_list:
                     await set_json("market:indices", indices_list, ttl=INDICES_TTL)
