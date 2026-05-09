@@ -302,7 +302,7 @@ async def _call_gemini(headlines: list[dict[str, str]], market_summary: str) -> 
         """Run Gemini synchronously in a thread so timeout actually works."""
         client = genai_sdk.Client(api_key=api_key)
         response = client.models.generate_content(
-            model="gemini-2.0-flash-lite",
+            model="gemini-2.5-flash-lite",
             contents=prompt,
         )
         return response.text
