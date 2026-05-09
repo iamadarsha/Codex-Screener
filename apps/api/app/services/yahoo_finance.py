@@ -324,7 +324,9 @@ class YFinanceProvider:
 
         Returns a dict mapping symbol to success boolean.
         """
-        _BATCH_SIZE = 5
+        # Batch size 3 (down from 5): lower peak RAM per batch (~120 MB vs ~200 MB).
+        # Inter-batch delay 2 s (up from 1 s): lets GC reclaim memory between batches.
+        _BATCH_SIZE = 3
         results: dict[str, bool] = {}
         total = len(symbols)
 
@@ -343,9 +345,9 @@ class YFinanceProvider:
             for symbol, result in zip(batch, batch_results):
                 results[symbol] = result is True
 
-            # Brief pause between batches — avoids Yahoo throttle
+            # Pause between batches — avoids Yahoo throttle and lets GC run
             if batch_start + _BATCH_SIZE < total:
-                await asyncio.sleep(_RATE_LIMIT_DELAY * 2)
+                await asyncio.sleep(_RATE_LIMIT_DELAY * 4)  # 2 s between batches
 
         succeeded = sum(1 for v in results.values() if v)
         log.info("bulk_compute_done", total=total, succeeded=succeeded, failed=total - succeeded)

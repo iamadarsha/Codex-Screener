@@ -99,20 +99,11 @@ async def lifespan(_app: FastAPI):
             logger.warning("Failed to pre-populate universe: %s", e)
             symbols = []
 
-        # Fire indicator compute immediately — don't wait for first NSE poll cycle.
-        # This ensures Redis has RSI/EMA/SMA data before the first user scan request.
-        # Limit startup compute to NIFTY 50 (50 symbols) to avoid OOM; the NSE poller
-        # will incrementally compute the full universe once the server is stable.
-        if symbols:
-            try:
-                from app.services.nse_poller import _run_bulk_compute, NIFTY_50_SYMBOLS
-                startup_symbols = NIFTY_50_SYMBOLS  # ~50 symbols — safe for startup
-                asyncio.create_task(
-                    _run_bulk_compute(startup_symbols), name="bulk_compute_startup"
-                )
-                logger.info("Startup bulk indicator compute fired for %d symbols (NIFTY 50)", len(startup_symbols))
-            except Exception as e:
-                logger.warning("Failed to fire startup bulk compute: %s", e)
+        # NOTE: Startup bulk compute intentionally removed.
+        # The NSE poller fires _run_bulk_compute on its first successful poll cycle
+        # (within ~30 s of startup) with the concurrency guard preventing overlapping
+        # runs.  Firing it here too caused two concurrent computes at boot, doubling
+        # peak RAM and OOM-killing the container.
 
         # Start self-healing watchdog (replaces the bare create_task)
         watchdog_task = asyncio.create_task(_poller_watchdog(), name="poller_watchdog")

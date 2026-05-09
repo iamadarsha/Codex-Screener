@@ -142,6 +142,7 @@ _last_compute_time: float = 0.0
 _poll_count: int = 0
 _startup_done: bool = False
 _consecutive_failures: int = 0
+_bulk_compute_in_progress: bool = False  # guard: only one bulk compute at a time
 
 
 async def populate_universe_fallback() -> list[str]:
@@ -208,9 +209,20 @@ async def _populate_universe_from_symbols(symbols: list[str]) -> list[str]:
 
 
 async def _run_bulk_compute(symbols: list[str]) -> None:
-    """Wrapper that runs YFinanceProvider.bulk_compute and logs completion."""
+    """Wrapper that runs YFinanceProvider.bulk_compute and logs completion.
+
+    Guards against concurrent runs: if a compute is already in progress this
+    call is a no-op so we never have two bulk-compute tasks overlapping and
+    doubling peak RAM usage.
+    """
+    global _bulk_compute_in_progress
     from app.services.yahoo_finance import YFinanceProvider
 
+    if _bulk_compute_in_progress:
+        log.info("bulk_compute_skipped: another compute is already running (%d symbols queued)", len(symbols))
+        return
+
+    _bulk_compute_in_progress = True
     try:
         log.info("Starting bulk indicator compute for %d symbols", len(symbols))
         results = await YFinanceProvider.bulk_compute(symbols)
@@ -222,6 +234,8 @@ async def _run_bulk_compute(symbols: list[str]) -> None:
         )
     except Exception as e:
         log.error("Bulk indicator compute failed: %s", e)
+    finally:
+        _bulk_compute_in_progress = False
 
 
 async def _fetch_and_store_trending() -> None:
