@@ -83,7 +83,7 @@ NIFTY_500_SYMBOLS = [
     "GAIL", "ADANIGREEN", "SJVN", "CESC", "JSPL",
     "HINDPETRO", "MRPL", "PETRONET", "GUJTGAS", "IGL",
     "MGL", "ADANIENSOL", "IRCON", "KNRCON", "PNBHOUSING",
-    "JSWENERGY", "GREENKO", "SUZLON", "INOXWIND", "WIPRO",
+    "JSWENERGY", "GREENKO", "SUZLON", "INOXWIND", "TORNTPOWER",
     "KALPATPOWR", "RPOWER", "GVK", "LNTECC", "BHEL",
     # ── FMCG & Consumer ───────────────────────────────────────────────────────
     "DABUR", "EMAMILTD", "BAJAJCON", "JYOTHYLAB", "RADICO",
@@ -110,7 +110,7 @@ NIFTY_500_SYMBOLS = [
     "ELGIEQUIP", "KIRLOSKER", "KIRLOSBROS", "KIRILINDS", "PRAJ",
     "JYOTISTRUC", "AIAENG", "GREAVES", "TRIVENI", "BLUESTAR",
     "WHIRLPOOL", "VOLTAS", "SYMPHONY", "ORIENTELEC", "AMBER",
-    "DIXON", "VGUARD", "POLYCAB", "KEI", "FINOLEX",
+    "APARINDS", "VGUARD", "POLYCAB", "KEI", "FINOLEX",
     # ── Chemicals & Specialty ─────────────────────────────────────────────────
     "AARTI", "AARTIDRUGS", "DEEPAKNI", "DEEPAKNTR", "FINEORG",
     "GALAXYSURF", "NAVINFLUOR", "FLUOROCHEM", "ALKYLAMINE", "CLEAN",

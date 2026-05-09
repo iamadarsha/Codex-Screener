@@ -1,7 +1,7 @@
 """AI-powered stock suggestions with 3-layer fallback:
 
 Layer 1: RSS + Technical Scoring Engine (zero API dependency, fast)
-Layer 2: Gemini 3.1 Flash Lite (primary + backup key, 500 RPD)
+Layer 2: Gemini 2.0 Flash Lite (primary + backup key, 500 RPD)
 Layer 3: Groq Llama 3.3 70B / xAI Grok
 """
 
@@ -279,8 +279,10 @@ Return ONLY a valid JSON object (no markdown fences, no explanation outside JSON
 # LAYER 1: Gemini
 # ---------------------------------------------------------------------------
 async def _call_gemini(headlines: list[dict[str, str]], market_summary: str) -> dict[str, list[dict[str, Any]]]:
-    """Layer 1: Gemini with primary + backup key. Runs sync SDK in thread to allow real cancellation."""
-    import google.generativeai as genai
+    """Layer 1: Gemini 2.0 Flash Lite via google-genai SDK, primary + backup key.
+    Runs the synchronous SDK call in a thread so asyncio.wait_for can cancel it.
+    """
+    from google import genai as genai_sdk
 
     from app.core.config import get_settings
 
@@ -298,9 +300,11 @@ async def _call_gemini(headlines: list[dict[str, str]], market_summary: str) -> 
 
     def _sync_gemini_call(api_key: str) -> str:
         """Run Gemini synchronously in a thread so timeout actually works."""
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-3.1-flash-lite")
-        response = model.generate_content(prompt)
+        client = genai_sdk.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model="gemini-2.0-flash-lite",
+            contents=prompt,
+        )
         return response.text
 
     last_error = None
