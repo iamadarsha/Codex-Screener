@@ -77,6 +77,7 @@ class YFinanceProvider:
             # Flatten MultiIndex columns if present (yfinance >= 0.2.31)
             if isinstance(df.columns, pd.MultiIndex):
                 df.columns = df.columns.get_level_values(0)
+            df = df.loc[:, ~df.columns.duplicated(keep="first")]
 
             records: list[dict[str, Any]] = []
             for idx, row in df.iterrows():
@@ -128,6 +129,12 @@ class YFinanceProvider:
 
             # Ensure columns are simple strings
             df.columns = [str(c) for c in df.columns]
+
+            # Drop duplicate columns: yfinance can produce two 'Close' columns after
+            # MultiIndex flattening for certain single-ticker downloads. When that
+            # happens df["Close"] returns a 2-D DataFrame, and pandas-ta crashes with
+            # "arg must be a list, tuple, 1-d array, or Series".
+            df = df.loc[:, ~df.columns.duplicated(keep="first")]
 
             # Coerce OHLCV columns to numeric — yfinance can return mixed types
             # for newly-listed or recently-split stocks (e.g. object dtype columns).
