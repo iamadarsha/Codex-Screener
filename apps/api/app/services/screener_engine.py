@@ -7,14 +7,19 @@ sub-1.5 s on 500 symbols.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import time
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from typing import Any
 
 import structlog
 
+from app.screener.dsl.ast import BoolNode
+from app.screener.dsl.compiler import compile_scan
+from app.screener.dsl.evaluator import EvalContext
+from app.screener.dsl.evaluator import evaluate as dsl_evaluate
 from app.services.condition_evaluator import (
     Condition,
     Operand,
@@ -24,6 +29,7 @@ from app.services.orb import ORBDetector
 from app.services.pattern_detector import detect_patterns
 from app.services.prebuilt_scans import ScanDefinition, get_scan_by_id
 from app.services.redis_cache import get_redis
+from app.utils.decimals import safe_decimal
 from app.utils.redis_keys import (
     indicator_key,
     ltp_symbol_key,
@@ -41,23 +47,13 @@ _SCAN_RESULT_TTL: int = 30  # seconds
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _to_decimal(value: object) -> Decimal | None:
-    if isinstance(value, Decimal):
-        return value
-    if value is None:
-        return None
-    try:
-        return Decimal(str(value))
-    except (InvalidOperation, TypeError, ValueError):
-        return None
-
-
 def _scan_hash(scan_def: ScanDefinition, universe: str) -> str:
     """Deterministic hash of a scan definition for cache keying."""
     payload = json.dumps(
         {
             "id": scan_def.get("id", ""),
             "conditions": str(scan_def.get("conditions", [])),
+            "dsl_root": str(scan_def.get("dsl_root", "")),
             "pattern": scan_def.get("pattern", ""),
             "universe": universe,
             "timeframe": scan_def.get("timeframe", "1d"),
@@ -76,20 +72,20 @@ def _enrich_symbol_data(
     Mutations are applied **in-place** for performance (called per symbol).
     """
     # -- bollinger_width_pct ---------------------------------------------------
-    bb_upper = _to_decimal(data.get("bollinger_upper"))
-    bb_lower = _to_decimal(data.get("bollinger_lower"))
-    sma_20 = _to_decimal(data.get("sma_20"))  # used as BB mid approximation
+    bb_upper = safe_decimal(data.get("bollinger_upper"))
+    bb_lower = safe_decimal(data.get("bollinger_lower"))
+    sma_20 = safe_decimal(data.get("sma_20"))  # used as BB mid approximation
     if bb_upper is not None and bb_lower is not None and sma_20 and sma_20 != 0:
         data["bollinger_mid"] = str(sma_20)
         data["bollinger_width_pct"] = str((bb_upper - bb_lower) / sma_20)
 
     # -- volume_sma_20 (2x threshold) -----------------------------------------
-    vol_sma = _to_decimal(data.get("sma_20_volume"))
+    vol_sma = safe_decimal(data.get("sma_20_volume"))
     if vol_sma is not None:
         data["volume_sma_20"] = str(vol_sma * 2)
 
     # -- high_52w_95 -----------------------------------------------------------
-    high_52w = _to_decimal(data.get("high_52w"))
+    high_52w = safe_decimal(data.get("high_52w"))
     if high_52w is not None:
         data["high_52w_95"] = str(high_52w * Decimal("0.95"))
 
@@ -163,12 +159,21 @@ class ScreenerEngine:
         timeframe: str = scan_definition.get("timeframe", "1d")
         conditions: list[Condition] = scan_definition.get("conditions", [])
         pattern_name: str | None = scan_definition.get("pattern")
+        dsl_root: BoolNode | None = scan_definition.get("dsl_root")
 
         # --- batch fetch indicators (pipeline) --------------------------------
         pipe = redis.pipeline(transaction=False)
         for sym in symbol_list:
             pipe.hgetall(indicator_key(sym, timeframe))
         indicator_results: list[dict[str, str]] = await pipe.execute()
+
+        # --- DSL scans: fetch candle history only if the compiled scan
+        # actually needs it (historical offsets / rolling functions) ----------
+        candle_histories: dict[str, list[dict[str, Any]]] = {}
+        if dsl_root is not None:
+            compiled_dsl = compile_scan(dsl_root)
+            if any(r.needs_history for r in compiled_dsl.requirements):
+                candle_histories = await _fetch_candle_histories(symbol_list, timeframe)
 
         # --- optionally fetch ORB data (only for ORB scans) -------------------
         orb_map: dict[str, dict[str, str]] = {}
@@ -197,7 +202,17 @@ class ScreenerEngine:
 
             data = _enrich_symbol_data(raw_data, orb_map.get(sym))
 
-            # condition-based matching
+            # DSL-based matching (new nested AND/OR/NOT + historical offsets
+            # + rolling functions — see app.screener.dsl)
+            if dsl_root is not None:
+                eval_ctx = EvalContext(
+                    indicator_data=data, candles=candle_histories.get(sym, [])
+                )
+                if not dsl_evaluate(dsl_root, eval_ctx):
+                    continue
+
+            # condition-based matching (existing flat AND-only path,
+            # unchanged — still used by all 13 prebuilt scans)
             if conditions:
                 if not evaluate_conditions(conditions, data, logic="AND"):
                     continue
@@ -213,9 +228,8 @@ class ScreenerEngine:
                 if pattern_name not in detected:
                     continue
 
-            # If neither conditions nor pattern are specified we skip the
-            # symbol (a scan must have at least one filter).
-            if not conditions and not pattern_name:
+            # A scan must have at least one filter.
+            if not conditions and not pattern_name and dsl_root is None:
                 continue
 
             matches.append(
@@ -277,8 +291,26 @@ class ScreenerEngine:
         universe: str = "nifty500",
         timeframe: str = "1d",
         pattern: str | None = None,
+        dsl_root: BoolNode | None = None,
     ) -> list[dict[str, Any]]:
-        """Build an ad-hoc scan definition and execute it."""
+        """Build an ad-hoc scan definition and execute it.
+
+        If `dsl_root` is given (an already-parsed-and-validated tree from
+        `app.screener.dsl`), it's evaluated via the new DSL engine and
+        `conditions` is ignored — see the route layer
+        (`app/api/routes/screener.py`) for where the `dsl` vs `conditions`
+        request fields are dispatched.
+        """
+        if dsl_root is not None:
+            scan_def: ScanDefinition = {
+                "id": "custom",
+                "dsl_root": dsl_root,
+                "timeframe": timeframe,
+            }
+            if pattern:
+                scan_def["pattern"] = pattern
+            return await self.run_scan(scan_def, universe=universe)
+
         from app.services.condition_evaluator import (
             ConditionOperator,
             IndicatorRef,
@@ -326,6 +358,21 @@ class ScreenerEngine:
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+async def _fetch_candle_histories(
+    symbols: list[str], timeframe: str
+) -> dict[str, list[dict[str, Any]]]:
+    """Batch-fetch recent candle history for DSL scans that need historical
+    offsets or rolling functions — reuses indicator_engine's per-symbol
+    Postgres query (same table/limit conventions), run concurrently rather
+    than sequentially to keep an N-symbol scan from serializing N round
+    trips to the database.
+    """
+    from app.services.indicator_engine import _fetch_candles  # noqa: SLF001 — intentional reuse
+
+    results = await asyncio.gather(*(_fetch_candles(sym, timeframe) for sym in symbols))
+    return {sym: candles for sym, candles in zip(symbols, results) if candles}
+
 
 def _build_candle_list(data: dict[str, str | None]) -> list[dict[str, Any]]:
     """Construct a chronological candle list from indicator hash fields.

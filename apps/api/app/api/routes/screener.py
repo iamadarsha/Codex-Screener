@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import uuid
 from datetime import datetime, timezone
 from typing import Any
 
@@ -15,6 +16,7 @@ from app.schemas.screener import (
     ScanRequest,
     ScanResult,
 )
+from app.utils.redis_keys import scan_result_key
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +157,7 @@ async def run_prebuilt_scan(request: Request, req: ScanRequest):
         # Enrich with indicator data from Redis
         items = await _enrich_items(items)
 
-        return ScanResult(
+        result = ScanResult(
             scan_id=req.scan_id,
             scan_name=scan_def.get("name", req.scan_id),
             description=scan_def.get("description"),
@@ -163,6 +165,8 @@ async def run_prebuilt_scan(request: Request, req: ScanRequest):
             total_matches=len(items),
             items=items,
         )
+        await _cache_scan_result(req.scan_id, result)
+        return result
     except HTTPException:
         raise
     except Exception as exc:
@@ -173,24 +177,49 @@ async def run_prebuilt_scan(request: Request, req: ScanRequest):
 @router.post("/custom", response_model=ScanResult)
 @limiter.limit(get_settings().rate_limit_screener)
 async def run_custom_scan(request: Request, req: CustomScanRequest):
-    """Run a custom scan with user-defined conditions."""
+    """Run a custom scan with user-defined conditions.
+
+    Accepts either the legacy flat `conditions` shape (unchanged, still
+    the 5-operator gt/lt/eq/cross_above/cross_below format) or the new
+    nested `dsl` shape (real AND/OR/NOT, historical offsets, rolling
+    functions — see app.screener.dsl). `dsl` takes precedence when both
+    are somehow present.
+    """
     try:
         from app.services.screener_engine import ScreenerEngine
 
         engine = ScreenerEngine()
-        conditions_raw = [c.model_dump() for c in req.conditions]
-        results = await engine.run_custom_scan(
-            conditions=conditions_raw,
-            universe=req.universe,
-            timeframe=req.timeframe,
-        )
+        scan_id = f"custom-{uuid.uuid4().hex[:12]}"
 
-        # Extract condition names from user-defined conditions
-        condition_names = [
-            c.get("indicator", "")
-            for c in conditions_raw
-            if c.get("indicator")
-        ]
+        if req.dsl is not None:
+            from app.screener.dsl.parser import DslParseError, parse_scan
+            from app.screener.dsl.validator import DslValidationError, validate
+
+            try:
+                dsl_root = parse_scan(req.dsl)
+                validate(dsl_root, timeframe=req.timeframe)
+            except (DslParseError, DslValidationError) as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+            results = await engine.run_custom_scan(
+                conditions=[],
+                universe=req.universe,
+                timeframe=req.timeframe,
+                dsl_root=dsl_root,
+            )
+            condition_names: list[str] = []
+        else:
+            conditions_raw = [c.model_dump() for c in req.conditions]
+            results = await engine.run_custom_scan(
+                conditions=conditions_raw,
+                universe=req.universe,
+                timeframe=req.timeframe,
+            )
+            condition_names = [
+                c.get("indicator", "")
+                for c in conditions_raw
+                if c.get("indicator")
+            ]
 
         # Transform engine results to ScanResultItem format
         items = []
@@ -209,16 +238,35 @@ async def run_custom_scan(request: Request, req: CustomScanRequest):
         # Enrich with indicator data from Redis
         items = await _enrich_items(items)
 
-        return ScanResult(
-            scan_id="custom",
+        result = ScanResult(
+            scan_id=scan_id,
             scan_name=req.name or "Custom Scan",
             run_at=datetime.now(timezone.utc),
             total_matches=len(items),
             items=items,
         )
+        await _cache_scan_result(scan_id, result)
+        return result
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.exception("Custom scan failed")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+async def _cache_scan_result(scan_id: str, result: ScanResult) -> None:
+    """Store a finished ScanResult so `/results/{scan_id}` can retrieve it.
+
+    Uses `scan_result_key()` — previously this route read from a different,
+    literal `f"scan_result:{scan_id}"` key that nothing ever wrote to
+    (found during the Phase 3.1 audit), so `/results/{scan_id}` was dead on
+    arrival regardless of what scan_id was passed. Fixed by having both the
+    writer (here) and the reader (`get_cached_results` below) agree on the
+    same key helper.
+    """
+    from app.services.redis_cache import set_json
+
+    await set_json(scan_result_key(scan_id), result.model_dump(mode="json"), ttl=3600)
 
 
 @router.get("/results/{scan_id}", response_model=ScanResult)
@@ -228,7 +276,7 @@ async def get_cached_results(request: Request, scan_id: str):
     try:
         from app.services.redis_cache import get_json
 
-        cached = await get_json(f"scan_result:{scan_id}")
+        cached = await get_json(scan_result_key(scan_id))
         if not cached:
             raise HTTPException(
                 status_code=404, detail=f"No cached results for scan '{scan_id}'"

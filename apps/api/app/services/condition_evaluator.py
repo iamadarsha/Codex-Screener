@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import enum
 from dataclasses import dataclass, field
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from typing import Union
 
 import structlog
+
+from app.utils.decimals import safe_decimal
 
 log = structlog.get_logger(__name__)
 
@@ -113,18 +115,6 @@ class Condition:
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _to_decimal(value: object) -> Decimal | None:
-    """Coerce a value to :class:`Decimal`, returning ``None`` on failure."""
-    if isinstance(value, Decimal):
-        return value
-    if value is None:
-        return None
-    try:
-        return Decimal(str(value))
-    except (InvalidOperation, TypeError, ValueError):
-        return None
-
-
 def _resolve_operand(
     operand: Operand,
     symbol_data: dict[str, str | None],
@@ -136,11 +126,11 @@ def _resolve_operand(
     """
     if isinstance(operand, IndicatorRef):
         raw = symbol_data.get(operand.name)
-        return _to_decimal(raw)
+        return safe_decimal(raw)
     if isinstance(operand, NumericLiteral):
         return operand.value
     # plain number
-    return _to_decimal(operand)
+    return safe_decimal(operand)
 
 
 def _resolve_prev_operand(
@@ -155,7 +145,7 @@ def _resolve_prev_operand(
     """
     if isinstance(operand, IndicatorRef):
         raw = symbol_data.get(f"prev_{operand.name}")
-        return _to_decimal(raw)
+        return safe_decimal(raw)
     # literals have no "previous" – they are constant
     return _resolve_operand(operand, symbol_data)
 

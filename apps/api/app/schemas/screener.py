@@ -21,10 +21,19 @@ class ScanRequest(BaseModel):
 
 class CustomScanRequest(BaseModel):
     name: str | None = None
-    conditions: list[ScanCondition] = Field(min_length=1)
+    conditions: list[ScanCondition] = Field(default_factory=list)
+    # New nested DSL tree (app.screener.dsl) — supports real AND/OR/NOT
+    # nesting, historical offsets, and rolling functions. When set, this
+    # takes precedence over `conditions`, which stays supported unchanged
+    # for existing callers using the flat 5-operator shape.
+    dsl: dict[str, object] | None = None
     universe: str = "nifty500"
     timeframe: str = "1d"
     user_id: str | None = None
+
+    def model_post_init(self, __context: object) -> None:
+        if not self.conditions and not self.dsl:
+            raise ValueError("either 'conditions' or 'dsl' must be provided")
 
 
 class ScanResultItem(BaseModel):
