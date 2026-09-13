@@ -25,8 +25,9 @@ from app.services.condition_evaluator import (
     Operand,
     evaluate_conditions,
 )
+from app.patterns.pattern_detector import detect_patterns
+from app.patterns.types import PatternMatch
 from app.services.orb import ORBDetector
-from app.services.pattern_detector import detect_patterns
 from app.services.prebuilt_scans import ScanDefinition, get_scan_by_id
 from app.services.redis_cache import get_redis
 from app.utils.decimals import safe_decimal
@@ -175,6 +176,13 @@ class ScreenerEngine:
             if any(r.needs_history for r in compiled_dsl.requirements):
                 candle_histories = await _fetch_candle_histories(symbol_list, timeframe)
 
+        # --- pattern scans: real chronological multi-candle history is
+        # required for 3-candle candlestick patterns and every structural
+        # (pivot-based) pattern -- reuse the DSL fetch above when it already
+        # ran, otherwise fetch it now (Postgres-backed, up to 210 candles). --
+        if pattern_name and not candle_histories:
+            candle_histories = await _fetch_candle_histories(symbol_list, timeframe)
+
         # --- optionally fetch ORB data (only for ORB scans) -------------------
         orb_map: dict[str, dict[str, str]] = {}
         needs_orb = any(
@@ -217,15 +225,15 @@ class ScreenerEngine:
                 if not evaluate_conditions(conditions, data, logic="AND"):
                     continue
 
-            # pattern-based matching
+            # pattern-based matching -- real chronological candle history
+            # (Postgres-backed, oldest-first) rather than the indicator
+            # hash's single now+prev-bar pair, so 3-candle candlestick
+            # patterns and structural (pivot-based) patterns can actually
+            # fire.
+            detected_patterns: list[PatternMatch] = []
             if pattern_name:
-                # Build minimal candle list from the indicator hash.
-                # The hash should contain open/high/low/close for the latest
-                # candle plus prev_open, prev_high, prev_low, prev_close for
-                # the prior candle.
-                candles = _build_candle_list(data)
-                detected = detect_patterns(candles)
-                if pattern_name not in detected:
+                detected_patterns = detect_patterns(candle_histories.get(sym, []))
+                if not any(p.name == pattern_name for p in detected_patterns):
                     continue
 
             # A scan must have at least one filter.
@@ -236,11 +244,18 @@ class ScreenerEngine:
                 {
                     "symbol": sym,
                     "data": {k: v for k, v in data.items() if v is not None},
-                    "patterns": (
-                        detect_patterns(_build_candle_list(data))
-                        if pattern_name
-                        else []
-                    ),
+                    "patterns": [
+                        {
+                            "name": p.name,
+                            "confidence": p.confidence,
+                            "direction": p.direction.value,
+                            "support": str(p.support) if p.support is not None else None,
+                            "resistance": (
+                                str(p.resistance) if p.resistance is not None else None
+                            ),
+                        }
+                        for p in detected_patterns
+                    ],
                 }
             )
 
@@ -372,33 +387,3 @@ async def _fetch_candle_histories(
 
     results = await asyncio.gather(*(fetch_candle_history(sym, timeframe) for sym in symbols))
     return {sym: candles for sym, candles in zip(symbols, results) if candles}
-
-
-def _build_candle_list(data: dict[str, str | None]) -> list[dict[str, Any]]:
-    """Construct a chronological candle list from indicator hash fields.
-
-    Expects keys like ``open``, ``high``, ``low``, ``close`` for the current
-    candle and ``prev_open``, ``prev_high``, ``prev_low``, ``prev_close`` for
-    the previous candle.
-    """
-    candles: list[dict[str, Any]] = []
-
-    # Previous candle
-    prev = {}
-    for field in ("open", "high", "low", "close", "volume"):
-        val = data.get(f"prev_{field}")
-        if val is not None:
-            prev[field] = val
-    if len(prev) >= 4:  # need at least OHLC
-        candles.append(prev)
-
-    # Current candle
-    curr = {}
-    for field in ("open", "high", "low", "close", "volume"):
-        val = data.get(field)
-        if val is not None:
-            curr[field] = val
-    if len(curr) >= 4:
-        candles.append(curr)
-
-    return candles
