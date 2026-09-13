@@ -15,9 +15,18 @@ import re
 from datetime import datetime, timedelta
 from typing import Any
 
+import pydantic
+import structlog
+
+from app.services.ai_schemas import AIPicksResponse
 from app.utils.time import IST, now_ist
 
 log = logging.getLogger(__name__)
+# Structured-output validation failures are logged via structlog (matching
+# this repo's convention elsewhere, e.g. app/market/candles.py) even though
+# the rest of this file predates that convention and still uses stdlib
+# `logging` for everything else.
+struct_log = structlog.get_logger(__name__)
 
 REDIS_KEY = "ai:suggestions"
 
@@ -104,24 +113,61 @@ def _normalize_confidence(picks: list) -> list:
 
 
 def _parse_ai_response(text: str) -> dict[str, list] | None:
-    """Parse JSON from AI model response, handling markdown fences."""
+    """Parse and validate JSON from an AI model response.
+
+    Fence-strips markdown code blocks, then validates the parsed JSON
+    through `AIPicksResponse` (Pydantic v2) instead of the old bare
+    `json.loads` + shallow key-presence check. Any malformed JSON or
+    schema-invalid payload (missing field, wrong type, bad enum value) is
+    rejected outright — fail closed, no silent coercion of invalid data —
+    and the caller treats a `None` return as "no picks from this layer,
+    try the next one."
+
+    Both historically-supported shapes are still handled: a dict with
+    intraday/weekly/monthly keys (what the shared prompt asks for today),
+    or a flat list of up to 15 picks to be sliced 5/5/5 (kept for any
+    provider/prompt variant that still returns the older flat shape).
+    """
     text = text.strip()
     fence_match = re.match(r"^```(?:\w+)?\s*\n(.*?)```\s*$", text, re.DOTALL)
     if fence_match:
         text = fence_match.group(1).strip()
+
     try:
         parsed = json.loads(text)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        struct_log.warning(
+            "ai_structured_validation_failure", reason="json_decode_error", error=str(e)
+        )
         return None
 
     if isinstance(parsed, dict) and all(k in parsed for k in ("intraday", "weekly", "monthly")):
-        for key in ("intraday", "weekly", "monthly"):
-            parsed[key] = _normalize_confidence(parsed.get(key, []))
-        return parsed
-    if isinstance(parsed, list):
-        parsed = _normalize_confidence(parsed)
-        return {"intraday": parsed[:5], "weekly": parsed[5:10], "monthly": parsed[10:15]}
-    return None
+        candidate: dict[str, list] = {
+            key: _normalize_confidence(parsed.get(key) or [])
+            for key in ("intraday", "weekly", "monthly")
+        }
+    elif isinstance(parsed, list):
+        normalized = _normalize_confidence(parsed)
+        candidate = {
+            "intraday": normalized[:5],
+            "weekly": normalized[5:10],
+            "monthly": normalized[10:15],
+        }
+    else:
+        struct_log.warning("ai_structured_validation_failure", reason="unrecognized_shape")
+        return None
+
+    try:
+        validated = AIPicksResponse.model_validate(candidate)
+    except pydantic.ValidationError as e:
+        struct_log.warning(
+            "ai_structured_validation_failure",
+            reason="schema_validation_error",
+            error=str(e),
+        )
+        return None
+
+    return validated.model_dump()
 
 
 # ---------------------------------------------------------------------------
@@ -283,6 +329,7 @@ async def _call_gemini(headlines: list[dict[str, str]], market_summary: str) -> 
     Runs the synchronous SDK call in a thread so asyncio.wait_for can cancel it.
     """
     from google import genai as genai_sdk
+    from google.genai import types as genai_types
 
     from app.core.config import get_settings
 
@@ -299,11 +346,23 @@ async def _call_gemini(headlines: list[dict[str, str]], market_summary: str) -> 
     prompt = _build_ai_prompt(headlines, market_summary)
 
     def _sync_gemini_call(api_key: str) -> str:
-        """Run Gemini synchronously in a thread so timeout actually works."""
+        """Run Gemini synchronously in a thread so timeout actually works.
+
+        Requests native structured output (`response_mime_type` +
+        `response_schema=AIPicksResponse` — `google-genai>=1.0.0` accepts a
+        Pydantic model class directly for `response_schema`) as a
+        belt-and-suspenders measure. The result is still run through
+        `_parse_ai_response`'s own `AIPicksResponse` validation afterward —
+        the SDK's structured mode is never trusted as the only safety net.
+        """
         client = genai_sdk.Client(api_key=api_key)
         response = client.models.generate_content(
             model="gemini-2.5-flash-lite",
             contents=prompt,
+            config=genai_types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=AIPicksResponse,
+            ),
         )
         return response.text
 
@@ -336,8 +395,17 @@ async def _call_gemini(headlines: list[dict[str, str]], market_summary: str) -> 
 # ---------------------------------------------------------------------------
 # LAYER 2: Groq / xAI (alternative AI providers)
 # ---------------------------------------------------------------------------
-async def _call_alternative_ai(headlines: list[dict[str, str]], market_summary: str) -> dict[str, list[dict[str, Any]]]:
-    """Try Groq (Llama 3.3 70B) then xAI (Grok) as fallback AI providers."""
+async def _call_alternative_ai(
+    headlines: list[dict[str, str]], market_summary: str
+) -> tuple[dict[str, list[dict[str, Any]]], str]:
+    """Try Groq (Llama 3.3 70B) then xAI (Grok) as fallback AI providers.
+
+    Returns `(picks, provider)` where `provider` is whichever of
+    "groq"/"xai" actually produced the result, or "none" if both failed —
+    fixes the pre-existing bug where the caller hardcoded `source = "groq"`
+    before this ran, mislabeling provenance whenever Groq failed and xAI
+    succeeded (or both failed).
+    """
     from app.core.config import get_settings
     import httpx
 
@@ -359,6 +427,7 @@ async def _call_alternative_ai(headlines: list[dict[str, str]], market_summary: 
                     messages=messages,
                     temperature=0.7,
                     max_tokens=4096,
+                    response_format={"type": "json_object"},
                 ),
                 timeout=20,
             )
@@ -367,7 +436,7 @@ async def _call_alternative_ai(headlines: list[dict[str, str]], market_summary: 
             if parsed and _has_picks(parsed):
                 total = sum(len(v) for v in parsed.values())
                 log.info("layer2_groq_success picks=%d", total)
-                return parsed
+                return parsed, "groq"
             log.warning("layer2_groq_empty_response")
         except asyncio.TimeoutError:
             log.warning("layer2_groq_timeout")
@@ -389,6 +458,7 @@ async def _call_alternative_ai(headlines: list[dict[str, str]], market_summary: 
                         "messages": messages,
                         "temperature": 0.7,
                         "max_tokens": 4096,
+                        "response_format": {"type": "json_object"},
                     },
                 )
                 if resp.status_code == 200:
@@ -398,14 +468,14 @@ async def _call_alternative_ai(headlines: list[dict[str, str]], market_summary: 
                     if parsed and _has_picks(parsed):
                         total = sum(len(v) for v in parsed.values())
                         log.info("layer2_xai_success picks=%d", total)
-                        return parsed
+                        return parsed, "xai"
                 else:
                     log.warning("layer2_xai_http_error status=%d", resp.status_code)
         except Exception as e:
             log.warning("layer2_xai_failed error=%s type=%s", e, type(e).__name__)
 
     log.warning("layer2_all_alternative_ai_failed")
-    return {"intraday": [], "weekly": [], "monthly": []}
+    return {"intraday": [], "weekly": [], "monthly": []}, "none"
 
 
 # ---------------------------------------------------------------------------
@@ -785,15 +855,16 @@ async def generate_suggestions() -> dict[str, Any]:
 
     # Layer 3: Groq / xAI (20s max)
     if not _has_picks(picks):
-        source = "groq"
         try:
-            picks = await asyncio.wait_for(
+            picks, source = await asyncio.wait_for(
                 _call_alternative_ai(headlines, market_summary), timeout=25
             )
         except asyncio.TimeoutError:
             log.warning("layer3_global_timeout")
+            source = "none"
         except Exception as e:
             log.warning("layer3_unexpected: %s %s", type(e).__name__, e)
+            source = "none"
 
     total_count = sum(len(v) for k, v in picks.items() if k in ("intraday", "weekly", "monthly"))
     log.info("ai_suggestions source=%s total_picks=%d", source, total_count)
