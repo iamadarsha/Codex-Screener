@@ -78,10 +78,29 @@ async def store_token(token: str) -> None:
     await set_with_ttl(KEY_UPSTOX_TOKEN, token, TTL_TOKEN)
 
 
-async def get_token() -> str | None:
-    """Retrieve the current Upstox access token from Redis.
+async def get_bearer_token() -> str | None:
+    """Return the bearer token to use for Upstox market-data requests.
 
-    Returns ``None`` when no valid token exists (re-login required).
+    Prefers the Analytics Token (server-side only, 1-year validity, no
+    OAuth redirect needed — see `Settings.upstox_analytics_token`) over the
+    OAuth2 access token, since this project runs a single owner-controlled
+    backend rather than a per-user broker connection. Falls back to
+    whatever OAuth2 token is cached in Redis if no Analytics Token is
+    configured, for backward compatibility with the existing `/auth/*`
+    flow.
+    """
+    settings = get_settings()
+    if settings.upstox_analytics_token:
+        return settings.upstox_analytics_token
+    return await get_token()
+
+
+async def get_token() -> str | None:
+    """Retrieve the current OAuth2 access token from Redis.
+
+    Returns ``None`` when no valid token exists (re-login required). Prefer
+    `get_bearer_token()` for market-data requests — it also considers the
+    Analytics Token.
     """
     r = await get_redis()
     return await r.get(KEY_UPSTOX_TOKEN)

@@ -50,9 +50,12 @@ class PriceSocket {
       this.ws.onmessage = (event) => {
         try {
           const msg = JSON.parse(event.data);
-          if (msg.type === "price" && msg.data) {
-            this.listeners.forEach((cb) => cb(msg.data));
-          } else if (msg.symbol) {
+          // Backend price events are always flat objects (see
+          // app.market.event_bus.PriceUpdateEvent / nse_poller.py's fallback
+          // path — both publish the same shape). Non-price control messages
+          // like {"type":"subscribed",...} have no `symbol` field and are
+          // ignored here.
+          if (msg.symbol) {
             this.listeners.forEach((cb) => cb(msg as LivePrice));
           }
         } catch {

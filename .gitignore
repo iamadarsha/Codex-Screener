@@ -18,3 +18,5 @@ PROJECT_HANDOFF_HIDDEN_KEYS.md
 
 .claude/worktrees/
 .venv-phase3/
+.claude-flow/
+*.tsbuildinfo

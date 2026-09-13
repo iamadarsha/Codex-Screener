@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     upstox_api_secret: str = ""
     upstox_redirect_uri: str = "http://localhost:8001/auth/upstox/callback"
     upstox_api_version: str = "2.0"
+    # Preferred over the OAuth2 flow above for this project's single-owner,
+    # server-side-only usage: no browser redirect, 1-year validity, read-only.
+    # Generate at https://account.upstox.com/developer/apps (Analytics tab).
+    upstox_analytics_token: str = ""
     supabase_url: str = ""
     supabase_anon_key: str = ""
     supabase_service_key: str = ""

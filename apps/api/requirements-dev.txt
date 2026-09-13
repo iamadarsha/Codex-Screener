@@ -4,3 +4,8 @@ pytest>=8.0.0,<9.0.0
 pytest-asyncio>=0.23.0,<1.0.0
 pytest-cov>=5.0.0,<6.0.0
 respx>=0.21.0,<1.0.0
+fakeredis>=2.23.0,<3.0.0
+# Pinned below 1.68 — newer grpcio-tools emits gencode requiring a protobuf
+# runtime >=7.x, incompatible with this project's protobuf<6.0.0 pin
+# (shared with google-genai). Bump both together if you ever raise the cap.
+grpcio-tools>=1.66.0,<1.68.0
