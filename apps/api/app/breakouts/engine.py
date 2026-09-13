@@ -33,7 +33,7 @@ from app.breakouts.levels import (
     vwap_levels,
 )
 from app.breakouts.persistence import publish_alert_trigger, record_alert_history, record_breakout_event
-from app.breakouts.scoring import compute_basic_score
+from app.breakouts.scoring import compute_dna_score
 from app.breakouts.state_machine import DEFAULT_CONFIGS, BreakoutStateStore
 from app.breakouts.types import BreakoutSignal, BreakoutStatus, Direction, TriggerType
 from app.market.candles import fetch_candle_history
@@ -259,8 +259,9 @@ async def _scan_symbol(symbol: str) -> None:
             if signal is not None:
                 signals.append(signal)
 
+    indicator_state = _indicator_states().get(symbol, SymbolIndicatorState())
     for signal in signals:
-        await _handle_signal(signal)
+        await _handle_signal(signal, indicator_state)
 
 
 def _diff(a: Any, b: Any) -> Any:
@@ -270,17 +271,20 @@ def _diff(a: Any, b: Any) -> Any:
     return a_dec - b_dec
 
 
-async def _handle_signal(signal: BreakoutSignal) -> None:
-    if signal.status is not BreakoutStatus.CONFIRMED:
+async def _handle_signal(signal: BreakoutSignal, indicator_state: SymbolIndicatorState) -> None:
+    if signal.status not in (BreakoutStatus.CONFIRMED, BreakoutStatus.FAILED):
         log.debug(
             "breakout_transition", symbol=signal.symbol, trigger_type=signal.trigger_type.value,
             status=signal.status.value,
         )
         return
 
-    signal = replace(
-        signal, score=compute_basic_score(signal.volume_ratio, signal.reference_level, signal.trigger_price)
-    )
+    if signal.status is BreakoutStatus.CONFIRMED:
+        dna = compute_dna_score(signal, indicator_state)
+        signal = replace(signal, score=dna.overall)
+    else:  # FAILED — a false breakout: confirmed, then reversed
+        signal = replace(signal, extra={**signal.extra, "outcome": "failed_after_confirmation"})
+
     await record_breakout_event(signal)
 
     for alert in await _active_alerts_for_symbol(signal.symbol):

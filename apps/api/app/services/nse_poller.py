@@ -280,6 +280,20 @@ async def nse_poller_loop():
                 breadth["advance_decline_ratio"] = round(breadth["advances"] / max(breadth["declines"], 1), 2)
                 await set_json("market:breadth", breadth, ttl=BREADTH_TTL)
 
+                # Market regime classification — pure logic on top of the
+                # indices/breadth data already fetched above, zero new
+                # ingestion (Milestone 3.4a).
+                try:
+                    from dataclasses import asdict
+
+                    from app.market.regime import compute_market_regime
+                    from app.utils.redis_keys import TTL_MARKET_REGIME, regime_key
+
+                    regime_result = compute_market_regime(indices_list, breadth)
+                    await set_json(regime_key(), asdict(regime_result), ttl=TTL_MARKET_REGIME)
+                except Exception as e:
+                    log.warning("Failed to compute market regime: %s", e)
+
             except Exception as e:
                 log.warning("Failed to fetch indices: %s", e)
 

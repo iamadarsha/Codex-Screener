@@ -102,16 +102,36 @@ def test_invalidated_can_re_trigger_on_a_later_cross():
     assert t.status is BreakoutStatus.TRIGGERED
 
 
-def test_confirmed_reverses_back_to_armed_not_invalidated():
+def test_confirmed_reverses_back_to_armed_and_emits_failed_signal():
     t = _tracker()
     t.evaluate(RawEvent.CROSS_UP, Decimal(100), Decimal(101), _NOW, "bar1")
-    t.evaluate(RawEvent.HOLD, Decimal(100), Decimal(102), _NOW + timedelta(minutes=5), "bar2")
+    confirm_time = _NOW + timedelta(minutes=5)
+    t.evaluate(RawEvent.HOLD, Decimal(100), Decimal(102), confirm_time, "bar2")
     assert t.status is BreakoutStatus.CONFIRMED
 
-    signal = t.evaluate(RawEvent.REVERSE, Decimal(100), Decimal(97), _NOW + timedelta(minutes=10), "bar3")
-    assert signal is None  # re-arming isn't itself alertable
+    fail_time = _NOW + timedelta(minutes=10)
+    signal = t.evaluate(RawEvent.REVERSE, Decimal(100), Decimal(97), fail_time, "bar3")
+
+    # The false breakout is now surfaced as its own FAILED signal...
+    assert signal is not None
+    assert signal.status is BreakoutStatus.FAILED
+    assert signal.symbol == "RELIANCE"
+    assert signal.trigger_type is TriggerType.PDH_PDL
+    assert signal.direction is Direction.BULLISH
+    assert signal.reference_level == Decimal(100)
+    assert signal.trigger_price == Decimal(97)
+    assert signal.confirmation_price == Decimal(102)  # the price it had confirmed at
+    assert signal.confirmed_at == confirm_time
+    assert signal.triggered_at == _NOW
+
+    # ...while the re-arm-to-ARMED behavior is unchanged.
     assert t.status is BreakoutStatus.ARMED
     assert t.bars_confirmed == 0
+
+    # And the tracker behaves as freshly armed on the next event.
+    next_signal = t.evaluate(RawEvent.CROSS_UP, Decimal(100), Decimal(101), fail_time + timedelta(minutes=5), "bar4")
+    assert next_signal is None  # first cross after re-arm is recorded, not yet alertable
+    assert t.status is BreakoutStatus.TRIGGERED
 
 
 def test_confirmed_stays_confirmed_on_continued_hold_no_refire():

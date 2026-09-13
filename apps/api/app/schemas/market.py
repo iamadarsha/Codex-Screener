@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -54,3 +55,19 @@ class SectorPerformance(BaseModel):
     declines: int
     top_gainer: str | None = None
     top_loser: str | None = None
+
+
+class RegimeOut(BaseModel):
+    """Current market regime classification plus the raw component readings
+    that drove it, for a transparent "why" alongside the label — matching
+    this project's established transparent-scoring convention (see
+    `BreakoutSignal`/`compute_basic_score`)."""
+
+    regime: str
+    vix_level: float | None = None
+    nifty_change_pct: float
+    advance_decline_ratio: float
+    advances: int
+    declines: int
+    unchanged: int
+    extra: dict[str, Any] = {}

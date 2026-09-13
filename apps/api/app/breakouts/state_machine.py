@@ -58,8 +58,8 @@ class BreakoutTracker:
 
     `evaluate()` advances the FSM by one scan cycle and returns a
     `BreakoutSignal` only on a transition worth surfacing (CONFIRMED /
-    INVALIDATED / EXPIRED) — ARMED-still-armed or HOLD-not-yet-confirmed
-    cycles return `None`.
+    INVALIDATED / EXPIRED / FAILED) — ARMED-still-armed or
+    HOLD-not-yet-confirmed cycles return `None`.
     """
 
     symbol: str
@@ -73,6 +73,8 @@ class BreakoutTracker:
     bars_confirmed: int = 0
     last_price: Decimal | None = None
     last_updated: datetime | None = None
+    confirmed_at: datetime | None = None
+    confirmation_price: Decimal | None = None
 
     def evaluate(
         self,
@@ -109,6 +111,8 @@ class BreakoutTracker:
                 self.last_bar_ts = bar_ts
                 if self.bars_confirmed >= self.config.confirmation_bars:
                     self.status = BreakoutStatus.CONFIRMED
+                    self.confirmed_at = now
+                    self.confirmation_price = price
                     return self._signal(
                         BreakoutStatus.CONFIRMED, level, price, now,
                         volume_ratio=volume_ratio, extra=extra,
@@ -117,10 +121,31 @@ class BreakoutTracker:
 
         if self.status == BreakoutStatus.CONFIRMED:
             # Stays CONFIRMED (no re-fire) until price reverses, at which
-            # point it re-arms for the next approach of the same level.
+            # point it re-arms for the next approach of the same level. A
+            # reversal here is a *false breakout* (it already confirmed) —
+            # distinct from INVALIDATED (a pre-confirmation reversal) — so it
+            # gets its own FAILED signal surfaced alongside the re-arm,
+            # rather than being silently swallowed.
             if event is RawEvent.REVERSE:
+                failed_signal = BreakoutSignal(
+                    symbol=self.symbol,
+                    trigger_type=self.trigger_type,
+                    direction=self.direction,
+                    status=BreakoutStatus.FAILED,
+                    reference_level=level,
+                    trigger_price=price,
+                    confirmation_price=self.confirmation_price,
+                    triggered_at=self.triggered_at or now,
+                    confirmed_at=self.confirmed_at,
+                    bars_confirmed=self.bars_confirmed,
+                    volume_ratio=volume_ratio,
+                    extra=extra,
+                )
                 self.status = BreakoutStatus.ARMED
                 self.bars_confirmed = 0
+                self.confirmed_at = None
+                self.confirmation_price = None
+                return failed_signal
             return None
 
         return None

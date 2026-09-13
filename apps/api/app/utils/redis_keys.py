@@ -13,6 +13,7 @@ TTL_CANDLE_CURRENT: int = 20 * 60  # 20 min (safety buffer for 15-min candles)
 TTL_UNIVERSE: int = 24 * 60 * 60  # 24 h
 TTL_WS_TICK: int = 5 * 60  # 5 min
 TTL_BREAKOUT_DEDUPE: int = 8 * 60 * 60  # 8 h (to end of trading day, matches orb.py's convention)
+TTL_MARKET_REGIME: int = 3 * 60  # 3 min — matches nse_poller.py's INDICES_TTL/BREADTH_TTL
 
 # ---------------------------------------------------------------------------
 # Key prefixes / static keys
@@ -72,6 +73,25 @@ def indicator_history_key(symbol: str, timeframe: str, field: str) -> str:
     return f"ind_hist:{symbol}:{timeframe}:{field}"
 
 
-def breakout_dedupe_key(alert_id: str, symbol: str, trigger_type: str, session_date: str) -> str:
-    """Return the Redis dedupe key for one alert's breakout notifications on one day."""
-    return f"breakout:dedupe:{alert_id}:{symbol}:{trigger_type}:{session_date}"
+def breakout_dedupe_key(
+    alert_id: str, symbol: str, trigger_type: str, session_date: str, outcome: str = "confirmed",
+) -> str:
+    """Return the Redis dedupe key for one alert's breakout notifications on one day.
+
+    *outcome* namespaces the key by signal status (default "confirmed", the
+    original behavior) so a FAILED (false-breakout) signal for the same
+    alert+symbol+trigger+day gets its own dedupe slot — a real failure alert
+    must never be suppressed just because a CONFIRMED alert for the same
+    breakout already fired earlier that session, and vice versa.
+    """
+    return f"breakout:dedupe:{alert_id}:{symbol}:{trigger_type}:{session_date}:{outcome}"
+
+
+def regime_key() -> str:
+    """Return the Redis key for the current market regime classification.
+
+    Market-wide and singleton like `market:breadth`/`market:indices` (which
+    `nse_poller.py` writes as bare string literals) — a trivial no-arg
+    function here instead, so callers don't need to know the literal.
+    """
+    return "market:regime"

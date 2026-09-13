@@ -9,12 +9,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db
 from app.db.models.stock import Stock
+from app.market.regime import MarketRegime, compute_market_regime
 from app.schemas.market import (
     IndexData,
     MarketBreadth,
     MarketStatus,
+    RegimeOut,
     SectorPerformance,
 )
+from app.utils.redis_keys import regime_key
 
 logger = logging.getLogger(__name__)
 
@@ -182,6 +185,54 @@ async def market_indices():
         return results
     except Exception as exc:
         logger.exception("Failed to fetch indices")
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.get("/regime", response_model=RegimeOut)
+async def market_regime():
+    """Get the current market regime classification plus its raw component
+    readings. Reads the Redis key the poller writes every cycle; if that's
+    absent/expired, recomputes on-demand from `market:indices` /
+    `market:breadth` the same way `/breadth`'s fallback does today."""
+    try:
+        from app.services.redis_cache import get_json
+
+        cached = await get_json(regime_key())
+        if cached:
+            return RegimeOut(
+                regime=cached.get("regime", MarketRegime.CHOPPY.value),
+                vix_level=cached.get("vix_level"),
+                nifty_change_pct=cached.get("nifty_change_pct", 0.0),
+                advance_decline_ratio=cached.get("advance_decline_ratio", 0.0),
+                advances=cached.get("advances", 0),
+                declines=cached.get("declines", 0),
+                unchanged=cached.get("unchanged", 0),
+                extra=cached.get("extra", {}),
+            )
+    except Exception:
+        pass
+
+    # Fallback: recompute on-demand from the same market:indices /
+    # market:breadth data the poller already writes, same convention as
+    # /breadth's fallback above.
+    try:
+        from app.services.redis_cache import get_json
+
+        indices = await get_json("market:indices") or []
+        breadth = await get_json("market:breadth") or {}
+        result = compute_market_regime(indices, breadth)
+        return RegimeOut(
+            regime=result.regime.value,
+            vix_level=result.vix_level,
+            nifty_change_pct=result.nifty_change_pct,
+            advance_decline_ratio=result.advance_decline_ratio,
+            advances=result.advances,
+            declines=result.declines,
+            unchanged=result.unchanged,
+            extra=result.extra,
+        )
+    except Exception as exc:
+        logger.exception("Failed to compute market regime")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 

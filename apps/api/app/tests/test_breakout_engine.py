@@ -114,6 +114,74 @@ async def test_scan_symbol_confirms_pdh_breakout_after_second_cycle(monkeypatch)
 
 
 @pytest.mark.usefixtures("fake_redis")
+async def test_scan_symbol_reverses_after_confirming_and_fires_failed_signal(monkeypatch):
+    """A PDH breakout that confirms and then reverses back below the level
+    must reach `_handle_signal` with `status=FAILED` and still fire the
+    persistence/notification side effects, tagged with the false-breakout
+    `extra["outcome"]` marker — the previously-missing 3.4a false-breakout
+    guard path."""
+    symbol = "RELIANCE"
+    await set_json(f"price:{symbol}", {"ltp": 2510.0, "volume": 100000})
+
+    from app.services.redis_cache import hset_dict
+
+    await hset_dict(indicator_key(symbol, "1d"), {"prev_high": "2500.0", "prev_low": "2400.0"})
+
+    recorded_events = []
+    notified_alerts = []
+
+    async def _fake_record_breakout_event(signal):
+        recorded_events.append(signal)
+
+    async def _fake_active_alerts(symbol_arg):
+        return [_FakeAlert(id=uuid.uuid4())]
+
+    async def _fake_publish_alert_trigger(alert_id, signal):
+        notified_alerts.append((alert_id, signal))
+
+    async def _fake_record_alert_history(alert_id, signal):
+        pass
+
+    monkeypatch.setattr(engine, "record_breakout_event", _fake_record_breakout_event)
+    monkeypatch.setattr(engine, "_active_alerts_for_symbol", _fake_active_alerts)
+    monkeypatch.setattr(engine, "publish_alert_trigger", _fake_publish_alert_trigger)
+    monkeypatch.setattr(engine, "record_alert_history", _fake_record_alert_history)
+
+    cycle1 = datetime(2026, 9, 15, 10, 0, tzinfo=IST)
+    monkeypatch.setattr(engine, "now_ist", lambda: cycle1)
+    await engine._scan_symbol(symbol)  # noqa: SLF001 — CROSS_UP, TRIGGERED
+
+    cycle2 = cycle1 + timedelta(minutes=5)
+    monkeypatch.setattr(engine, "now_ist", lambda: cycle2)
+    await engine._scan_symbol(symbol)  # noqa: SLF001 — HOLD on a new bar, CONFIRMED
+
+    store = engine.get_breakout_state_store()
+    bullish_tracker = store.get_or_create(
+        symbol, TriggerType.PDH_PDL, Direction.BULLISH, engine.DEFAULT_CONFIGS[TriggerType.PDH_PDL],
+    )
+    assert bullish_tracker.status is BreakoutStatus.CONFIRMED
+    assert len(recorded_events) == 1  # the CONFIRMED signal only so far
+
+    # Price falls back below the PDH level — reverses the CONFIRMED breakout.
+    await set_json(f"price:{symbol}", {"ltp": 2495.0, "volume": 100000})
+    cycle3 = cycle2 + timedelta(minutes=5)
+    monkeypatch.setattr(engine, "now_ist", lambda: cycle3)
+    await engine._scan_symbol(symbol)  # noqa: SLF001 — REVERSE, FAILED
+
+    assert bullish_tracker.status is BreakoutStatus.ARMED  # re-armed exactly as before
+    assert len(recorded_events) == 2
+    failed_signal = recorded_events[-1]
+    assert failed_signal.status is BreakoutStatus.FAILED
+    assert failed_signal.symbol == symbol
+    assert failed_signal.trigger_type is TriggerType.PDH_PDL
+    assert failed_signal.direction is Direction.BULLISH
+    assert failed_signal.extra.get("outcome") == "failed_after_confirmation"
+
+    assert len(notified_alerts) == 2  # one for CONFIRMED, one for FAILED
+    assert notified_alerts[-1][1] is failed_signal
+
+
+@pytest.mark.usefixtures("fake_redis")
 async def test_scan_symbol_no_op_when_no_price_data():
     # No price:{symbol} key seeded at all — must return cleanly, no crash.
     await engine._scan_symbol("NONEXISTENT")  # noqa: SLF001

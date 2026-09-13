@@ -37,6 +37,7 @@ class BreakoutStatus(str, Enum):
     CONFIRMED = "confirmed"  # confirmation criteria satisfied — alertable
     INVALIDATED = "invalidated"  # reversed back through the level before confirming
     EXPIRED = "expired"  # confirmation window elapsed unconfirmed, or session-scoped level's day ended
+    FAILED = "failed"  # reversed back through the level AFTER confirming — a false breakout
 
 
 class RawEvent(str, Enum):
@@ -74,8 +75,10 @@ class BreakoutSignal:
     """An emitted breakout lifecycle transition worth surfacing.
 
     Only produced by `BreakoutTracker.evaluate()` on CONFIRMED / INVALIDATED /
-    EXPIRED transitions — ARMED/TRIGGERED are internal tracker states, never
-    turned into a `BreakoutSignal`.
+    EXPIRED / FAILED transitions — ARMED/TRIGGERED are internal tracker
+    states, never turned into a `BreakoutSignal`. FAILED marks a breakout
+    that reversed *after* confirming (distinct from INVALIDATED, which is a
+    pre-confirmation reversal).
     """
 
     symbol: str
