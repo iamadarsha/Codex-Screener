@@ -147,9 +147,7 @@ app.add_middleware(SlowAPIMiddleware)
 _DEFAULT_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:3001",
-    "https://breakoutscan.up.railway.app",
-    "https://breakoutscan-web-production.up.railway.app",
-    "https://screenercodex.netlify.app",
+    "https://breakoutscan-web.vercel.app",
     "https://breakoutscan.in",
     "https://www.breakoutscan.in",
 ]

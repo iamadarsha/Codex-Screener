@@ -1,19 +1,60 @@
-name: Deploy to Railway
+name: CI
+
+# Replaces the old "Deploy to Railway" workflow, which tried to `railway up`
+# against a dead RAILWAY_TOKEN on every push. Railway is no longer used —
+# the frontend deploys via Vercel's own git integration, and the backend's
+# Oracle Cloud deploy is a separate, manually-triggered SSH step (not yet
+# automated here). This workflow only runs checks, it does not deploy.
 
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
-  deploy:
+  api:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-      - name: Deploy to Railway
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: railway up --detach
+      - name: Install dependencies
+        run: |
+          pip install --prefer-binary -r requirements.txt
+          pip install --prefer-binary -r requirements-dev.txt
+
+      - name: Run tests
+        run: python -m pytest app/tests
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build

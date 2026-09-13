@@ -202,6 +202,7 @@ class YFinanceProvider:
             bb_df = ta.bbands(close, length=20, std=2)
             bb_upper = None
             bb_lower = None
+            bb_mid = None
             if bb_df is not None and not bb_df.empty:
                 bb_cols = bb_df.columns.tolist()
                 for col in bb_cols:
@@ -209,6 +210,8 @@ class YFinanceProvider:
                         bb_upper = bb_df[col].iloc[-1]
                     elif col.startswith("BBL_"):
                         bb_lower = bb_df[col].iloc[-1]
+                    elif col.startswith("BBM_"):
+                        bb_mid = bb_df[col].iloc[-1]
 
             # ATR
             atr_series = ta.atr(high, low, close, length=14)
@@ -283,6 +286,7 @@ class YFinanceProvider:
                 "vwap": _safe_str(vwap),
                 "bollinger_upper": _safe_str(bb_upper),
                 "bollinger_lower": _safe_str(bb_lower),
+                "bollinger_mid": _safe_str(bb_mid),
                 "sma_20_volume": _safe_str(vol_sma20),
                 "change_pct": _safe_str(change_pct),
                 "high_52w": _safe_str(high_52w),

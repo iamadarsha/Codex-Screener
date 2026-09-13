@@ -1,7 +1,17 @@
 #!/usr/bin/env bash
 # BreakoutScan — Fly.io deploy script
+#
+# DEPRECATED / REFERENCE ONLY: Fly.io removed its always-on free tier for new
+# accounts in Oct 2024 (new orgs are pay-as-you-go, ~$2-5/mo minimum for an
+# always-on machine). The project's target backend host is now Oracle Cloud
+# Always Free ARM — see docs/APPLE_CONTAINER.md and docs/DATA_PROVIDER_MATRIX.md.
+# This script is kept only in case Fly.io's small paid tier is ever used.
+#
 # Run this AFTER: flyctl auth login
 # Usage: bash deploy_fly.sh
+#
+# No secret is ever hardcoded in this file — every value below is either
+# prompted for interactively or read from your own shell environment.
 
 set -euo pipefail
 
@@ -19,8 +29,8 @@ fi
 echo "✅ Logged in as: $(flyctl auth whoami)"
 echo ""
 
-# ── Collect missing secrets ───────────────────────────────────────────────────
-echo "You need 4 values that aren't stored locally."
+# ── Collect all secrets interactively — none are ever hardcoded here ─────────
+echo "Enter the following values (input is hidden):"
 echo ""
 
 read -rsp "1. REDIS_URL (from Redis Cloud — e.g. redis://default:PASS@HOST:PORT): " REDIS_URL
@@ -34,9 +44,26 @@ echo ""
 
 read -rsp "4. SUPABASE DB PASSWORD (from supabase.com → Settings → Database): " SUPABASE_DB_PASS
 echo ""
+
+read -rsp "5. SUPABASE_ANON_KEY (from supabase.com → Settings → API): " SUPABASE_ANON_KEY
 echo ""
 
-DATABASE_URL="postgresql+asyncpg://postgres:${SUPABASE_DB_PASS}@db.gruaokvbcnvgvklhqimw.supabase.co:5432/postgres"
+read -rsp "6. SUPABASE_SERVICE_KEY (from supabase.com → Settings → API): " SUPABASE_SERVICE_KEY
+echo ""
+
+read -rsp "7. UPSTOX_API_KEY (from Upstox Developer App): " UPSTOX_API_KEY
+echo ""
+
+read -rsp "8. UPSTOX_API_SECRET (from Upstox Developer App): " UPSTOX_API_SECRET
+echo ""
+
+read -rp "9. SUPABASE_URL (e.g. https://xxxx.supabase.co): " SUPABASE_URL
+echo ""
+
+read -rp "10. Supabase project ref (the xxxx in the URL above, used for the DB host): " SUPABASE_PROJECT_REF
+echo ""
+
+DATABASE_URL="postgresql+asyncpg://postgres:${SUPABASE_DB_PASS}@db.${SUPABASE_PROJECT_REF}.supabase.co:5432/postgres"
 
 # ── Create app if it doesn't exist ───────────────────────────────────────────
 if ! flyctl apps list 2>/dev/null | grep -q "^${APP_NAME}"; then
@@ -51,11 +78,11 @@ flyctl secrets set \
   GEMINI_API_KEY="${GEMINI_API_KEY}" \
   INDIAN_API_KEY="${INDIAN_API_KEY}" \
   DATABASE_URL="${DATABASE_URL}" \
-  SUPABASE_URL="https://gruaokvbcnvgvklhqimw.supabase.co" \
-  SUPABASE_ANON_KEY="***REMOVED-SUPABASE-ANON-KEY***" \
-  SUPABASE_SERVICE_KEY="***REMOVED-SUPABASE-SERVICE-KEY***" \
-  UPSTOX_API_KEY="***REMOVED-UPSTOX-KEY***" \
-  UPSTOX_API_SECRET="***REMOVED-UPSTOX-SECRET***" \
+  SUPABASE_URL="${SUPABASE_URL}" \
+  SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY}" \
+  SUPABASE_SERVICE_KEY="${SUPABASE_SERVICE_KEY}" \
+  UPSTOX_API_KEY="${UPSTOX_API_KEY}" \
+  UPSTOX_API_SECRET="${UPSTOX_API_SECRET}" \
   UPSTOX_REDIRECT_URI="https://breakoutscan-api.fly.dev/auth/upstox/callback" \
   CORS_ALLOWED_ORIGINS="https://breakoutscan-web.vercel.app,https://breakoutscan.in,https://www.breakoutscan.in" \
   ENVIRONMENT="production" \
