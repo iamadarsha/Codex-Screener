@@ -12,6 +12,7 @@ TTL_INDICATOR: int = 5 * 60  # 5 min
 TTL_CANDLE_CURRENT: int = 20 * 60  # 20 min (safety buffer for 15-min candles)
 TTL_UNIVERSE: int = 24 * 60 * 60  # 24 h
 TTL_WS_TICK: int = 5 * 60  # 5 min
+TTL_BREAKOUT_DEDUPE: int = 8 * 60 * 60  # 8 h (to end of trading day, matches orb.py's convention)
 
 # ---------------------------------------------------------------------------
 # Key prefixes / static keys
@@ -69,3 +70,8 @@ def scan_result_key(scan_hash: str) -> str:
 def indicator_history_key(symbol: str, timeframe: str, field: str) -> str:
     """Return the Redis list key for historical indicator values."""
     return f"ind_hist:{symbol}:{timeframe}:{field}"
+
+
+def breakout_dedupe_key(alert_id: str, symbol: str, trigger_type: str, session_date: str) -> str:
+    """Return the Redis dedupe key for one alert's breakout notifications on one day."""
+    return f"breakout:dedupe:{alert_id}:{symbol}:{trigger_type}:{session_date}"

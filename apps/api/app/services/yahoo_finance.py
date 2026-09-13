@@ -250,8 +250,9 @@ class YFinanceProvider:
                 else 0.0
             )
 
-            # 52-week high
+            # 52-week high / low
             high_52w = float(high.tail(252).max()) if len(high) >= 252 else float(high.max())
+            low_52w = float(low.tail(252).min()) if len(low) >= 252 else float(low.min())
 
             # --- Build mapping and store in Redis -----------------------------
             mapping = {
@@ -290,6 +291,7 @@ class YFinanceProvider:
                 "sma_20_volume": _safe_str(vol_sma20),
                 "change_pct": _safe_str(change_pct),
                 "high_52w": _safe_str(high_52w),
+                "low_52w": _safe_str(low_52w),
             }
 
             await hset_dict(indicator_key(symbol, "1d"), mapping, ttl=14400)

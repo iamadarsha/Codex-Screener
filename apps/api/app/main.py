@@ -64,6 +64,26 @@ async def _poller_watchdog() -> None:
             delay = 5  # reset backoff
 
 
+async def _breakout_watchdog() -> None:
+    """Run breakout_engine_loop forever, restarting it if it ever raises.
+
+    Same crash-restart-with-backoff pattern as `_poller_watchdog` above.
+    """
+    from app.breakouts.engine import breakout_engine_loop
+
+    delay = 5
+    while True:
+        try:
+            logger.info("Breakout engine (re)starting…")
+            await breakout_engine_loop()
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.error("Breakout engine crashed: %s — restarting in %ds", exc, delay)
+            await asyncio.sleep(delay)
+            delay = min(delay * 2, 300)
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     global _poller_running, _universe_size, _startup_time
@@ -98,6 +118,7 @@ async def lifespan(_app: FastAPI):
         logger.info("UPSTOX_ANALYTICS_TOKEN not set — nse_poller is the only price feed")
 
     watchdog_task = None
+    breakout_watchdog_task = None
     try:
         from app.services.redis_cache import get_redis
 
@@ -123,6 +144,9 @@ async def lifespan(_app: FastAPI):
         # Start self-healing watchdog (replaces the bare create_task)
         watchdog_task = asyncio.create_task(_poller_watchdog(), name="poller_watchdog")
         logger.info("NSE poller watchdog started")
+
+        breakout_watchdog_task = asyncio.create_task(_breakout_watchdog(), name="breakout_watchdog")
+        logger.info("Breakout engine watchdog started")
     except asyncio.TimeoutError:
         logger.warning("Redis connection timed out – starting without Redis")
     except Exception as exc:
@@ -143,6 +167,14 @@ async def lifespan(_app: FastAPI):
         except asyncio.CancelledError:
             pass
         logger.info("NSE poller watchdog stopped")
+
+    if breakout_watchdog_task is not None:
+        breakout_watchdog_task.cancel()
+        try:
+            await breakout_watchdog_task
+        except asyncio.CancelledError:
+            pass
+        logger.info("Breakout engine watchdog stopped")
 
     if upstox_provider is not None:
         await upstox_provider.stop()

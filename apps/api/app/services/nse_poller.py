@@ -83,6 +83,7 @@ _poll_count: int = 0
 _startup_done: bool = False
 _consecutive_failures: int = 0
 _bulk_compute_in_progress: bool = False  # guard: only one bulk compute at a time
+_prev_cum_volume: dict[str, int] = {}  # totalTradedVolume seen last cycle, per symbol — for CandleEngine deltas
 
 
 async def populate_universe_fallback() -> list[str]:
@@ -176,6 +177,28 @@ async def _run_bulk_compute(symbols: list[str]) -> None:
         log.error("Bulk indicator compute failed: %s", e)
     finally:
         _bulk_compute_in_progress = False
+
+
+async def _feed_candle_engine(symbol: str, ltp: float, cum_volume: int, ts: datetime) -> None:
+    """Drive `CandleEngine` from the NSE-scrape fallback path too, so
+    `MarketState`'s candle ring buffers (and 1-min Postgres persistence)
+    don't go dark during Upstox failover — only the Upstox pipeline
+    (`app/market/pipeline.py`) fed this before this fix.
+
+    `totalTradedVolume` from NSE is cumulative for the day (like Upstox's
+    `vtt`), so we diff against the last-seen value per symbol to get the
+    same kind of per-tick delta `CandleEngine.on_tick` expects (Upstox's
+    `ltq`) — never feed the cumulative figure directly.
+    """
+    try:
+        from app.market.pipeline import get_candle_engine
+
+        prev = _prev_cum_volume.get(symbol)
+        delta = max(cum_volume - prev, 0) if prev is not None else 0
+        _prev_cum_volume[symbol] = cum_volume
+        await get_candle_engine().on_tick(symbol=symbol, ltp=ltp, volume_delta=delta, ts=ts)
+    except Exception as e:
+        log.debug("feed_candle_engine_failed symbol=%s error=%s", symbol, e)
 
 
 async def _fetch_and_store_trending() -> None:
@@ -311,6 +334,9 @@ async def nse_poller_loop():
                             }
                             await set_json(f"price:{symbol}", price_data, ttl=PRICE_TTL)
                             await redis.publish("price_updates", json.dumps(price_data))
+                            await _feed_candle_engine(
+                                symbol, price_data["ltp"], price_data["volume"], datetime.fromisoformat(ts)
+                            )
                             all_symbols.append(symbol)
 
                         log.info("Stored + published prices for %d Nifty 500 stocks", len(all_symbols))
@@ -349,6 +375,9 @@ async def nse_poller_loop():
                                 }
                                 await set_json(f"price:{symbol}", price_data, ttl=PRICE_TTL)
                                 await redis.publish("price_updates", json.dumps(price_data))
+                                await _feed_candle_engine(
+                                    symbol, price_data["ltp"], price_data["volume"], datetime.fromisoformat(ts)
+                                )
                             log.info("Fallback: stored prices for %d Nifty 50 stocks", len(stock_data))
                             fetch_ok = True
                             _consecutive_failures = 0

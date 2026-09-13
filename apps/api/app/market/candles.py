@@ -45,8 +45,9 @@ async def fetch_candle_history(symbol: str, timeframe: str) -> list[dict[str, An
     """
     from sqlalchemy import select
 
+    is_intraday = timeframe in ("1min", "5min", "15min")
     async with SessionLocal() as session:
-        if timeframe in ("1min", "5min", "15min"):
+        if is_intraday:
             stmt = (
                 select(Ohlcv1Min)
                 .where(Ohlcv1Min.symbol == symbol)
@@ -65,6 +66,7 @@ async def fetch_candle_history(symbol: str, timeframe: str) -> list[dict[str, An
 
     candles: list[dict[str, Any]] = [
         {
+            "ts": (r.ts if is_intraday else r.date).isoformat(),
             "open": float(r.open),
             "high": float(r.high),
             "low": float(r.low),

@@ -17,4 +17,13 @@ class Base(DeclarativeBase):
 
 
 # Import models so Alembic can discover table metadata.
-from app.db.models import alert, alert_history, ohlcv, scan_run, stock, user_scan, watchlist  # noqa: E402,F401
+from app.db.models import (  # noqa: E402,F401
+    alert,
+    alert_history,
+    breakout_event,
+    ohlcv,
+    scan_run,
+    stock,
+    user_scan,
+    watchlist,
+)
