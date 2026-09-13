@@ -52,6 +52,21 @@ class FailoverController:
     def status(self) -> FeedStatus:
         return self._status
 
+    @property
+    def has_ever_ticked(self) -> bool:
+        """False until the very first primary tick arrives.
+
+        Distinct from `status`/`should_run_fallback_poller()`: those treat
+        "no tick has ever arrived" as a fresh start rather than staleness
+        (see `evaluate()`), which is correct for the controller's own
+        transition logic but wrong as the sole signal for "should a
+        fallback data source run" — a primary that has never once proven
+        itself live (e.g. still connecting, or started while markets are
+        closed) shouldn't be trusted over a working fallback just because
+        it hasn't technically gone *stale* yet.
+        """
+        return self._last_primary_tick is not None
+
     def record_primary_tick(self, now: float | None = None) -> None:
         now = now if now is not None else time.monotonic()
         self._last_primary_tick = now

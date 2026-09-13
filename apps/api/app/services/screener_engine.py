@@ -368,9 +368,9 @@ async def _fetch_candle_histories(
     than sequentially to keep an N-symbol scan from serializing N round
     trips to the database.
     """
-    from app.services.indicator_engine import _fetch_candles  # noqa: SLF001 — intentional reuse
+    from app.market.candles import fetch_candle_history
 
-    results = await asyncio.gather(*(_fetch_candles(sym, timeframe) for sym in symbols))
+    results = await asyncio.gather(*(fetch_candle_history(sym, timeframe) for sym in symbols))
     return {sym: candles for sym, candles in zip(symbols, results) if candles}
 
 

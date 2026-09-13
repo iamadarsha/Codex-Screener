@@ -82,6 +82,21 @@ async def lifespan(_app: FastAPI):
         settings.redis_url[:30] + "..." if settings.redis_url else "MISSING",
     )
 
+    upstox_provider = None
+    if settings.upstox_analytics_token:
+        try:
+            from app.market.pipeline import start_upstox_pipeline
+
+            upstox_provider = await start_upstox_pipeline()
+            logger.info("Upstox V3 primary feed started")
+        except Exception as exc:
+            logger.warning(
+                "Upstox V3 primary feed failed to start (%s) — nse_poller fallback will carry prices",
+                exc,
+            )
+    else:
+        logger.info("UPSTOX_ANALYTICS_TOKEN not set — nse_poller is the only price feed")
+
     watchdog_task = None
     try:
         from app.services.redis_cache import get_redis
@@ -128,6 +143,10 @@ async def lifespan(_app: FastAPI):
         except asyncio.CancelledError:
             pass
         logger.info("NSE poller watchdog stopped")
+
+    if upstox_provider is not None:
+        await upstox_provider.stop()
+        logger.info("Upstox V3 primary feed stopped")
 
 
 settings = get_settings()

@@ -19,7 +19,7 @@ from typing import Any
 import structlog
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from app.db.models.ohlcv import Ohlcv1Min
+from app.db.models.ohlcv import Ohlcv1Min, OhlcvDaily
 from app.db.session import SessionLocal
 from app.services.redis_cache import hget_all, hset_dict
 from app.utils.decimals import safe_decimal
@@ -31,6 +31,49 @@ log = structlog.get_logger(__name__)
 TIMEFRAMES = ("1min", "5min", "15min")
 
 _FLUSH_BATCH_SIZE = 200
+
+# Minimum number of candles required to compute the slowest indicator (SMA-200)
+_HISTORY_CANDLE_LIMIT = 210
+
+
+async def fetch_candle_history(symbol: str, timeframe: str) -> list[dict[str, Any]]:
+    """Load recent candles from Postgres, oldest-first.
+
+    Moved here from the now-deleted `app.services.indicator_engine` (Phase
+    2.2) — this was the one piece of that module still in active use, via
+    `screener_engine.py`'s DSL historical-offset/rolling-function fetches.
+    """
+    from sqlalchemy import select
+
+    async with SessionLocal() as session:
+        if timeframe in ("1min", "5min", "15min"):
+            stmt = (
+                select(Ohlcv1Min)
+                .where(Ohlcv1Min.symbol == symbol)
+                .order_by(Ohlcv1Min.ts.desc())
+                .limit(_HISTORY_CANDLE_LIMIT)
+            )
+            rows = (await session.execute(stmt)).scalars().all()
+        else:
+            stmt = (
+                select(OhlcvDaily)
+                .where(OhlcvDaily.symbol == symbol)
+                .order_by(OhlcvDaily.date.desc())
+                .limit(_HISTORY_CANDLE_LIMIT)
+            )
+            rows = (await session.execute(stmt)).scalars().all()
+
+    candles: list[dict[str, Any]] = [
+        {
+            "open": float(r.open),
+            "high": float(r.high),
+            "low": float(r.low),
+            "close": float(r.close),
+            "volume": int(r.volume),
+        }
+        for r in reversed(rows)
+    ]
+    return candles
 
 
 class CandlePersistenceError(Exception):
