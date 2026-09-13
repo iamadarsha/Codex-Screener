@@ -78,6 +78,56 @@ async def fetch_candle_history(symbol: str, timeframe: str) -> list[dict[str, An
     return candles
 
 
+async def fetch_candle_history_as_of(
+    symbol: str, timeframe: str, as_of: datetime
+) -> list[dict[str, Any]]:
+    """Load recent candles from Postgres, oldest-first, restricted to bars
+    at or before *as_of*.
+
+    Additive sibling of `fetch_candle_history` for point-in-time historical
+    replay (`app.research.replay`) — exact same query pattern, with the
+    single addition of a hard `ts <= as_of` (or `date <= as_of.date()` for
+    daily) predicate applied *before* the ordering/limit, so a replay run
+    can never observe a candle timestamped after its `as_of` cutoff. The
+    existing `fetch_candle_history` function is untouched by this addition.
+    """
+    from sqlalchemy import select
+
+    is_intraday = timeframe in ("1min", "5min", "15min")
+    async with SessionLocal() as session:
+        if is_intraday:
+            stmt = (
+                select(Ohlcv1Min)
+                .where(Ohlcv1Min.symbol == symbol)
+                .where(Ohlcv1Min.ts <= as_of)
+                .order_by(Ohlcv1Min.ts.desc())
+                .limit(_HISTORY_CANDLE_LIMIT)
+            )
+            rows = (await session.execute(stmt)).scalars().all()
+        else:
+            stmt = (
+                select(OhlcvDaily)
+                .where(OhlcvDaily.symbol == symbol)
+                .where(OhlcvDaily.date <= as_of.date())
+                .order_by(OhlcvDaily.date.desc())
+                .limit(_HISTORY_CANDLE_LIMIT)
+            )
+            rows = (await session.execute(stmt)).scalars().all()
+
+    candles: list[dict[str, Any]] = [
+        {
+            "ts": (r.ts if is_intraday else r.date).isoformat(),
+            "open": float(r.open),
+            "high": float(r.high),
+            "low": float(r.low),
+            "close": float(r.close),
+            "volume": int(r.volume),
+        }
+        for r in reversed(rows)
+    ]
+    return candles
+
+
 class CandlePersistenceError(Exception):
     """Raised when a batch of completed candles fails to persist."""
 

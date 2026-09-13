@@ -33,6 +33,19 @@ async def fake_redis() -> AsyncIterator[fakeredis.aioredis.FakeRedis]:
 
 
 @pytest.fixture
+def research_runs_root(tmp_path, monkeypatch):
+    """Point `app.research.artifacts.resolve_run_dir` at an isolated tmp
+    directory instead of the real `./research_runs`, so research-package
+    tests never touch the actual working tree. Yields the root Path."""
+    from app.core.config import Settings
+
+    root = tmp_path / "research_runs"
+    fake_settings = Settings(research_runs_root=str(root))
+    monkeypatch.setattr("app.research.artifacts.get_settings", lambda: fake_settings)
+    return root
+
+
+@pytest.fixture
 async def api_client() -> AsyncIterator[httpx.AsyncClient]:
     """An async HTTP client wired directly to the FastAPI app (no network)."""
     from app.main import app

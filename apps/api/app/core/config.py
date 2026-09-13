@@ -60,6 +60,12 @@ class Settings(BaseSettings):
     redis_oauth_state_ttl_seconds: int = 600
     nse_fallback_silence_seconds: int = 60
 
+    # Local-filesystem storage root for research/replay run artifacts
+    # (manifest.json / request.json / state.json / evidence.json /
+    # results.json per run). No object-storage layer exists yet (see
+    # docs/DATA_PROVIDER_MATRIX.md) so local disk is the right call for now.
+    research_runs_root: str = "./research_runs"
+
     # CORS — comma-separated extra origins (added on top of hardcoded defaults)
     cors_allowed_origins: str = ""
 

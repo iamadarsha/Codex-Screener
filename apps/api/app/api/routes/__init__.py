@@ -14,6 +14,7 @@ from app.api.routes import (
     indices,
     market,
     prices,
+    research,
     screener,
     stocks,
     watchlist,
@@ -36,3 +37,4 @@ api_router.include_router(indices.router)
 api_router.include_router(ai_suggestions.router)
 api_router.include_router(company_info.router)
 api_router.include_router(breakouts.router)
+api_router.include_router(research.router)
