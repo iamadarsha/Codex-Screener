@@ -32,6 +32,18 @@ TIMEFRAMES = ("1min", "5min", "15min")
 
 _FLUSH_BATCH_SIZE = 200
 
+# Hard cap on the in-memory retry buffer. Without this, a genuinely
+# unreachable DB (not a transient blip) makes flush_pending() put the
+# whole failing batch back every cycle while on_tick() keeps appending —
+# unbounded growth on a memory-constrained VM. Caught live (2026-09-14):
+# no Postgres was ever connected in this deployment, so every single
+# flush attempt failed and the buffer grew continuously, consuming
+# memory hand over fist on a box that had already OOM-crashed twice
+# that same day. Once the cap is hit, the oldest candles are dropped
+# (most-recent-first is more useful than oldest-first for a live system)
+# rather than growing forever.
+_PENDING_1MIN_MAX = _FLUSH_BATCH_SIZE * 5
+
 # Minimum number of candles required to compute the slowest indicator (SMA-200)
 _HISTORY_CANDLE_LIMIT = 210
 
@@ -174,8 +186,20 @@ class CandleEngine:
                 await session.execute(stmt)
                 await session.commit()
         except Exception as exc:
+            dropped = 0
             async with self._flush_lock:
-                self._pending_1min = batch + self._pending_1min
+                merged = batch + self._pending_1min
+                if len(merged) > _PENDING_1MIN_MAX:
+                    dropped = len(merged) - _PENDING_1MIN_MAX
+                    merged = merged[:_PENDING_1MIN_MAX]
+                self._pending_1min = merged
+            if dropped:
+                log.error(
+                    "candle_batch_persist_buffer_capped",
+                    dropped=dropped,
+                    buffer_size=_PENDING_1MIN_MAX,
+                    reason="DB unreachable long enough to exceed the retry buffer cap",
+                )
             log.error("candle_batch_persist_failed", count=len(rows), error=str(exc))
             raise CandlePersistenceError(f"failed to persist {len(rows)} candles") from exc
 

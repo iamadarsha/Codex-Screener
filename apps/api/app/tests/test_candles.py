@@ -11,7 +11,7 @@ from datetime import datetime
 
 import pytest
 
-from app.market.candles import CandleEngine, CandlePersistenceError
+from app.market.candles import _PENDING_1MIN_MAX, CandleEngine, CandlePersistenceError
 from app.utils.time import IST
 
 
@@ -140,3 +140,36 @@ async def test_flush_failure_is_raised_not_swallowed_and_batch_is_retried(monkey
     # this is the fix for the old CandleBuilder._persist_1min, which just
     # logged and discarded a failed write.
     assert engine.pending_count() == 1
+
+
+@pytest.mark.usefixtures("fake_redis")
+async def test_pending_buffer_is_capped_not_unbounded_when_db_stays_down(monkeypatch):
+    """A genuinely unreachable DB (not a transient blip) must not let
+    _pending_1min grow forever — caught live (2026-09-14): no Postgres was
+    connected in production, every flush failed, and the retry-everything
+    behavior above grew the buffer continuously on a memory-constrained VM
+    that had already OOM-crashed twice that day."""
+    monkeypatch.setattr(
+        "app.market.candles.SessionLocal", lambda: _FakeSession(raise_on_commit=True)
+    )
+
+    engine = CandleEngine()
+    # Simulate a large pre-existing backlog from many prior failed cycles.
+    engine._pending_1min = [  # noqa: SLF001
+        {
+            "symbol": "RELIANCE",
+            "timeframe": "1min",
+            "ts": _ist(9, 15, 0).isoformat(),
+            "open": "100",
+            "high": "100",
+            "low": "100",
+            "close": "100",
+            "volume": 1,
+        }
+        for _ in range(_PENDING_1MIN_MAX)
+    ]
+
+    with pytest.raises(CandlePersistenceError):
+        await engine.flush_pending()
+
+    assert engine.pending_count() <= _PENDING_1MIN_MAX
