@@ -26,8 +26,16 @@ print("BreakoutScan: all imports OK", file=sys.stderr, flush=True)
 
 
 _poller_running = False
+_breakout_running = False
 _universe_size = 0
 _startup_time: float = 0.0
+_db_ready = False
+
+# Bounded startup DB connectivity retry schedule (seconds between attempts).
+# A transient network blip degrades gracefully (see below); a genuinely
+# invalid config (e.g. localhost in production) never reaches this point —
+# it's rejected earlier by Settings' own validator, at import time.
+_DB_STARTUP_RETRY_DELAYS = (0, 2, 5, 15, 30)
 
 
 async def _poller_watchdog() -> None:
@@ -69,16 +77,21 @@ async def _breakout_watchdog() -> None:
 
     Same crash-restart-with-backoff pattern as `_poller_watchdog` above.
     """
+    global _breakout_running
+
     from app.breakouts.engine import breakout_engine_loop
 
     delay = 5
     while True:
+        _breakout_running = True
         try:
             logger.info("Breakout engine (re)starting…")
             await breakout_engine_loop()
         except asyncio.CancelledError:
+            _breakout_running = False
             raise
         except Exception as exc:
+            _breakout_running = False
             logger.error("Breakout engine crashed: %s — restarting in %ds", exc, delay)
             await asyncio.sleep(delay)
             delay = min(delay * 2, 300)
@@ -86,9 +99,10 @@ async def _breakout_watchdog() -> None:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    global _poller_running, _universe_size, _startup_time
+    global _poller_running, _universe_size, _startup_time, _db_ready
     _startup_time = time.monotonic()
 
+    from app.db.session import check_db_connectivity
     from app.services.nse_poller import populate_universe_fallback
 
     configure_logging()
@@ -101,6 +115,28 @@ async def lifespan(_app: FastAPI):
         "***set***" if settings.indian_api_key else "MISSING",
         settings.redis_url[:30] + "..." if settings.redis_url else "MISSING",
     )
+
+    # Bounded DB connectivity check. Settings' own validator already
+    # refuses to start with an invalid production config (localhost DB,
+    # empty DATABASE_URL) — what's left here is a *reachability* problem
+    # (network blip, provider outage), which should degrade gracefully
+    # rather than crash the whole process. /health/ready reports this.
+    for i, wait_s in enumerate(_DB_STARTUP_RETRY_DELAYS):
+        if wait_s:
+            await asyncio.sleep(wait_s)
+        _db_ready = await check_db_connectivity()
+        if _db_ready:
+            logger.info("Database connectivity confirmed (attempt %d)", i + 1)
+            break
+        logger.warning(
+            "Database not reachable yet (attempt %d/%d)", i + 1, len(_DB_STARTUP_RETRY_DELAYS)
+        )
+    if not _db_ready:
+        logger.error(
+            "Database unreachable after %d attempts — starting anyway in DEGRADED mode; "
+            "candle persistence will fail until this recovers",
+            len(_DB_STARTUP_RETRY_DELAYS),
+        )
 
     upstox_provider = None
     if settings.upstox_analytics_token:
@@ -230,7 +266,11 @@ async def ping() -> dict[str, str]:
 
 @app.get("/health", tags=["system"])
 async def health() -> dict:
-    """Deep health check — reports Redis liveness, poller state, uptime."""
+    """Deep health check — reports Redis liveness, poller state, uptime.
+
+    Kept as-is: the deployed frontend's backend-health proxy calls this
+    exact path/shape today. New, more granular checks are additive below.
+    """
     from app.services.redis_cache import redis_ping
 
     redis_ok = await redis_ping()
@@ -244,4 +284,69 @@ async def health() -> dict:
         "poller": "running" if _poller_running else "stopped",
         "universe_size": _universe_size,
         "uptime_seconds": uptime_s,
+    }
+
+
+@app.get("/health/live", tags=["system"])
+async def health_live() -> dict:
+    """Liveness only: the process is alive and can respond. Never checks
+    a downstream dependency — a slow/down Postgres or Redis must not make
+    an orchestrator think the process itself needs restarting."""
+    return {"status": "alive"}
+
+
+@app.get("/health/ready", tags=["system"])
+async def health_ready() -> JSONResponse:
+    """Readiness: safe to receive production traffic right now.
+
+    Checks the dependencies a request actually needs — Redis and
+    Postgres — live, each call. Returns HTTP 503 when not ready so an
+    external monitor or load balancer can act on it without parsing the body.
+    """
+    from app.db.session import check_db_connectivity
+    from app.services.redis_cache import redis_ping
+
+    redis_ok = await redis_ping()
+    db_ok = await check_db_connectivity()
+    ready = redis_ok and db_ok
+
+    body = {
+        "status": "ready" if ready else "not_ready",
+        "redis": "ok" if redis_ok else "unavailable",
+        "database": "ok" if db_ok else "unavailable",
+    }
+    return JSONResponse(content=body, status_code=200 if ready else 503)
+
+
+@app.get("/health/data", tags=["system"])
+async def health_data() -> dict:
+    """Market-data health: feed provider, session state, coverage.
+
+    This is a v1, honestly-scoped snapshot of currently-available signals
+    (which feed is primary/fallback, whether the market is open, how many
+    symbols are tracked) — NOT the full LIVE/DEGRADED/STALE/NO_DATA
+    per-symbol freshness contract, which is a larger, separate piece of
+    work. Never claims freshness it can't currently verify.
+    """
+    from app.api.routes.market import _market_status_now
+    from app.market.pipeline import get_failover_controller, is_upstox_configured
+
+    market_status = await _market_status_now()
+
+    provider = "upstox_v3" if is_upstox_configured() else "nse_fallback_only"
+    failover_status = None
+    if is_upstox_configured():
+        try:
+            failover_status = get_failover_controller().status.value
+        except Exception:
+            failover_status = "unknown"
+
+    return {
+        "provider": provider,
+        "failover_status": failover_status,
+        "market_is_open": market_status.is_open,
+        "market_status": market_status.status,
+        "universe_size": _universe_size,
+        "poller_running": _poller_running,
+        "breakout_engine_running": _breakout_running,
     }

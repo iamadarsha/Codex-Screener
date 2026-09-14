@@ -4,7 +4,9 @@
  * Forwards all /api/* requests to the backend service at runtime using
  * INTERNAL_API_URL (server-side env var, not baked at build time).
  *
- * Railway: set INTERNAL_API_URL=https://breakoutscan-api-production.up.railway.app
+ * Production: set INTERNAL_API_URL to the backend's real origin (see
+ * config/production-env.example) — this is a server-only env var, never
+ * baked into the client bundle.
  * Local dev: defaults to http://localhost:8001
  */
 import { type NextRequest, NextResponse } from "next/server";

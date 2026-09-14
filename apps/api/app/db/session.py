@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncIterator
 
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import get_settings
@@ -63,3 +64,18 @@ class _SessionLocalProxy:
 
 
 SessionLocal = _SessionLocalProxy()
+
+
+async def check_db_connectivity() -> bool:
+    """``SELECT 1`` against the configured database. True on success.
+
+    Never raises — callers (startup validation, /health/ready) treat any
+    failure the same way: DB is not currently reachable.
+    """
+    try:
+        async with SessionLocal() as session:
+            await session.execute(text("SELECT 1"))
+        return True
+    except Exception:
+        logger.exception("Database connectivity check failed")
+        return False

@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -67,6 +68,29 @@ class Settings(BaseSettings):
     rate_limit_default: str = "100/minute"
     rate_limit_screener: str = "20/minute"
     rate_limit_ai_refresh: str = "5/minute"
+
+    @model_validator(mode="after")
+    def _reject_unsafe_production_defaults(self) -> "Settings":
+        """Fail fast at startup rather than silently degrading in production.
+
+        The `localhost:5432` default above is a legitimate local-dev
+        convenience, but this VM has no local Postgres — using it in
+        production is exactly what caused every candle-persistence write
+        to fail silently and grow an unbounded retry buffer (2026-09-14).
+        Refusing to start is safer than starting broken.
+        """
+        if self.environment.lower() != "production":
+            return self
+        db_url_lower = self.database_url.lower()
+        if "localhost" in db_url_lower or "127.0.0.1" in db_url_lower:
+            raise ValueError(
+                "DATABASE_URL points at localhost/127.0.0.1 while ENVIRONMENT=production. "
+                "Set a real DATABASE_URL (see config/production-env.example) — refusing to "
+                "start with a database config that cannot work in production."
+            )
+        if not self.database_url.strip():
+            raise ValueError("DATABASE_URL is empty while ENVIRONMENT=production.")
+        return self
 
 
 @lru_cache(maxsize=1)

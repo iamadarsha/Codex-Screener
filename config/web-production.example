@@ -1,0 +1,23 @@
+# BreakoutScan web (Next.js) — production environment template
+#
+# Placeholders only, safe to commit. Real values belong in the Vercel
+# dashboard's Environment Variables settings, NOT in a committed
+# apps/web/.env.production file — Next.js bakes a committed env file into
+# every build and it silently overrides whatever the Vercel dashboard has
+# set, which is exactly the class of bug that took the frontend down
+# (stale Fly.io URLs baked into a build no dashboard fix could touch).
+#
+# NEXT_PUBLIC_* values are bundled into the client-side JS bundle and are
+# visible to anyone who opens devtools — never put a secret in one.
+
+# Leave empty in production. The frontend calls its own Next.js API
+# routes (/api/...) which proxy server-side to INTERNAL_API_URL below —
+# the browser never needs to know the backend's real origin.
+NEXT_PUBLIC_API_URL=
+
+# Server-only — never exposed to the browser. Points Next.js's API proxy
+# route (apps/web/src/app/api/[...path]/route.ts) at the real backend.
+INTERNAL_API_URL=https://<your-backend-host>
+
+# Only set once TLS/WSS (Cloudflare Tunnel) is live for the backend.
+NEXT_PUBLIC_WS_URL=

@@ -1,0 +1,43 @@
+# BreakoutScan API — production environment template
+#
+# This file holds PLACEHOLDERS ONLY. It documents which variables the
+# production backend needs; it is never a source of real secrets and is
+# safe to commit.
+#
+# Real values live ONLY on the production host, in:
+#   /etc/breakoutscan/api.env   (chmod 600, root/opc-owned)
+#
+# or, for this project's current interim convention, in:
+#   /home/opc/.env.runtime      (chmod 600)
+#
+# Never put real values here, in the Dockerfile, in an image layer, or in
+# any file tracked by git. scripts/check-config-hygiene.py fails CI if a
+# real-looking secret or a stale host ever gets committed.
+
+# --- Database (Supabase Session Pooler — required for a long-running host) ---
+# Get this from: Supabase Dashboard -> Connect -> Direct connection -> Session pooler
+# Session pooler (not Direct connection, not Transaction pooler) is correct here:
+# it's IPv4-proxied for free, which a typical Oracle Cloud free-tier VM needs,
+# and it supports the long-lived connections a persistent FastAPI process holds
+# (unlike the Transaction pooler, which is meant for stateless/serverless callers).
+DATABASE_URL=postgresql+asyncpg://postgres.<project-ref>:<password>@<region>.pooler.supabase.com:5432/postgres
+
+# --- Redis (hot transient state — candles, prices, dedupe keys) ---
+REDIS_URL=redis://localhost:6379/0
+
+# --- Upstox V3 (primary live market data feed) ---
+UPSTOX_ANALYTICS_TOKEN=
+UPSTOX_API_KEY=
+UPSTOX_API_SECRET=
+
+# --- Optional AI suggestion providers (all have a deterministic fallback) ---
+GEMINI_API_KEY=
+GROQ_API_KEY=
+XAI_API_KEY=
+INDIAN_API_KEY=
+
+# --- Runtime mode ---
+# Must be exactly "production" for the backend's config validation to
+# reject unsafe defaults (localhost DB, missing DATABASE_URL, etc).
+ENVIRONMENT=production
+DEBUG=false

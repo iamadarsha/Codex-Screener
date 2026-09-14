@@ -173,3 +173,43 @@ async def test_pending_buffer_is_capped_not_unbounded_when_db_stays_down(monkeyp
         await engine.flush_pending()
 
     assert engine.pending_count() <= _PENDING_1MIN_MAX
+
+
+@pytest.mark.usefixtures("fake_redis")
+async def test_flush_pending_backs_off_after_failure_instead_of_hammering_db(monkeypatch):
+    """After a failed write, an immediate retry must not hit the DB again —
+    caught live (2026-09-14): with no backoff, a sustained outage meant a
+    fresh connection attempt roughly every ~24s across the full universe,
+    hammering an already-down dependency on top of the memory-leak risk."""
+    monkeypatch.setattr(
+        "app.market.candles.SessionLocal", lambda: _FakeSession(raise_on_commit=True)
+    )
+
+    engine = CandleEngine()
+    await engine.on_tick("RELIANCE", ltp=100.0, volume_delta=10, ts=_ist(9, 15, 0))
+    await engine.on_tick("RELIANCE", ltp=101.0, volume_delta=1, ts=_ist(9, 16, 0))
+
+    with pytest.raises(CandlePersistenceError):
+        await engine.flush_pending()
+    assert len(_FakeSession.instances) == 1
+
+    # Immediately retrying should be skipped entirely — no new DB session.
+    with pytest.raises(CandlePersistenceError, match="backing off"):
+        await engine.flush_pending()
+    assert len(_FakeSession.instances) == 1
+
+
+@pytest.mark.usefixtures("fake_redis")
+async def test_flush_pending_backoff_resets_only_on_success(monkeypatch):
+    engine = CandleEngine()
+    engine._backoff_index = 3  # noqa: SLF001 — simulate a prior run of failures
+    engine._next_attempt_at = 0.0  # noqa: SLF001 — backoff window already elapsed
+
+    monkeypatch.setattr("app.market.candles.SessionLocal", lambda: _FakeSession())
+    await engine.on_tick("RELIANCE", ltp=100.0, volume_delta=10, ts=_ist(9, 15, 0))
+    await engine.on_tick("RELIANCE", ltp=101.0, volume_delta=1, ts=_ist(9, 16, 0))
+
+    written = await engine.flush_pending()
+
+    assert written == 1
+    assert engine._backoff_index == -1  # noqa: SLF001 — reset after a real success

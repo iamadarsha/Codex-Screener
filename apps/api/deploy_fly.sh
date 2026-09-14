@@ -83,7 +83,7 @@ flyctl secrets set \
   SUPABASE_SERVICE_KEY="${SUPABASE_SERVICE_KEY}" \
   UPSTOX_API_KEY="${UPSTOX_API_KEY}" \
   UPSTOX_API_SECRET="${UPSTOX_API_SECRET}" \
-  UPSTOX_REDIRECT_URI="https://breakoutscan-api.fly.dev/auth/upstox/callback" \
+  UPSTOX_REDIRECT_URI="https://${APP_NAME}.fly.dev/auth/upstox/callback" \
   CORS_ALLOWED_ORIGINS="https://breakoutscan-web.vercel.app,https://breakoutscan.in,https://www.breakoutscan.in" \
   ENVIRONMENT="production" \
   DEBUG="false" \

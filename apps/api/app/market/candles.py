@@ -12,6 +12,8 @@ silently swallowed.
 from __future__ import annotations
 
 import asyncio
+import random
+import time as _time
 from datetime import datetime
 from decimal import Decimal
 from typing import Any
@@ -43,6 +45,17 @@ _FLUSH_BATCH_SIZE = 200
 # (most-recent-first is more useful than oldest-first for a live system)
 # rather than growing forever.
 _PENDING_1MIN_MAX = _FLUSH_BATCH_SIZE * 5
+
+# Bounded exponential backoff for retrying a failed persistence batch.
+# Without this, on_tick() re-triggers flush_pending() every time the
+# pending buffer crosses _FLUSH_BATCH_SIZE again (roughly every ~24s
+# across the full 500-symbol universe) — during a sustained DB outage
+# that means a fresh connection attempt every ~24s hammering a database
+# that's already down, on top of the memory-leak risk _PENDING_1MIN_MAX
+# already guards against. Backoff resets only once a write actually
+# succeeds, per the standard "don't retry a dead dependency on every tick"
+# pattern — never on a timer alone.
+_BACKOFF_SECONDS = (1.0, 2.0, 4.0, 8.0, 16.0, 30.0, 60.0)
 
 # Minimum number of candles required to compute the slowest indicator (SMA-200)
 _HISTORY_CANDLE_LIMIT = 210
@@ -105,6 +118,9 @@ class CandleEngine:
     def __init__(self) -> None:
         self._pending_1min: list[dict[str, Any]] = []
         self._flush_lock = asyncio.Lock()
+        # -1 = no active backoff (never failed, or last attempt succeeded).
+        self._backoff_index = -1
+        self._next_attempt_at = 0.0
 
     async def on_tick(
         self,
@@ -147,10 +163,22 @@ class CandleEngine:
         Raises `CandlePersistenceError` on failure (and puts the batch back
         for a later retry) instead of swallowing it — the old
         `CandleBuilder._persist_1min` logged and dropped failed writes.
+
+        While a backoff window from a prior failure is active, this skips
+        the actual DB round-trip entirely (still raises, so callers/tests
+        see the same failure contract) rather than hammering a dependency
+        that's already known to be down.
         """
         async with self._flush_lock:
             if not self._pending_1min:
                 return 0
+            now = _time.monotonic()
+            if self._backoff_index >= 0 and now < self._next_attempt_at:
+                remaining = self._next_attempt_at - now
+                raise CandlePersistenceError(
+                    f"skipping persistence attempt — backing off after a prior failure "
+                    f"(retry in {remaining:.0f}s)"
+                )
             batch, self._pending_1min = self._pending_1min, []
 
         rows = []
@@ -200,8 +228,24 @@ class CandleEngine:
                     buffer_size=_PENDING_1MIN_MAX,
                     reason="DB unreachable long enough to exceed the retry buffer cap",
                 )
-            log.error("candle_batch_persist_failed", count=len(rows), error=str(exc))
+
+            self._backoff_index = min(self._backoff_index + 1, len(_BACKOFF_SECONDS) - 1)
+            base_delay = _BACKOFF_SECONDS[self._backoff_index]
+            jitter = random.uniform(0, base_delay * 0.3)
+            self._next_attempt_at = _time.monotonic() + base_delay + jitter
+
+            log.error(
+                "candle_batch_persist_failed",
+                count=len(rows),
+                error=str(exc),
+                next_retry_in_seconds=round(base_delay + jitter, 1),
+            )
             raise CandlePersistenceError(f"failed to persist {len(rows)} candles") from exc
+
+        # Reset backoff only on an actual successful write, per spec —
+        # never reset it on a timer alone.
+        self._backoff_index = -1
+        self._next_attempt_at = 0.0
 
         log.debug("candle_batch_persisted", count=len(rows))
         return len(rows)
