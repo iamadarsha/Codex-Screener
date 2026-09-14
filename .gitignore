@@ -18,6 +18,11 @@ __pycache__
 PROJECT_HANDOFF.md
 PROJECT_HANDOFF_HIDDEN_KEYS.md
 
+# Local-only worksheet for filling in real rotated credentials — never
+# holds a value until the user manually edits it, and must never be
+# committed even then.
+CREDENTIAL_ROTATION_WORKSHEET.md
+
 .claude/worktrees/
 .venv-phase3/
 .claude-flow/
