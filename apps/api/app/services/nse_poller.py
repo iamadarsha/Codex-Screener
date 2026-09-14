@@ -83,6 +83,8 @@ _poll_count: int = 0
 _startup_done: bool = False
 _consecutive_failures: int = 0
 _bulk_compute_in_progress: bool = False  # guard: only one bulk compute at a time
+_last_holiday_refresh: float = 0.0  # monotonic time of last NSE holiday-list refresh
+HOLIDAY_REFRESH_INTERVAL = 20 * 60 * 60  # 20 h — matches TTL_MARKET_HOLIDAYS
 _prev_cum_volume: dict[str, int] = {}  # totalTradedVolume seen last cycle, per symbol — for CandleEngine deltas
 
 
@@ -220,7 +222,7 @@ async def _fetch_and_store_trending() -> None:
 
 async def nse_poller_loop():
     """Continuously poll NSE for market data and store in Redis."""
-    global _cached_symbols, _last_compute_time, _poll_count, _startup_done, _consecutive_failures
+    global _cached_symbols, _last_compute_time, _poll_count, _startup_done, _consecutive_failures, _last_holiday_refresh
 
     from app.services.nse_fallback import NSEClient
     from app.services.redis_cache import get_redis, set_json
@@ -299,15 +301,20 @@ async def nse_poller_loop():
 
             # ----------------------------------------------------------
             # 2. Fetch Nifty 500 stock quotes for live prices
-            #    NSE limits each index query to its constituents, so we
-            #    fetch NIFTY 500 which returns all ~500 stocks in one call.
-            #    We also fetch NIFTY 50 separately to tag nifty50 members.
+            #
+            #    Uses app.services.nse_live (jugaad-data's NSELive), which
+            #    fetches all ~500 constituents in a single call. Replaces
+            #    the old raw `/api/equity-stockIndices` httpx scrape here,
+            #    confirmed (2026-09-14, live, during trading hours) to be
+            #    blocked by NSE's bot-detection — the homepage itself
+            #    returned 403 and the data endpoint served a bot-challenge
+            #    page. NSELive's endpoints succeed from the same VM/IP.
             #
             #    Skipped while the Upstox V3 primary feed is healthy — it
             #    already publishes to these same `price:{symbol}` keys /
             #    `price_updates` channel with real tick data. This whole
-            #    NSE-scrape path only runs as automatic fallback (Milestone
-            #    2.2), gated by the shared FailoverController.
+            #    NSE fallback path only runs as automatic fallback
+            #    (Milestone 2.2), gated by the shared FailoverController.
             # ----------------------------------------------------------
             from app.market.pipeline import should_use_fallback_prices
 
@@ -316,88 +323,75 @@ async def nse_poller_loop():
                 fetch_ok = True  # Upstox primary is healthy — not a failure, just skipped
             else:
                 try:
-                    http = await client._ensure_client()
+                    from app.services.nse_live import fetch_bulk_quotes
 
-                    # Fetch NIFTY 500 (covers all 500 stocks)
-                    resp = await http.get("/api/equity-stockIndices", params={"index": "NIFTY 500"})
-                    if resp.status_code == 403:
-                        await client._refresh_cookies()
-                        resp = await http.get("/api/equity-stockIndices", params={"index": "NIFTY 500"})
+                    stock_data = await fetch_bulk_quotes("NIFTY 500")
+                    all_symbols: list[str] = []
+                    ts = datetime.now(timezone.utc).isoformat()
 
-                    if resp.status_code == 200:
-                        stock_data = resp.json().get("data", [])
-                        all_symbols: list[str] = []
-                        ts = datetime.now(timezone.utc).isoformat()
+                    for stock in stock_data:
+                        symbol = stock.get("symbol", "")
+                        if not symbol or symbol in ("NIFTY 500", "NIFTY 50"):
+                            continue
+                        price_data = {
+                            "symbol": symbol,
+                            "ltp": stock.get("lastPrice", 0),
+                            "open": stock.get("open", 0),
+                            "high": stock.get("dayHigh", 0),
+                            "low": stock.get("dayLow", 0),
+                            "close": stock.get("lastPrice", 0),
+                            "prev_close": stock.get("previousClose", 0),
+                            "change": stock.get("change", 0),
+                            "change_pct": stock.get("pChange", 0),
+                            "volume": stock.get("totalTradedVolume", 0),
+                            "timestamp": ts,
+                            "source": "nse_live",
+                        }
+                        await set_json(f"price:{symbol}", price_data, ttl=PRICE_TTL)
+                        await redis.publish("price_updates", json.dumps(price_data))
+                        await _feed_candle_engine(
+                            symbol, price_data["ltp"], price_data["volume"], datetime.fromisoformat(ts)
+                        )
+                        all_symbols.append(symbol)
 
-                        for stock in stock_data:
-                            symbol = stock.get("symbol", "")
-                            if not symbol or symbol in ("NIFTY 500", "NIFTY 50"):
-                                continue
-                            price_data = {
-                                "symbol": symbol,
-                                "ltp": stock.get("lastPrice", 0),
-                                "open": stock.get("open", 0),
-                                "high": stock.get("dayHigh", 0),
-                                "low": stock.get("dayLow", 0),
-                                "close": stock.get("lastPrice", 0),
-                                "prev_close": stock.get("previousClose", 0),
-                                "change": stock.get("change", 0),
-                                "change_pct": stock.get("pChange", 0),
-                                "volume": stock.get("totalTradedVolume", 0),
-                                "timestamp": ts,
-                            }
-                            await set_json(f"price:{symbol}", price_data, ttl=PRICE_TTL)
-                            await redis.publish("price_updates", json.dumps(price_data))
-                            await _feed_candle_engine(
-                                symbol, price_data["ltp"], price_data["volume"], datetime.fromisoformat(ts)
-                            )
-                            all_symbols.append(symbol)
-
-                        log.info("Stored + published prices for %d Nifty 500 stocks", len(all_symbols))
+                    if all_symbols:
+                        log.info("Stored + published prices for %d Nifty 500 stocks (nse_live)", len(all_symbols))
                         fetch_ok = True
                         _consecutive_failures = 0
-
-                        # Update universe with live data
-                        if all_symbols:
-                            _cached_symbols = await _populate_universe_from_symbols(all_symbols)
+                        _cached_symbols = await _populate_universe_from_symbols(all_symbols)
                     else:
-                        log.warning("NSE NIFTY 500 returned status %d, falling back to NIFTY 50", resp.status_code)
-                        # Fallback: try NIFTY 50 if 500 fails
-                        resp = await http.get("/api/equity-stockIndices", params={"index": "NIFTY 50"})
-                        if resp.status_code == 403:
-                            await client._refresh_cookies()
-                            resp = await http.get("/api/equity-stockIndices", params={"index": "NIFTY 50"})
-                        if resp.status_code == 200:
-                            stock_data = resp.json().get("data", [])
-                            ts = datetime.now(timezone.utc).isoformat()
-                            for stock in stock_data:
-                                symbol = stock.get("symbol", "")
-                                if not symbol or symbol == "NIFTY 50":
-                                    continue
-                                price_data = {
-                                    "symbol": symbol,
-                                    "ltp": stock.get("lastPrice", 0),
-                                    "open": stock.get("open", 0),
-                                    "high": stock.get("dayHigh", 0),
-                                    "low": stock.get("dayLow", 0),
-                                    "close": stock.get("lastPrice", 0),
-                                    "prev_close": stock.get("previousClose", 0),
-                                    "change": stock.get("change", 0),
-                                    "change_pct": stock.get("pChange", 0),
-                                    "volume": stock.get("totalTradedVolume", 0),
-                                    "timestamp": ts,
-                                }
-                                await set_json(f"price:{symbol}", price_data, ttl=PRICE_TTL)
-                                await redis.publish("price_updates", json.dumps(price_data))
-                                await _feed_candle_engine(
-                                    symbol, price_data["ltp"], price_data["volume"], datetime.fromisoformat(ts)
-                                )
-                            log.info("Fallback: stored prices for %d Nifty 50 stocks", len(stock_data))
-                            fetch_ok = True
-                            _consecutive_failures = 0
+                        log.warning("nse_live returned no stock data")
 
                 except Exception as e:
-                    log.warning("Failed to fetch stock prices: %s", e)
+                    log.warning("Failed to fetch stock prices via nse_live: %s", e)
+
+            # ----------------------------------------------------------
+            # 2b. Refresh the NSE holiday calendar (~once/day)
+            #
+            #     Feeds app.api.routes.market's holiday-aware is_open
+            #     check — before this, market status only checked the
+            #     09:15-15:30 IST clock window + weekday, so it reported
+            #     "open" on trading holidays (caught live on Ganesh
+            #     Chaturthi, 2026-09-14, via NSE's own market_status()
+            #     disagreeing with our clock-only check).
+            # ----------------------------------------------------------
+            now_monotonic = time.monotonic()
+            if now_monotonic - _last_holiday_refresh >= HOLIDAY_REFRESH_INTERVAL:
+                try:
+                    from app.services.nse_live import fetch_holiday_dates
+                    from app.utils.redis_keys import TTL_MARKET_HOLIDAYS, market_holidays_key
+
+                    holidays = await fetch_holiday_dates()
+                    if holidays:
+                        await set_json(
+                            market_holidays_key(),
+                            sorted(d.isoformat() for d in holidays),
+                            ttl=TTL_MARKET_HOLIDAYS,
+                        )
+                        log.info("Refreshed NSE holiday calendar: %d dates", len(holidays))
+                        _last_holiday_refresh = now_monotonic
+                except Exception as e:
+                    log.warning("Failed to refresh NSE holiday calendar: %s", e)
 
             if not fetch_ok:
                 _consecutive_failures += 1

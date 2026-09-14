@@ -28,23 +28,58 @@ MARKET_OPEN = time(9, 15)
 MARKET_CLOSE = time(15, 30)
 
 
-def _market_status_now() -> MarketStatus:
-    """Determine market open/close status based on IST time."""
+async def _get_holiday_dates() -> set[str]:
+    """Read the cached NSE holiday calendar (ISO date strings) from Redis.
+
+    Fails open (empty set) on a cache miss rather than blocking this
+    route on a live NSE call — `nse_poller.py` refreshes the cache
+    roughly daily. An empty result just means "no known holiday today",
+    the same behavior as before this check existed.
+    """
+    from app.services.redis_cache import get_json
+    from app.utils.redis_keys import market_holidays_key
+
+    try:
+        cached = await get_json(market_holidays_key())
+        return set(cached) if cached else set()
+    except Exception:
+        return set()
+
+
+def _next_open_skipping_weekends_and_holidays(
+    from_dt: datetime, holidays: set[str]
+) -> datetime:
+    """Roll *from_dt* forward to the next weekday that isn't a known holiday."""
+    candidate = from_dt
+    for _ in range(10):  # generous bound — holidays never cluster this long
+        if candidate.weekday() < 5 and candidate.date().isoformat() not in holidays:
+            return candidate.replace(hour=9, minute=15, second=0, microsecond=0)
+        candidate += timedelta(days=1)
+    return candidate.replace(hour=9, minute=15, second=0, microsecond=0)
+
+
+async def _market_status_now() -> MarketStatus:
+    """Determine market open/close status based on IST time AND the NSE
+    holiday calendar — a clock-only check would report "open" on trading
+    holidays (caught live on Ganesh Chaturthi, 2026-09-14, where NSE's own
+    market_status() disagreed with a naive weekday+time check)."""
     now_ist = datetime.now(IST)
     current_time = now_ist.time()
     weekday = now_ist.weekday()
+    holidays = await _get_holiday_dates()
+    is_holiday = now_ist.date().isoformat() in holidays
 
-    # Weekend
-    if weekday >= 5:
-        days_until_monday = 7 - weekday
-        next_open_dt = now_ist.replace(
-            hour=9, minute=15, second=0, microsecond=0
-        ) + timedelta(days=days_until_monday)
+    # Weekend or trading holiday
+    if weekday >= 5 or is_holiday:
+        next_open_dt = _next_open_skipping_weekends_and_holidays(
+            now_ist + timedelta(days=1), holidays
+        )
+        message = "Market is closed (weekend)" if weekday >= 5 else "Market is closed (holiday)"
         return MarketStatus(
             is_open=False,
             status="closed",
             next_open=next_open_dt,
-            message="Market is closed (weekend)",
+            message=message,
         )
 
     if current_time < time(9, 0):
@@ -75,11 +110,9 @@ def _market_status_now() -> MarketStatus:
         )
 
     # After close
-    next_day = now_ist + timedelta(days=1)
-    if next_day.weekday() >= 5:
-        days_until_monday = 7 - next_day.weekday()
-        next_day = next_day + timedelta(days=days_until_monday)
-    next_open_dt = next_day.replace(hour=9, minute=15, second=0, microsecond=0)
+    next_open_dt = _next_open_skipping_weekends_and_holidays(
+        now_ist + timedelta(days=1), holidays
+    )
     return MarketStatus(
         is_open=False,
         status="post_close",
@@ -91,7 +124,7 @@ def _market_status_now() -> MarketStatus:
 @router.get("/status", response_model=MarketStatus)
 async def market_status():
     """Get current market open/closed status."""
-    return _market_status_now()
+    return await _market_status_now()
 
 
 @router.get("/breadth", response_model=MarketBreadth)

@@ -14,6 +14,7 @@ TTL_UNIVERSE: int = 24 * 60 * 60  # 24 h
 TTL_WS_TICK: int = 5 * 60  # 5 min
 TTL_BREAKOUT_DEDUPE: int = 8 * 60 * 60  # 8 h (to end of trading day, matches orb.py's convention)
 TTL_MARKET_REGIME: int = 3 * 60  # 3 min — matches nse_poller.py's INDICES_TTL/BREADTH_TTL
+TTL_MARKET_HOLIDAYS: int = 20 * 60 * 60  # 20 h — holidays don't change intraday, refresh ~daily
 
 # ---------------------------------------------------------------------------
 # Key prefixes / static keys
@@ -95,3 +96,9 @@ def regime_key() -> str:
     function here instead, so callers don't need to know the literal.
     """
     return "market:regime"
+
+
+def market_holidays_key() -> str:
+    """Return the Redis key for the cached NSE equity-segment holiday list
+    (a JSON list of ISO date strings for the current year)."""
+    return "market:holidays"
