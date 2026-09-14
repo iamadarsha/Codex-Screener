@@ -83,7 +83,7 @@ _poll_count: int = 0
 _startup_done: bool = False
 _consecutive_failures: int = 0
 _bulk_compute_in_progress: bool = False  # guard: only one bulk compute at a time
-_last_holiday_refresh: float = 0.0  # monotonic time of last NSE holiday-list refresh
+_last_holiday_refresh: float | None = None  # monotonic time of last refresh; None = never yet
 HOLIDAY_REFRESH_INTERVAL = 20 * 60 * 60  # 20 h — matches TTL_MARKET_HOLIDAYS
 _prev_cum_volume: dict[str, int] = {}  # totalTradedVolume seen last cycle, per symbol — for CandleEngine deltas
 
@@ -376,7 +376,7 @@ async def nse_poller_loop():
             #     disagreeing with our clock-only check).
             # ----------------------------------------------------------
             now_monotonic = time.monotonic()
-            if now_monotonic - _last_holiday_refresh >= HOLIDAY_REFRESH_INTERVAL:
+            if _last_holiday_refresh is None or now_monotonic - _last_holiday_refresh >= HOLIDAY_REFRESH_INTERVAL:
                 try:
                     from app.services.nse_live import fetch_holiday_dates
                     from app.utils.redis_keys import TTL_MARKET_HOLIDAYS, market_holidays_key
