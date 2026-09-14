@@ -30,7 +30,7 @@ def _get_engine():
         _engine = create_async_engine(
             settings.database_url,
             pool_pre_ping=True,
-            pool_timeout=5,
+            pool_timeout=10,
             pool_recycle=300,
             # Kept well under Supabase's free-tier Session Pooler cap
             # (Supavisor: 15 concurrent connections, PROJECT-wide, not
@@ -38,11 +38,26 @@ def _get_engine():
             # process alone claim the entire project quota — confirmed
             # live (2026-09-15): running one `alembic upgrade` alongside
             # the running app hit "max clients reached in session mode"
-            # immediately. 3+2=5 leaves real headroom for one-off scripts,
-            # the health check, and a startup burst without ever reaching
-            # the hard external ceiling.
-            pool_size=3,
-            max_overflow=2,
+            # immediately.
+            #
+            # An initial 3+2=5 was too tight the other direction: the
+            # breakout engine's startup burst (many symbols advancing
+            # indicator state / evaluating signals close together across
+            # the 500-symbol universe — largely a startup-transient effect,
+            # since a fresh restart compares many symbols' indicator state
+            # against thresholds in the same instant, unlike organic price
+            # movement during real trading) produced QueuePool timeouts —
+            # real missed breakout checks for a handful of symbols, though
+            # each just self-heals on the next 30s cycle rather than
+            # crashing. 8+4=12 leaves 3 connections of headroom under
+            # Supabase's 15 hard cap while giving the startup burst enough
+            # room that timeouts became rare rather than eliminated
+            # outright — a deliberate tradeoff given the alternative
+            # (matching the old 15-connection ceiling) reproduces the
+            # actual outage this is meant to prevent. pool_timeout raised
+            # to 10s to match — 5s was tuned for the old, larger pool.
+            pool_size=8,
+            max_overflow=4,
             connect_args=connect_args,
         )
         logger.info("Database engine created")
