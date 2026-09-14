@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { formatPrice, formatPercent } from "@/lib/format";
+import { API_BASE_URL } from "@/lib/constants";
 
 interface IndexTick {
   symbol: string;
@@ -17,9 +18,7 @@ export function IndexTickerBar() {
   useEffect(() => {
     async function fetchIndices() {
       try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001"}/api/market/indices`
-        );
+        const res = await fetch(`${API_BASE_URL}/api/market/indices`);
         if (res.ok) {
           const data = await res.json();
           setIndices(
