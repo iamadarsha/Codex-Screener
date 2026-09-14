@@ -43,12 +43,17 @@ _JITTER_FRACTION = 0.25  # unlike the old (unused) upstox_streamer.py's unjitter
 
 @dataclass
 class SubscriptionRequest:
-    """`full` mode in Upstox's docs/UI is wire-named `full_d5` in the V3
-    RequestMode enum (5-level market depth) — confirmed from the actual
-    compiled .proto, not just the docs summary."""
+    """Mode values per the live V3 docs (verified 2026-09-14 against
+    https://upstox.com/developer/api-documentation/v3/get-market-data-feed/):
+    `ltpc`, `option_greeks`, `full` (LTPC + 5 market-depth levels + option
+    greeks), `full_d30` (30 levels, Upstox Plus only, 50-key cap). The
+    previous value here, `full_d5`, is not a valid mode string in the
+    current API at all — it silently produced a connection that received
+    only the unconditional initial `market_info` heartbeat and no actual
+    ticks, discovered via live verification on 2026-09-14."""
 
     instrument_keys: list[str]
-    mode: str = "full_d5"
+    mode: str = "full"
 
     def to_json(self, guid: str, method: str = "sub") -> str:
         return json.dumps(
@@ -87,6 +92,7 @@ class UpstoxV3Provider:
         self._task: asyncio.Task[None] | None = None
         self._subscribed_keys: list[str] = []
         self._ws: Any | None = None
+        self._messages_received = 0
 
     def _apply_subscription_cap(self, instrument_keys: list[str]) -> list[str]:
         if len(instrument_keys) > self._max_subscription_keys:
@@ -132,10 +138,13 @@ class UpstoxV3Provider:
         while self._running:
             try:
                 ws_url = await self._authorize()
+                log.info("upstox_v3_authorized", subscribed_count=len(self._subscribed_keys))
                 async with websockets.connect(ws_url, max_size=None) as ws:
                     self._ws = ws
                     attempt = 0
+                    log.info("upstox_v3_ws_connected")
                     await self._subscribe(ws)
+                    log.info("upstox_v3_subscribed", instrument_count=len(self._subscribed_keys))
                     async for raw in ws:
                         if isinstance(raw, str):
                             continue  # V3 sends binary frames only
@@ -155,15 +164,30 @@ class UpstoxV3Provider:
             await asyncio.sleep(delay)
 
     async def _handle_raw(self, raw: bytes) -> None:
+        self._messages_received += 1
         decoded = decode_feed_response(raw)
+        if self._messages_received <= 3 or self._messages_received % 100 == 0:
+            log.info(
+                "upstox_v3_message_received",
+                count=self._messages_received,
+                raw_bytes=len(raw),
+                decoded_type=str(decoded.type),
+                tick_count=len(decoded.ticks) if decoded.ticks else 0,
+            )
         if decoded.type in (MessageType.LIVE_FEED, MessageType.INITIAL_FEED) and decoded.ticks:
             self.failover.record_primary_tick()
         await self._on_message(decoded)
 
     async def _subscribe(self, ws: Any) -> None:
+        """Per the V3 docs' "Binary message format" note, the subscription
+        request must be sent as a binary frame, not a text frame — the
+        `websockets` library sends `str` as text and `bytes` as binary, so
+        the JSON payload is UTF-8-encoded before sending. Sending it as
+        text produced an accepted connection that silently never received
+        real tick data, discovered via live verification on 2026-09-14."""
         req = SubscriptionRequest(instrument_keys=self._subscribed_keys)
         guid = f"bos-{int(time.time())}"
-        await ws.send(req.to_json(guid))
+        await ws.send(req.to_json(guid).encode("utf-8"))
 
     def is_feed_alive(self) -> bool:
         """True unless the failover controller has moved off the primary feed."""

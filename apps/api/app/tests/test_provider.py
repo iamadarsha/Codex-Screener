@@ -13,15 +13,17 @@ import respx
 from app.market.provider import SubscriptionRequest, UpstoxV3Provider
 
 
-def test_subscription_request_uses_full_d5_wire_name():
+def test_subscription_request_uses_full_wire_name():
     req = SubscriptionRequest(instrument_keys=["NSE_EQ|A", "NSE_EQ|B"])
     payload = json.loads(req.to_json(guid="test-guid"))
 
     assert payload["method"] == "sub"
     assert payload["guid"] == "test-guid"
-    # "full" in Upstox's docs/UI is wire-named `full_d5` in the real
-    # RequestMode enum — confirmed from the compiled .proto, not guessed.
-    assert payload["data"]["mode"] == "full_d5"
+    # Verified 2026-09-14 against the live V3 docs and live behavior:
+    # "full_d5" is not a valid mode string at all — it silently produced a
+    # connection that never received real ticks. "full" (5 depth levels +
+    # option greeks) is the correct value.
+    assert payload["data"]["mode"] == "full"
     assert payload["data"]["instrumentKeys"] == ["NSE_EQ|A", "NSE_EQ|B"]
 
 
@@ -77,3 +79,36 @@ async def test_subscription_truncated_at_mode_cap():
 
     assert len(capped) == 3
     assert capped == ["NSE_EQ|0", "NSE_EQ|1", "NSE_EQ|2"]
+
+
+async def test_subscribe_sends_binary_frame_not_text():
+    """Per the V3 docs' "Binary message format" note, the subscription
+    request must be a binary frame. Sending it as `str` (a text frame)
+    produced a connection that was accepted but never received real ticks
+    — discovered via live verification on 2026-09-14."""
+
+    async def get_token():
+        return "fake-token"
+
+    async def on_message(_msg):
+        pass
+
+    class _FakeWs:
+        def __init__(self):
+            self.sent = None
+
+        async def send(self, data):
+            self.sent = data
+
+    provider = UpstoxV3Provider(
+        get_token=get_token, on_message=on_message, max_subscription_keys=10
+    )
+    provider._subscribed_keys = ["NSE_EQ|A"]  # noqa: SLF001
+    fake_ws = _FakeWs()
+
+    await provider._subscribe(fake_ws)  # noqa: SLF001
+
+    assert isinstance(fake_ws.sent, bytes), "subscription payload must be sent as bytes (binary frame), not str"
+    payload = json.loads(fake_ws.sent.decode("utf-8"))
+    assert payload["data"]["mode"] == "full"
+    assert payload["data"]["instrumentKeys"] == ["NSE_EQ|A"]
