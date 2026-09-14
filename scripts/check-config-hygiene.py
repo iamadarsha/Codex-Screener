@@ -69,6 +69,11 @@ def _tracked_files() -> list[Path]:
 
 
 def _is_scannable(path: Path) -> bool:
+    # This script's own source necessarily contains the literal patterns
+    # it searches for (as list definitions) — scanning itself would always
+    # self-flag, so it's excluded rather than allowlisted line-by-line.
+    if path.resolve() == Path(__file__).resolve():
+        return False
     # Path.suffix on ".env.production" is ".production", not ".env" — match
     # dotfile env variants (.env, .env.production, .env.local, ...) by name
     # prefix explicitly rather than relying on suffix parsing.
