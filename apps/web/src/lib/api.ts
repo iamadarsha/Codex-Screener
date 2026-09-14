@@ -318,7 +318,11 @@ export async function fetchApiHealth(): Promise<ApiHealth> {
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), 5_000);
   try {
-    const res = await fetch(`${API_BASE_URL}/health`, { signal: controller.signal });
+    // Routed through /api/backend-health, not a plain /health fetch — the
+    // catch-all proxy always prepends /api/ (which the backend's real
+    // /health route doesn't have), and /api/health itself is Next.js's own
+    // unrelated self-check. See app/api/backend-health/route.ts.
+    const res = await fetch("/api/backend-health", { signal: controller.signal });
     clearTimeout(t);
     if (!res.ok) throw new Error("health check failed");
     return res.json() as Promise<ApiHealth>;
