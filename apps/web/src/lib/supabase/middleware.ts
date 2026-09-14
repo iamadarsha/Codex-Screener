@@ -31,7 +31,16 @@ export async function updateSession(request: NextRequest) {
 
   // Just refresh the session — don't gate any pages behind auth.
   // Auth is only required at the feature level (e.g. watchlist add).
-  await supabase.auth.getUser();
+  //
+  // Never let a Supabase outage break every single page load: found live
+  // (2026-09-15) that a stale/unreachable NEXT_PUBLIC_SUPABASE_URL here
+  // means this call fails on literally every request site-wide, since
+  // this middleware's matcher covers nearly the whole app.
+  try {
+    await supabase.auth.getUser();
+  } catch (err) {
+    console.error("[supabase middleware] session refresh failed:", err);
+  }
 
   return supabaseResponse;
 }

@@ -32,8 +32,17 @@ def _get_engine():
             pool_pre_ping=True,
             pool_timeout=5,
             pool_recycle=300,
-            pool_size=5,
-            max_overflow=10,
+            # Kept well under Supabase's free-tier Session Pooler cap
+            # (Supavisor: 15 concurrent connections, PROJECT-wide, not
+            # per-process). The old 5+10=15 setting let this single API
+            # process alone claim the entire project quota — confirmed
+            # live (2026-09-15): running one `alembic upgrade` alongside
+            # the running app hit "max clients reached in session mode"
+            # immediately. 3+2=5 leaves real headroom for one-off scripts,
+            # the health check, and a startup burst without ever reaching
+            # the hard external ceiling.
+            pool_size=3,
+            max_overflow=2,
             connect_args=connect_args,
         )
         logger.info("Database engine created")
