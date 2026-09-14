@@ -46,11 +46,16 @@ async def publish_alert_trigger(alert_id: uuid.UUID, signal: BreakoutSignal) -> 
     await publish(ALERT_TRIGGERS_CHANNEL, json.dumps(payload, default=str))
 
 
-async def record_alert_history(alert_id: uuid.UUID, signal: BreakoutSignal) -> None:
+async def record_alert_history(alert_id: uuid.UUID, signal: BreakoutSignal, session=None) -> None:
+    """Accepts an optional caller-provided `session` so a single signal's
+    whole persistence path (event + alert lookup + history) can share one
+    connection checkout instead of opening a new one per call — see
+    `app.breakouts.engine._handle_signal`. Falls back to its own session
+    when called standalone (existing tests, ad-hoc use)."""
     from app.db.models.alert_history import AlertHistory
 
-    async with SessionLocal() as session:
-        session.add(
+    async def _do(s) -> None:
+        s.add(
             AlertHistory(
                 alert_id=alert_id,
                 symbol=signal.symbol,
@@ -58,14 +63,21 @@ async def record_alert_history(alert_id: uuid.UUID, signal: BreakoutSignal) -> N
                 conditions_met=_conditions_met(signal),
             )
         )
-        await session.commit()
+        await s.commit()
+
+    if session is not None:
+        await _do(session)
+        return
+    async with SessionLocal() as session:
+        await _do(session)
 
 
-async def record_breakout_event(signal: BreakoutSignal) -> None:
+async def record_breakout_event(signal: BreakoutSignal, session=None) -> None:
+    """Same optional shared-`session` pattern as `record_alert_history`."""
     from app.db.models.breakout_event import BreakoutEvent
 
-    async with SessionLocal() as session:
-        session.add(
+    async def _do(s) -> None:
+        s.add(
             BreakoutEvent(
                 symbol=signal.symbol,
                 trigger_type=signal.trigger_type.value,
@@ -79,7 +91,13 @@ async def record_breakout_event(signal: BreakoutSignal) -> None:
                 confirmed_at=signal.confirmed_at,
             )
         )
-        await session.commit()
+        await s.commit()
+
+    if session is not None:
+        await _do(session)
+    else:
+        async with SessionLocal() as session:
+            await _do(session)
     log.info(
         "breakout_confirmed",
         symbol=signal.symbol,

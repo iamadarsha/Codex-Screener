@@ -117,3 +117,33 @@ async def test_record_breakout_event_writes_expected_row(monkeypatch):
     assert row.reference_level == Decimal("2500.0")
     assert row.confirmation_price == Decimal("2510.0")
     assert row.score == 72.5
+
+
+async def test_record_breakout_event_reuses_a_passed_in_session(monkeypatch):
+    """A caller-provided session must be used directly — no new SessionLocal()
+    checkout — so a signal's whole persistence path can share one connection.
+    Caught live (2026-09-15): several symbols signalling in the same cycle
+    each opened 2-3 separate connections, exhausting Supabase's small
+    free-tier connection pool."""
+    monkeypatch.setattr(persistence, "SessionLocal", _FakeSession)
+    shared_session = _FakeSession()
+    _FakeSession.instances.clear()  # the line above counts as one; reset for a clean assertion
+
+    await persistence.record_breakout_event(_signal(), session=shared_session)
+
+    assert _FakeSession.instances == []  # no new session opened
+    assert shared_session.committed is True
+    assert shared_session.added[0].symbol == "RELIANCE"
+
+
+async def test_record_alert_history_reuses_a_passed_in_session(monkeypatch):
+    monkeypatch.setattr(persistence, "SessionLocal", _FakeSession)
+    shared_session = _FakeSession()
+    _FakeSession.instances.clear()
+    alert_id = uuid.uuid4()
+
+    await persistence.record_alert_history(alert_id, _signal(), session=shared_session)
+
+    assert _FakeSession.instances == []
+    assert shared_session.committed is True
+    assert shared_session.added[0].alert_id == alert_id

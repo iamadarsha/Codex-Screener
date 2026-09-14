@@ -30,34 +30,25 @@ def _get_engine():
         _engine = create_async_engine(
             settings.database_url,
             pool_pre_ping=True,
-            pool_timeout=10,
-            pool_recycle=300,
+            pool_timeout=15,
+            pool_recycle=1800,
             # Kept well under Supabase's free-tier Session Pooler cap
             # (Supavisor: 15 concurrent connections, PROJECT-wide, not
-            # per-process). The old 5+10=15 setting let this single API
-            # process alone claim the entire project quota — confirmed
-            # live (2026-09-15): running one `alembic upgrade` alongside
-            # the running app hit "max clients reached in session mode"
-            # immediately.
-            #
-            # An initial 3+2=5 was too tight the other direction: the
-            # breakout engine's startup burst (many symbols advancing
-            # indicator state / evaluating signals close together across
-            # the 500-symbol universe — largely a startup-transient effect,
-            # since a fresh restart compares many symbols' indicator state
-            # against thresholds in the same instant, unlike organic price
-            # movement during real trading) produced QueuePool timeouts —
-            # real missed breakout checks for a handful of symbols, though
-            # each just self-heals on the next 30s cycle rather than
-            # crashing. 8+4=12 leaves 3 connections of headroom under
-            # Supabase's 15 hard cap while giving the startup burst enough
-            # room that timeouts became rare rather than eliminated
-            # outright — a deliberate tradeoff given the alternative
-            # (matching the old 15-connection ceiling) reproduces the
-            # actual outage this is meant to prevent. pool_timeout raised
-            # to 10s to match — 5s was tuned for the old, larger pool.
-            pool_size=8,
-            max_overflow=4,
+            # per-process). 5+10=15 let this single process alone claim
+            # the entire project quota (confirmed live 2026-09-15: one
+            # `alembic upgrade` alongside the running app hit "max clients
+            # reached in session mode" immediately). Widening the pool to
+            # chase QueuePool timeouts (3+2, then 8+4) was the wrong axis
+            # entirely — it treats Postgres as the app's concurrency
+            # controller. The actual fix is work-shaping on the demand
+            # side (breakout concurrency cut from 20 to 4, the 500-symbol
+            # scan staggered in chunks instead of launched as one burst,
+            # signal persistence consolidated onto one session instead of
+            # 2-3 separate checkouts per symbol — see engine.py). With
+            # demand shaped down, a small fixed pool and zero overflow is
+            # both sufficient and leaves real headroom under the 15 cap.
+            pool_size=4,
+            max_overflow=0,
             connect_args=connect_args,
         )
         logger.info("Database engine created")

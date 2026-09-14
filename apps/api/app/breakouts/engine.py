@@ -47,7 +47,17 @@ from app.utils.time import IST, get_candle_boundary, market_open_today, now_ist
 log = structlog.get_logger(__name__)
 
 BREAKOUT_SCAN_INTERVAL = 30  # seconds — matches nse_poller.POLL_INTERVAL
-_MAX_CONCURRENT_SYMBOL_SCANS = 20
+# Lowered from 20 on a 498MB-RAM VM after live testing (2026-09-15): firing
+# up to 20 concurrent symbol scans meant up to 20 concurrent DB checkouts
+# whenever several symbols signalled in the same cycle, producing real
+# QueuePool timeouts. 4 bounds both CPU burst and DB demand at the source
+# instead of compensating with a larger connection pool.
+_MAX_CONCURRENT_SYMBOL_SCANS = 4
+# The universe is processed in chunks of this size, with a short pause
+# between chunks, so 500 symbols don't get scheduled as one instantaneous
+# burst — full coverage still completes well within BREAKOUT_SCAN_INTERVAL.
+_SCAN_CHUNK_SIZE = 50
+_SCAN_CHUNK_DELAY_SECONDS = 1.0
 _LEVEL_TIMEFRAME = "15min"
 _MIN_HISTORY_FOR_STRUCTURAL_TRIGGERS = 4  # NR4's minimum
 _BANDWIDTH_HISTORY_LEN = 30
@@ -285,45 +295,92 @@ async def _handle_signal(signal: BreakoutSignal, indicator_state: SymbolIndicato
     else:  # FAILED — a false breakout: confirmed, then reversed
         signal = replace(signal, extra={**signal.extra, "outcome": "failed_after_confirmation"})
 
-    await record_breakout_event(signal)
-
-    for alert in await _active_alerts_for_symbol(signal.symbol):
-        if await should_notify(alert, signal, now_ist()):
-            await publish_alert_trigger(alert.id, signal)
-            await record_alert_history(alert.id, signal)
-
-
-async def _active_alerts_for_symbol(symbol: str) -> list[Any]:
-    from sqlalchemy import select
-
-    from app.db.models.alert import Alert
+    # One session/connection checkout for this signal's whole persistence
+    # path (event + alert lookup + alert history), instead of 2-3 separate
+    # ones — cuts real connection-pool pressure when several symbols signal
+    # in the same cycle, without needing a bigger pool.
     from app.db.session import SessionLocal
 
     async with SessionLocal() as session:
+        await record_breakout_event(signal, session=session)
+
+        for alert in await _active_alerts_for_symbol(signal.symbol, session=session):
+            if await should_notify(alert, signal, now_ist()):
+                await publish_alert_trigger(alert.id, signal)
+                await record_alert_history(alert.id, signal, session=session)
+
+
+async def _active_alerts_for_symbol(symbol: str, session: Any | None = None) -> list[Any]:
+    from sqlalchemy import select
+
+    from app.db.models.alert import Alert
+
+    async def _query(s: Any) -> list[Any]:
         rows = (
-            await session.execute(
-                select(Alert).where(Alert.symbol == symbol, Alert.is_active.is_(True))
-            )
+            await s.execute(select(Alert).where(Alert.symbol == symbol, Alert.is_active.is_(True)))
         ).scalars().all()
         return list(rows)
+
+    if session is not None:
+        return await _query(session)
+
+    from app.db.session import SessionLocal
+
+    async with SessionLocal() as session:
+        return await _query(session)
+
+
+_last_scan_coverage: dict[str, int] = {"expected": 0, "processed": 0, "failed": 0}
+
+
+def get_last_scan_coverage() -> dict[str, int]:
+    """Snapshot of the most recently completed scan cycle's coverage —
+    read by /health/data. A completed scan that silently examined fewer
+    symbols than expected is not a successful full scan."""
+    return dict(_last_scan_coverage)
+
+
+def _chunked(items: list[str], size: int) -> list[list[str]]:
+    return [items[i : i + size] for i in range(0, len(items), size)]
 
 
 async def breakout_engine_loop() -> None:
     """Forever loop — `main.py` wraps this in the same watchdog-with-backoff
-    pattern already used for `nse_poller_loop` (`_poller_watchdog`)."""
+    pattern already used for `nse_poller_loop` (`_poller_watchdog`).
+
+    Processes the universe in small chunks with a short pause between them
+    instead of scheduling all ~500 symbols in one `asyncio.gather` burst —
+    that burst pattern was largely a startup-transient effect (many symbols'
+    indicator state compared against thresholds in the same instant) but it
+    produced real DB QueuePool timeouts under live testing. Chunking keeps
+    the semaphore's concurrency cap meaningful instead of just queueing 500
+    tasks that all wake at once the moment a slot frees up.
+    """
+    global _last_scan_coverage
     while True:
         try:
             symbols = await _get_universe_symbols()
             semaphore = asyncio.Semaphore(_MAX_CONCURRENT_SYMBOL_SCANS)
+            processed = 0
+            failed = 0
 
             async def _bounded(sym: str) -> None:
+                nonlocal processed, failed
                 async with semaphore:
                     try:
                         await _scan_symbol(sym)
+                        processed += 1
                     except Exception:
+                        failed += 1
                         log.exception("breakout_scan_symbol_failed", symbol=sym)
 
-            await asyncio.gather(*(_bounded(s) for s in symbols))
+            for chunk in _chunked(symbols, _SCAN_CHUNK_SIZE):
+                await asyncio.gather(*(_bounded(s) for s in chunk))
+                await asyncio.sleep(_SCAN_CHUNK_DELAY_SECONDS)
+
+            _last_scan_coverage = {
+                "expected": len(symbols), "processed": processed, "failed": failed,
+            }
             get_breakout_state_store().purge_expired(now_ist())
         except Exception:
             log.exception("breakout_engine_cycle_failed")

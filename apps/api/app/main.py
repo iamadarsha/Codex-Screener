@@ -329,6 +329,7 @@ async def health_data() -> dict:
     work. Never claims freshness it can't currently verify.
     """
     from app.api.routes.market import _market_status_now
+    from app.breakouts.engine import get_last_scan_coverage
     from app.market.pipeline import get_failover_controller, is_upstox_configured
 
     market_status = await _market_status_now()
@@ -349,4 +350,9 @@ async def health_data() -> dict:
         "universe_size": _universe_size,
         "poller_running": _poller_running,
         "breakout_engine_running": _breakout_running,
+        # Coverage from the most recently *completed* breakout-scan cycle —
+        # a scan that silently examined fewer symbols than expected is not
+        # a successful full scan, so this is surfaced explicitly rather
+        # than assumed from universe_size alone.
+        "last_scan_coverage": get_last_scan_coverage(),
     }

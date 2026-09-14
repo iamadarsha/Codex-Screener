@@ -10,6 +10,7 @@ real Postgres connection.
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -18,7 +19,7 @@ import pytest
 
 from app.breakouts import engine
 from app.breakouts.types import BreakoutStatus, Direction, TriggerType
-from app.services.redis_cache import set_json
+from app.services.redis_cache import get_redis, set_json
 from app.utils.redis_keys import indicator_key
 from app.utils.time import IST
 
@@ -68,16 +69,16 @@ async def test_scan_symbol_confirms_pdh_breakout_after_second_cycle(monkeypatch)
     recorded_events = []
     notified_alerts = []
 
-    async def _fake_record_breakout_event(signal):
+    async def _fake_record_breakout_event(signal, **kwargs):
         recorded_events.append(signal)
 
-    async def _fake_active_alerts(symbol_arg):
+    async def _fake_active_alerts(symbol_arg, **kwargs):
         return [_FakeAlert(id=uuid.uuid4())]
 
     async def _fake_publish_alert_trigger(alert_id, signal):
         notified_alerts.append((alert_id, signal))
 
-    async def _fake_record_alert_history(alert_id, signal):
+    async def _fake_record_alert_history(alert_id, signal, **kwargs):
         pass
 
     monkeypatch.setattr(engine, "record_breakout_event", _fake_record_breakout_event)
@@ -130,16 +131,16 @@ async def test_scan_symbol_reverses_after_confirming_and_fires_failed_signal(mon
     recorded_events = []
     notified_alerts = []
 
-    async def _fake_record_breakout_event(signal):
+    async def _fake_record_breakout_event(signal, **kwargs):
         recorded_events.append(signal)
 
-    async def _fake_active_alerts(symbol_arg):
+    async def _fake_active_alerts(symbol_arg, **kwargs):
         return [_FakeAlert(id=uuid.uuid4())]
 
     async def _fake_publish_alert_trigger(alert_id, signal):
         notified_alerts.append((alert_id, signal))
 
-    async def _fake_record_alert_history(alert_id, signal):
+    async def _fake_record_alert_history(alert_id, signal, **kwargs):
         pass
 
     monkeypatch.setattr(engine, "record_breakout_event", _fake_record_breakout_event)
@@ -193,3 +194,64 @@ async def test_scan_symbol_ignores_price_data_with_unparseable_ltp():
     await set_json("price:BADDATA", {"ltp": "not-a-number", "volume": 100})
     await engine._scan_symbol("BADDATA")  # noqa: SLF001
     assert engine.get_breakout_state_store().all_active() == []
+
+
+def test_chunked_splits_into_expected_group_sizes():
+    items = [str(i) for i in range(125)]
+    chunks = engine._chunked(items, 50)  # noqa: SLF001
+    assert [len(c) for c in chunks] == [50, 50, 25]
+    assert [s for chunk in chunks for s in chunk] == items
+
+
+def test_chunked_handles_empty_and_smaller_than_chunk_size():
+    assert engine._chunked([], 50) == []  # noqa: SLF001
+    assert engine._chunked(["A", "B"], 50) == [["A", "B"]]  # noqa: SLF001
+
+
+@pytest.mark.usefixtures("fake_redis")
+async def test_breakout_engine_loop_processes_in_chunks_and_records_coverage(monkeypatch):
+    """The 500-symbol universe must not be scheduled as one instantaneous
+    burst — caught live (2026-09-15): that pattern produced real DB
+    QueuePool timeouts. This verifies symbols are processed in bounded
+    chunks (not all at once) and that a completed cycle's coverage is
+    recorded for /health/data, including a failed symbol."""
+    redis = await get_redis()
+    symbols = [f"SYM{i}" for i in range(7)]
+    await redis.sadd("universe:nifty500", *symbols)
+
+    monkeypatch.setattr(engine, "_SCAN_CHUNK_SIZE", 3)
+    monkeypatch.setattr(engine, "_SCAN_CHUNK_DELAY_SECONDS", 0.0)
+
+    seen: list[str] = []
+    max_concurrent = 0
+    current = 0
+
+    async def _fake_scan_symbol(sym: str) -> None:
+        nonlocal max_concurrent, current
+        current += 1
+        max_concurrent = max(max_concurrent, current)
+        seen.append(sym)
+        try:
+            await asyncio.sleep(0)
+            if sym == "SYM3":
+                raise RuntimeError("simulated scan failure")
+        finally:
+            current -= 1
+
+    monkeypatch.setattr(engine, "_scan_symbol", _fake_scan_symbol)
+
+    task = asyncio.create_task(engine.breakout_engine_loop())
+    try:
+        await asyncio.sleep(0.2)  # let one full cycle (all chunks) complete
+    finally:
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+    assert sorted(seen) == sorted(symbols)
+    assert max_concurrent <= 3  # never exceeded one chunk's worth at a time
+
+    coverage = engine.get_last_scan_coverage()
+    assert coverage["expected"] == 7
+    assert coverage["processed"] == 6  # all but the one that raised
+    assert coverage["failed"] == 1
